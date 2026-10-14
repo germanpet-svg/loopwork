@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DeepSeek Disco Virtual (Dual-Channel OPFS + Git)
 // @namespace    local.disk
-// @version      1.5.27
+// @version      1.5.29
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @match        https://chat.deepseek.com/*
 // @grant        none
@@ -17,7 +17,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.5.27',
+    VERSION: '1.5.29',
     MAX_RUN_BYTES: 256 * 1024,
     RUN_TIMEOUT_MS: 3000,
     MAX_SHARE_FILE_BYTES: 64 * 1024,
@@ -186,6 +186,7 @@
     if (!parts.length) throw new Error('no se puede borrar la raíz');
     const { dir, name } = await parentOf(path, false);
     await dir.removeEntry(name, { recursive: !!recursive });
+    notifyHTMLPreviews(parts.join('/'));
   }
 
   async function openRawWriter(path, { append = false } = {}) {
@@ -200,6 +201,7 @@
     const ws = await openRawWriter(path);
     try { await ws.write(data); await ws.close(); }
     catch (e) { try { await ws.abort(); } catch { /* */ } throw e; }
+    notifyHTMLPreviews(splitPath(path).join('/'));
   }
 
   async function copyOrMove(args, move) {
@@ -317,6 +319,7 @@
       async close() {
         await flush();
         if (gzWriter) { await gzWriter.close(); await pipe; } else await ws.close();
+        notifyHTMLPreviews(splitPath(path).join('/'));
         return bytes;
       },
       async abort() {
@@ -502,6 +505,114 @@
     const date = new Date(timestamp * 1000);
     if (!Number.isFinite(date.getTime())) return 'sin fecha: timestamp fuera de rango';
     return iso ? date.toISOString() : date.toLocaleTimeString();
+  }
+
+  function gitChangeDescription(head, work, stage) {
+    const states = [];
+    if (head === 0 && stage === 0) states.push('untracked');
+    else {
+      if (head !== stage) states.push(stage === 0 ? 'deleted (staged)' : head === 0 ? 'added (staged)' : 'modified (staged)');
+      if (work !== stage) states.push(work === 0 ? 'deleted (unstaged)' : stage === 0 ? 'untracked' : 'modified (unstaged)');
+    }
+    return states.join(', ');
+  }
+
+  async function stageAllGitFiles(git, fs) {
+    const matrix = await git.statusMatrix({ fs, dir: '.' });
+    let count = 0;
+    for (const [filepath, , work] of matrix) {
+      if (isInternalPath(filepath)) continue;
+      if (work === 0) await git.remove({ fs, dir: '.', filepath });
+      else await git.add({ fs, dir: '.', filepath });
+      count++;
+    }
+    return count;
+  }
+
+  async function gitBlobOids(git, fs, tree) {
+    const blobs = [];
+    await git.walk({
+      fs, dir: '.', trees: [tree],
+      map: async (path, [entry]) => {
+        if (path !== '.' && entry && await entry.type() === 'blob') blobs.push([path, await entry.oid()]);
+      }
+    });
+    return blobs.sort((a, b) => a[0].localeCompare(b[0]));
+  }
+
+  async function getGitStatus({ capture = false } = {}) {
+    const repository = await getHandle('.git');
+    if (!repository) return { initialized: false, changes: [] };
+    if (repository.kind !== 'directory') throw new Error('.git no es una carpeta; revisa el repositorio');
+    const { git, fs } = await getGit();
+    const matrix = await git.statusMatrix({ fs, dir: '.' });
+    if (matrix.some(([path, head, , stage]) => isInternalPath(path) && (head !== 0 || stage !== 0))) {
+      throw new Error('Git contiene metadatos internos versionados; revisa el repositorio antes de guardar');
+    }
+    const rows = matrix.filter(([path]) => !isInternalPath(path));
+    const changes = rows.filter(([, head, work, stage]) => head !== work || work !== stage)
+      .map(([path, head, work, stage]) => ({ path, head, work, stage, description: gitChangeDescription(head, work, stage) }));
+    const branch = await git.currentBranch({ fs, dir: '.' });
+    const head = await gitHeadOid(git, fs);
+    const state = { initialized: true, changes, branch, head };
+    if (!capture) return state;
+    if (!branch) throw new Error('guardar con botón requiere una rama local activa; revisa git branch');
+    const working = [];
+    for (const [path, , work] of rows) {
+      let hash = null;
+      if (work !== 0) {
+        const file = await (await requireFile(path)).getFile();
+        if (file.size > CFG.MAX_HASH_BYTES) throw new Error(`Git: archivo demasiado grande para verificar: ${path}`);
+        hash = await computeSha256(await file.arrayBuffer());
+      }
+      working.push([path, hash]);
+    }
+    const staged = await gitBlobOids(git, fs, git.STAGE());
+    working.sort((a, b) => a[0].localeCompare(b[0]));
+    state.stagedOids = staged;
+    state.workSignature = JSON.stringify({ branch, head, working });
+    state.signature = JSON.stringify({ work: state.workSignature, staged });
+    return state;
+  }
+
+  async function saveGitChanges(review, message) {
+    if (busy || editorOpen) throw new Error('cierra el editor o espera a que termine la operación antes de versionar');
+    if (typeof message !== 'string' || !message.trim()) throw new Error('escribe un mensaje de commit');
+    if (!review?.initialized || !review.signature || !review.changes.length) throw new Error('actualiza la revisión de cambios antes de guardar');
+    setBusy(true);
+    let staged = false;
+    try {
+      const current = await getGitStatus({ capture: true });
+      if (current.signature !== review.signature) throw new Error('repositorio cambió desde la revisión; actualiza la lista antes de guardar');
+      const { git, fs } = await getGit();
+      staged = true;
+      await stageAllGitFiles(git, fs);
+      const ready = await getGitStatus({ capture: true });
+      if (ready.workSignature !== review.workSignature || ready.changes.some(c => c.work !== c.stage)) {
+        throw new Error('archivos o rama cambiaron durante staging; no se hizo commit');
+      }
+      if (!ready.changes.some(c => c.head !== c.stage)) {
+        throw new Error('la versión actual coincide con HEAD; staging actualizado, no hay cambios para un commit');
+      }
+      const oid = await git.commit({ fs, dir: '.', message: message.trim(),
+        author: { name: 'DV User', email: 'user@local.lan' } });
+      if (await gitHeadOid(git, fs) !== oid) throw new Error(`commit ${oid} creado, pero HEAD cambió; revisa git log y git status`);
+      const commit = await git.readCommit({ fs, dir: '.', oid });
+      if ((review.head && !commit.commit.parent.includes(review.head)) ||
+          !review.head && commit.commit.parent.length) throw new Error(`commit ${oid} creado con historial inesperado; revisa git log`);
+      if (JSON.stringify(await gitBlobOids(git, fs, git.TREE({ ref: oid }))) !== JSON.stringify(ready.stagedOids)) {
+        throw new Error(`commit ${oid} creado, pero su contenido no coincide con el staging revisado; revisa git show`);
+      }
+      const final = await getGitStatus();
+      uiLog(`[${review.branch} ${oid.slice(0, 7)}] ${message.trim()}. Git local; nada enviado al chat ni a un servidor.`, 'info');
+      if (final.changes.length) uiLog('Hay cambios pendientes posteriores al commit; revisa el estado Git.', 'err');
+      return oid;
+    } catch (e) {
+      throw new Error(`${e.message}${staged ? '. El staging puede haber cambiado; revisa git status. Sin rollback automático.' : ''}`);
+    } finally {
+      setBusy(false);
+      await ui?.refresh();
+    }
   }
 
   async function checkoutBranch(git, fs, ref) {
@@ -1345,6 +1456,134 @@
     return '<!doctype html>\n' + doc.documentElement.outerHTML;
   }
 
+  const htmlPreviews = new Map();
+
+  function closeHTMLPreview(entry, { closeTab = false } = {}) {
+    clearTimeout(entry.timer);
+    clearInterval(entry.watch);
+    entry.channel.close();
+    URL.revokeObjectURL(entry.url);
+    if (htmlPreviews.get(entry.path) === entry) htmlPreviews.delete(entry.path);
+    if (closeTab && !entry.tab.closed) entry.tab.close();
+  }
+
+  function notifyHTMLPreviews(path) {
+    for (const entry of htmlPreviews.values()) {
+      if (entry.tab.closed) { closeHTMLPreview(entry); continue; }
+      if (entry.path !== path && !entry.path.startsWith(path + '/')) continue;
+      clearTimeout(entry.timer);
+      entry.timer = setTimeout(() => updateHTMLPreview(entry), 150);
+    }
+  }
+
+  async function updateHTMLPreview(entry) {
+    if (htmlPreviews.get(entry.path) !== entry) return;
+    if (entry.tab.closed) { closeHTMLPreview(entry); return; }
+    const revision = ++entry.revision;
+    try {
+      const snapshot = await editorSnapshot(entry.path);
+      const html = staticPreviewDocument(snapshot.text);
+      if (htmlPreviews.get(entry.path) !== entry || revision !== entry.revision) return;
+      entry.channel.postMessage({ type: 'render', html, hash: snapshot.hash });
+    } catch (e) {
+      if (htmlPreviews.get(entry.path) !== entry || revision !== entry.revision) return;
+      entry.channel.postMessage({ type: 'error', text: e.message });
+      uiLog(`Vista previa ${entry.path}: ${e.message}`, 'err');
+    }
+  }
+
+  function htmlPreviewShell(path, channelName, nonce) {
+    const encode = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; frame-src about:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+      <meta name="referrer" content="no-referrer"><title>DV · Vista previa HTML</title>
+      <style>html,body{height:100%;margin:0;font:13px system-ui;background:#18181b;color:#f4f4f5}
+      body{display:flex;flex-direction:column}header{padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+      button{padding:7px 12px;background:#2563eb;color:white;border:0;border-radius:5px;cursor:pointer}
+      button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
+      #status{padding:0 10px 8px;overflow-wrap:anywhere}iframe{flex:1;width:100%;border:0;background:white;min-height:0}</style></head>
+      <body><header><strong id="path"></strong><button id="refresh" type="button">Actualizar desde disco</button>
+      <span>HTML estático · sin scripts ni red</span></header><div id="status" role="status" aria-live="polite">Conectando con el panel...</div>
+      <iframe sandbox="" referrerpolicy="no-referrer" title="Vista previa HTML aislada"></iframe>
+      <script nonce="${nonce}">
+      'use strict';
+      const path = ${encode(path)}, name = ${encode(channelName)};
+      document.title = 'DV · ' + path;
+      document.getElementById('path').textContent = path;
+      const status = document.getElementById('status'), frame = document.querySelector('iframe');
+      let channel, timer;
+      const request = () => {
+        clearTimeout(timer);
+        status.textContent = 'Leyendo la versión guardada en OPFS...';
+        channel.postMessage({type:'refresh'});
+        timer = setTimeout(() => {
+          frame.removeAttribute('srcdoc');
+          status.textContent = 'El panel no responde. Mantén DeepSeek abierto. Si lo recargaste, vuelve a pulsar Ejecutar allí.';
+        }, 5000);
+      };
+      try {
+        channel = new BroadcastChannel(name);
+        channel.onmessage = ({data}) => {
+          if (!data || typeof data !== 'object') return;
+          if (data.type === 'render' && typeof data.html === 'string' && /^[a-f0-9]{64}$/.test(data.hash)) {
+            clearTimeout(timer);
+            frame.srcdoc = data.html;
+            status.textContent = 'Actualizado: ' + new Date().toLocaleTimeString() + ' · SHA256 ' + data.hash.slice(0, 8) +
+              ' · Solo cambios guardados. Actualización automática mientras el panel esté abierto.';
+          } else if (data.type === 'error' && typeof data.text === 'string') {
+            clearTimeout(timer); frame.removeAttribute('srcdoc');
+            status.textContent = 'No se pudo actualizar: ' + data.text;
+          }
+        };
+        document.getElementById('refresh').addEventListener('click', request);
+        request();
+        addEventListener('pagehide', () => { clearTimeout(timer); channel.close(); });
+      } catch (error) {
+        status.textContent = 'No se pudo conectar la vista previa: ' + error.message;
+      }
+      </script></body></html>`;
+  }
+
+  async function openHTMLPreview(path) {
+    path = splitPath(path).join('/');
+    if (!confirm(`¿Abrir "${path}" en una pestaña de vista previa HTML estática?\nSin scripts, red ni recursos externos. Se actualizará al guardar; requiere mantener DeepSeek abierto.`)) {
+      throw new Error('ejecución cancelada');
+    }
+    if (typeof BroadcastChannel !== 'function') throw new Error('el navegador no admite BroadcastChannel para conectar la vista previa');
+    const previous = htmlPreviews.get(path);
+    if (previous && !previous.tab.closed) {
+      previous.tab.focus();
+      await updateHTMLPreview(previous);
+      return `Vista previa HTML actualizada en su pestaña: ${path}.`;
+    }
+    if (previous) closeHTMLPreview(previous);
+    let entry = null, channel = null, url = null, tab = null;
+    try {
+      const channelName = 'dv-preview-' + crypto.randomUUID();
+      channel = new BroadcastChannel(channelName);
+      const nonce = crypto.randomUUID().replaceAll('-', '');
+      url = URL.createObjectURL(new Blob([htmlPreviewShell(path, channelName, nonce)], { type: 'text/html;charset=utf-8' }));
+      // Navigate in the initial trusted click; detaching opener first prevents later navigation.
+      tab = window.open(url, '_blank');
+      if (!tab) throw new Error('el navegador bloqueó la pestaña; permite ventanas emergentes para DeepSeek y reintenta');
+      tab.opener = null;
+      entry = { path, tab, channel, url, revision: 0, timer: null, watch: null };
+      htmlPreviews.set(path, entry);
+      channel.onmessage = ({ data }) => {
+        if (data?.type === 'refresh') return updateHTMLPreview(entry);
+      };
+      await editorSnapshot(path);
+      entry.watch = setInterval(() => {
+        if (tab.closed) closeHTMLPreview(entry);
+      }, 5000);
+      return `Vista previa HTML abierta en pestaña: ${path}. Actualización automática al guardar y botón Actualizar desde disco; F5 vuelve a leer OPFS mientras el panel siga abierto. Sin scripts, red ni recursos OPFS relativos.`;
+    } catch (e) {
+      if (entry) closeHTMLPreview(entry, { closeTab: true });
+      else { channel?.close(); if (url) URL.revokeObjectURL(url); tab?.close(); }
+      throw e;
+    }
+  }
+
   function consoleRunnerDocument(source, token) {
     const workerSource = `
       const format = value => {
@@ -1389,6 +1628,7 @@
     const path = pos[0];
     if (isInternalPath(path)) throw new Error('no se ejecutan metadatos internos');
     if (!/\.(html?|js)$/i.test(path)) throw new Error('motor no disponible; run admite HTML estático y JavaScript de consola, no Node/Python/shell');
+    if (/\.html?$/i.test(path)) return openHTMLPreview(path);
     const file = await (await requireFile(path)).getFile();
     if (file.size > CFG.MAX_RUN_BYTES) throw new Error('archivo supera 256 KB para run');
     let source;
@@ -1400,18 +1640,6 @@
     const frame = document.createElement('iframe');
     frame.setAttribute('sandbox', /\.js$/i.test(path) ? 'allow-scripts' : '');
     frame.referrerPolicy = 'no-referrer';
-    if (!/\.js$/i.test(path)) {
-      const host = document.createElement('div');
-      const shadow = host.attachShadow({ mode: 'closed' });
-      const close = h('button', { onclick: () => host.remove() }, 'Cerrar vista previa');
-      const title = h('div', {}, `HTML estático: ${path} (sin scripts ni recursos externos)`);
-      host.style.cssText = 'position:fixed;inset:5%;z-index:1000000;background:white;color:black;border:2px solid #555;padding:8px';
-      frame.style.cssText = 'width:100%;height:calc(100% - 55px);border:0';
-      frame.srcdoc = staticPreviewDocument(source);
-      shadow.append(title, close, frame);
-      document.body.append(host);
-      return `Vista previa HTML estática abierta: ${path}. Scripts desactivados; CSS inline e imágenes data: permitidos. Recursos OPFS relativos no se resuelven.`;
-    }
     frame.style.display = 'none';
     const token = crypto.randomUUID();
     return new Promise((resolve, reject) => {
@@ -1557,27 +1785,14 @@
         const rows = [];
         for (const [filepath, head, workdir, stage] of matrix) {
           if (isInternalPath(filepath) || (head === workdir && workdir === stage)) continue;
-          const states = [];
-          if (head === 0 && stage === 0) states.push('untracked');
-          else {
-            if (head !== stage) states.push(stage === 0 ? 'deleted (staged)' : head === 0 ? 'added (staged)' : 'modified (staged)');
-            if (workdir !== stage) states.push(workdir === 0 ? 'deleted (unstaged)' : stage === 0 ? 'untracked' : 'modified (unstaged)');
-          }
-          rows.push(`${states.join(', ').padEnd(18)} ${filepath}`);
+          rows.push(`${gitChangeDescription(head, workdir, stage).padEnd(18)} ${filepath}`);
         }
         return rows.length ? rows.join('\n') : 'Working tree limpio. Nada pendiente de confirmar.';
       }
       case 'add':
         if (!subArgs[0]) throw new Error('uso: git add <ruta|--all>');
         if (subArgs[0] === '--all' || subArgs[0] === '.') {
-          const matrix = await git.statusMatrix({ fs, dir: '.' });
-          let c = 0;
-          for (const [filepath, , workdir] of matrix) {
-            if (isInternalPath(filepath)) continue;
-            if (workdir === 0) await git.remove({ fs, dir: '.', filepath });
-            else await git.add({ fs, dir: '.', filepath });
-            c++;
-          }
+          const c = await stageAllGitFiles(git, fs);
           return `${c} archivos añadidos al staging area.`;
         }
         if (isInternalPath(subArgs[0])) throw new Error('no se pueden versionar metadatos internos');
@@ -1677,6 +1892,7 @@
       '  cp confirma reemplazos; mv siempre confirma. Máximo verificable: 512 MB.',
       '  mv no es rename atómico: copia y verifica antes de borrar el origen.',
       '  run: HTML estático (sin scripts/recursos relativos); JS de consola aislado.',
+      '  HTML abre pestaña conectada: autoactualiza al guardar, Actualizar desde disco y F5; mantén DeepSeek abierto.',
       '  JS: máximo 3 segundos, 100 mensajes/20 KB; usa await para trabajo asíncrono.',
       '  Sin DOM, Node, dependencias, red ni OPFS; salida disponible para save/--share.',
       '  git diff: staging vs archivos; git diff --staged: HEAD vs staging.',
@@ -1688,6 +1904,9 @@
       '  El log resume 800 caracteres; git show HEAD:archivo | head -n 20 permite ver un fragmento.',
       '  Redirigir show guarda texto, no exporta bytes exactos (saltos/BOM pueden cambiar).',
       '  Git remoto todavía no está implementado.',
+      '  Guardar cambios en Git: revisa lista y mensaje; confirma add --all + commit local, incluidos borrados.',
+      '  El botón usa los archivos actuales, reemplaza staging anterior y excluye metadatos; no elimina comandos.',
+      '  Ver cambios muestra estado, diff sin staging y diff staged; sin revertir automático.',
       '  git branch [nombre]: lista/crea ramas locales; * indica activa; crear no cambia de rama.',
       '  git checkout rama: confirma cambio; bloquea staging/cambios/archivos ignorados o sin seguimiento.',
       '  Sin --force, borrado de ramas, HEAD separado ni restauración Git de archivos.',
@@ -2190,7 +2409,7 @@
   const PANEL_CSS = `
     :host { all: initial; }
     #panel {
-      position: fixed; top: 75px; right: 20px; width: 440px; box-sizing: border-box;
+      position: fixed; top: 75px; right: 20px; width: 540px; box-sizing: border-box;
       background: #18181b; color: #f4f4f5; border-radius: 10px; border: 1px solid #3f3f46;
       font: 13px system-ui, sans-serif; box-shadow: 0 12px 36px rgba(0,0,0,.6);
       overflow: hidden; max-width: calc(100vw - 16px); z-index: 999999;
@@ -2241,6 +2460,13 @@
     .file-dialog select {
       width: 100%; background: #09090b; color: #fff; border: 1px solid #3f3f46; padding: 4px; border-radius: 4px; margin-bottom: 6px; font-size: 11px;
     }
+    .git-overlay { position:fixed;inset:0;z-index:1000002;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box; }
+    .git-modal { width:min(860px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:#18181b;color:#f4f4f5;border:1px solid #52525b;border-radius:10px;padding:18px;box-sizing:border-box;font:13px system-ui; }
+    .git-modal pre { max-height:35vh;overflow:auto;background:#09090b;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px monospace; }
+    .git-modal input { width:100%;box-sizing:border-box;background:#09090b;color:white;border:1px solid #52525b;border-radius:5px;padding:8px;margin:6px 0; }
+    .git-modal ul { max-height:25vh;overflow:auto;padding-left:20px;overflow-wrap:anywhere; }
+    .git-badge { font-size:11px;overflow-wrap:anywhere; }
+    .git-save { max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
   `;
 
   function buildPanel() {
@@ -2270,6 +2496,109 @@
       placeholder: 'Comandos locales... (Enter ejecuta, Shift+Enter nueva línea)\nEj: !git status · !ls · !write f.txt "hola"'
     });
     const stateEl = h('span', { class: 'badge-local', role: 'status', 'aria-live': 'polite' }, 'Listo · local');
+    let gitState = null, gitReview = null, gitLoading = false, refreshGeneration = 0;
+    const gitBadge = h('span', { class: 'git-badge', role: 'status', 'aria-live': 'polite' }, 'Git: consultando...');
+    const gitNotice = h('p', { role: 'status', 'aria-live': 'polite' });
+    const gitPaths = h('ul', { 'aria-label': 'Archivos incluidos en el commit' });
+    const gitDiffText = h('pre', { 'aria-label': 'Estado y diferencias Git', style: 'display:none' });
+    const gitMessage = h('input', { id: 'dv-git-message', type: 'text', 'aria-label': 'Mensaje del commit' });
+    const closeGit = () => {
+      if (busy || gitLoading) return;
+      gitOverlay.style.display = 'none'; panel.inert = false; gitReview = null; btnGitSave.focus();
+    };
+    const loadGitReview = async () => {
+      if (busy || editorOpen || gitLoading) {
+        uiLog('Cierra el editor o espera antes de revisar Git.', 'err'); return;
+      }
+      gitLoading = true; gitReview = null; updateState();
+      gitOverlay.style.display = 'flex';
+      panel.inert = true;
+      gitNotice.textContent = 'Verificando archivos y staging...';
+      gitPaths.replaceChildren(); gitDiffText.style.display = 'none';
+      setBusy(true);
+      try {
+        const review = await getGitStatus({ capture: true });
+        if (!review.initialized) throw new Error('Git no está inicializado; cierra y pulsa Inicializar Git local');
+        gitReview = review;
+        for (const change of review.changes) gitPaths.append(h('li', {}, `${change.path} — ${change.description}`));
+        gitNotice.textContent = `Rama: ${review.branch}. ${review.changes.length} archivo(s). ` +
+          'Se guardan las versiones actuales y los borrados de esta lista. El staging anterior se reemplaza por esos archivos actuales. ' +
+          'Los archivos ignorados sin seguimiento y metadatos internos se excluyen. No sube nada a un servidor.';
+        if (!gitMessage.value.trim()) gitMessage.value = review.changes.length === 1 ?
+          `${review.changes[0].path}: cambios` : `Guardar ${review.changes.length} archivos`;
+      } catch (e) {
+        gitNotice.textContent = `No se pudo preparar: ${e.message}`;
+        uiLog(`Git: ${e.message}`, 'err');
+      } finally {
+        gitLoading = false; setBusy(false); updateState();
+        if (gitReview) gitMessage.focus(); else btnGitClose.focus();
+      }
+    };
+    const btnGitSave = h('button', { class: 'btn git-save', disabled: true,
+      title: 'Revisar todos los cambios y confirmar un commit Git local; no sube archivos ni elimina comandos',
+      onclick: async () => {
+        if (busy || editorOpen || gitLoading) { uiLog('Espera o cierra el editor antes de versionar.', 'err'); return; }
+        if (gitState && !gitState.initialized) {
+          setBusy(true);
+          try {
+            const result = await execute('git init');
+            if (!result.ok) throw new Error(result.text);
+            uiLog(result.text, 'info');
+          } catch (e) { uiLog(`Git: ${e.message}`, 'err'); return; }
+          finally { setBusy(false); await refresh(); }
+        }
+        gitMessage.value = '';
+        await loadGitReview();
+      }
+    }, 'Guardar cambios en Git');
+    const btnGitDiff = h('button', { class: 'btn btn-secondary', disabled: true, onclick: async () => {
+      await loadGitReview();
+      if (gitReview) await showGitDiff();
+    } }, 'Ver cambios');
+    const confirmGit = h('button', { class: 'btn', disabled: true, onclick: async () => {
+      try {
+        const oid = await saveGitChanges(gitReview, gitMessage.value);
+        gitNotice.textContent = `Commit local verificado: ${oid.slice(0, 7)}.`;
+        gitReview = null; gitOverlay.style.display = 'none'; panel.inert = false; btnGitSave.focus();
+      } catch (e) {
+        gitNotice.textContent = `No se completó el guardado: ${e.message}`;
+        uiLog(`Git: ${e.message}`, 'err');
+        gitReview = null;
+      } finally { updateState(); }
+    } }, 'Confirmar commit local');
+    gitMessage.addEventListener('input', () => updateState());
+    const btnGitRefresh = h('button', { class: 'btn btn-secondary', onclick: loadGitReview }, 'Actualizar lista');
+    const btnGitReviewDiff = h('button', { class: 'btn btn-secondary', onclick: () => showGitDiff() }, 'Ver diferencias');
+    const btnGitClose = h('button', { class: 'btn btn-secondary', onclick: closeGit }, 'Cancelar');
+    async function showGitDiff() {
+      if (busy || gitLoading || !gitReview) return;
+      gitLoading = true; setBusy(true);
+      try {
+        const { git, fs } = await getGit();
+        gitDiffText.textContent = 'Archivos nuevos sin seguimiento: consulta la lista (no aparecen en git diff).\n\n' +
+          'WORKING TREE vs STAGING:\n' + await gitDiff(git, fs, []) +
+          '\n\nSTAGING vs HEAD:\n' + await gitDiff(git, fs, ['--staged']);
+        gitDiffText.style.display = 'block';
+      } catch (e) { gitNotice.textContent = `No se pudo mostrar el diff: ${e.message}`; uiLog(`Git diff: ${e.message}`, 'err'); }
+      finally { gitLoading = false; setBusy(false); }
+    }
+    const gitOverlay = h('div', { class: 'git-overlay' },
+      h('section', { class: 'git-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Guardar cambios en Git local' },
+        h('h2', {}, 'Guardar cambios en Git local'),
+        gitNotice, gitPaths, gitDiffText,
+        h('label', { for: 'dv-git-message' }, 'Mensaje del commit'), gitMessage,
+        h('div', { class: 'row' }, btnGitRefresh, btnGitReviewDiff, confirmGit, btnGitClose)));
+    gitOverlay.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') { e.preventDefault(); closeGit(); }
+      if (e.key === 'Tab') {
+        const controls = [gitMessage, btnGitRefresh, btnGitReviewDiff, confirmGit, btnGitClose].filter(el => !el.disabled);
+        const first = controls[0], last = controls.at(-1);
+        if (e.shiftKey && e.target === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && e.target === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+    for (const type of ['keyup', 'keypress']) gitOverlay.addEventListener(type, (e) => e.stopPropagation());
     const toggleEl = h('button', { class: 'btn btn-secondary', 'aria-label': 'Contraer panel', 'aria-expanded': 'true' }, 'Contraer');
     const expandEl = h('button', { class: 'btn btn-secondary', 'aria-label': 'Ampliar panel', 'aria-pressed': 'false' }, 'Ampliar');
     const headerEl = h('div', { id: 'header' },
@@ -2277,7 +2606,8 @@
         h('span', {}, `💾 DV v${CFG.VERSION} `),
         h('span', { class: 'badge-local' }, 'Panel Soberano')
       ),
-      h('div', { class: 'row' }, stateEl, expandEl, toggleEl)
+      h('div', { class: 'row' }, stateEl, expandEl, toggleEl),
+      h('div', { class: 'row', style: 'width:100%;cursor:default' }, gitBadge, btnGitSave, btnGitDiff)
     );
 
     let histIdx = -1;
@@ -2474,7 +2804,7 @@
 
     for (const t of ['keydown', 'keyup', 'keypress']) panel.addEventListener(t, (e) => e.stopPropagation());
 
-    shadow.append(panel);
+    shadow.append(panel, gitOverlay);
     document.body.appendChild(host);
 
     const panelLog = (msg, cls = '') => {
@@ -2485,6 +2815,7 @@
     };
 
     async function refresh() {
+      const generation = ++refreshGeneration;
       filesEl.replaceChildren();
       try {
         const files = (await listFiles()).filter((file) => !isInternalPath(file.path));
@@ -2500,7 +2831,7 @@
               onclick: () => openCodeEditor(f.path)
             }, 'Editar'),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Ejecutar ${f.path}`, title: 'Abrir HTML estático o ejecutar consola JS aislada, con confirmación',
+              class: 'btn btn-secondary', 'aria-label': `Ejecutar ${f.path}`, title: 'HTML en pestaña con actualización al guardar; JS en consola aislada. Requiere confirmación',
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
               onclick: () => runFromExplorer(f.path)
             }, 'Ejecutar'),
@@ -2519,12 +2850,36 @@
         }
         if (files.length > 50) filesEl.append(h('li', {}, `Mostrando 50 de ${files.length}; Eliminar todos incluye la lista completa.`));
       } catch (e) { panelLog(`❌ ${e.message}`, 'err'); }
+      try {
+        const state = await getGitStatus();
+        if (generation !== refreshGeneration) return;
+        gitState = state;
+        gitBadge.textContent = !state.initialized ? 'Git local: sin inicializar' :
+          `${state.branch || 'HEAD separado'} · ${state.changes.length ? `${state.changes.length} cambios pendientes` : 'Working tree limpio'}`;
+        gitBadge.style.color = state.changes.length ? '#facc15' : '#6ee7b7';
+        btnGitSave.textContent = !state.initialized ? 'Inicializar Git local' :
+          state.changes.length === 0 ? 'Todo guardado en Git' :
+          state.changes.length === 1 ? `Guardar ${state.changes[0].path} en Git` : `Guardar ${state.changes.length} cambios en Git`;
+        updateState();
+      } catch (e) {
+        if (generation !== refreshGeneration) return;
+        gitState = null; gitBadge.textContent = 'Git: error de consulta'; gitBadge.style.color = '#f87171';
+        btnGitSave.textContent = 'Revisar Git';
+        panelLog(`Git: ${e.message}`, 'err'); updateState();
+      }
     }
 
     const updateState = () => {
       stateEl.textContent = busy ? 'Operación en curso' : editorOpen ? 'Editor abierto' : 'Listo · local';
       panel.setAttribute('aria-busy', String(busy));
       for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog]) button.disabled = busy;
+      btnGitSave.disabled = busy || editorOpen || gitLoading || gitState?.initialized && !gitState.changes.length;
+      btnGitDiff.disabled = busy || editorOpen || gitLoading || !gitState?.initialized;
+      confirmGit.disabled = busy || editorOpen || gitLoading || !gitReview?.changes.length || !gitMessage.value.trim();
+      btnGitRefresh.disabled = busy || editorOpen || gitLoading;
+      btnGitReviewDiff.disabled = busy || editorOpen || gitLoading || !gitReview;
+      btnGitClose.disabled = busy || gitLoading;
+      gitMessage.disabled = busy || gitLoading;
     };
     updateState();
     try { if (localStorage.getItem(CFG.WELCOME_KEY) !== 'seen') welcome.style.display = 'block'; }
@@ -2543,6 +2898,12 @@
   (async function boot() {
     try {
       if (document.getElementById(CFG.HOST_ID)) return;
+      window.addEventListener('pagehide', () => {
+        for (const entry of htmlPreviews.values()) {
+          entry.channel.postMessage({ type: 'error', text: 'DeepSeek se cerró o recargó; vuelve a abrir la vista previa desde Ejecutar.' });
+          closeHTMLPreview(entry);
+        }
+      });
       loadSettings();
       if (!(await initOPFS())) throw new Error('OPFS no está disponible; no se puede montar el panel');
       const body = await waitFor(() => document.body, 20000, 200);
