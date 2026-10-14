@@ -6,6 +6,8 @@ Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 Versión actual: **1.5.32**. **114 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/74147934-e857-4583-8f66-c1d307006a9b" />
+
 ## Contenido
 
 - [Qué ofrece](#qué-ofrece)
