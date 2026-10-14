@@ -3,10 +3,8 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.5.32**. **114 pruebas Node** y validaciones aisladas en navegador.
+Versión actual: **1.5.35**. **129 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
-
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/74147934-e857-4583-8f66-c1d307006a9b" />
 
 ## Contenido
 
@@ -29,7 +27,9 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 - Panel independiente del chat: ejecutar comandos locales no envía un mensaje al modelo.
 - Importación múltiple desde la PC y descarga de archivos con sus bytes originales.
 - Botones por archivo: **Editar · Ejecutar · Descargar · Eliminar**.
-- Editor de texto con líneas, búsqueda/reemplazo literal, diff y aprobación.
+- Editor de código con resaltado, minimapa, buscar/reemplazar (regex), vista previa HTML en vivo, diff y aprobación.
+- **Nuevo archivo…** (o `!edit pagina.html`): editor en blanco para pegar código; nunca sobrescribe.
+- Escrituras transaccionales (temporal verificado + journal PREPARED/COMMITTED) con recuperación al iniciar.
 - Propuestas JSON con hash para evitar aplicar cambios a una versión obsoleta.
 - Botón de revisión en bloques de corrección del chat, con diff, aprobación y checkpoint previo.
   Reconoce el formato real de DeepSeek (`.md-code-block` con `<pre>` sin `<code>`;
@@ -44,7 +44,7 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 No instala un motor WASM ni ofrece Python, Node, shell, dependencias, autocomplete
 o validación semántica por lenguaje. El motor de edición verifica candidatos y
-hashes, pero su recuperación transaccional todavía está incompleta.
+hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#límites-y-recuperación)).
 
 ## Instalación
 
@@ -55,7 +55,7 @@ hashes, pero su recuperación transaccional todavía está incompleta.
 3. Crea un script nuevo y pega completo
    [deepseek-disco.user.js](./deepseek-disco.user.js).
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/).
-5. Comprueba que el panel muestra **v1.5.32**.
+5. Comprueba que el panel muestra **v1.5.34**.
 
 No hace falta npm para usarlo. Sí hace falta el gestor de userscripts; si el
 navegador exige permisos adicionales para ejecutarlos, concédelos al gestor.
@@ -117,6 +117,52 @@ incorporados contienen inglés y chino. Las pruebas comprueban cobertura de cada
 mensaje explícito e integridad de marcadores `{0}`, `{1}`, etc., para que las rutas
 y el contenido interpolados nunca se traduzcan ni se interpreten como HTML.
 
+### Crear un archivo nuevo
+
+Pulsa **Nuevo archivo…**, escribe el nombre en el campo que aparece en el panel
+(puede incluir carpeta, ej. `web/index.html`) y pulsa Enter o **Abrir editor**;
+se abre el editor en blanco. No usa `prompt()`, que algunos navegadores bloquean. Pega o escribe el código y pulsa **Crear archivo**
+(o Ctrl+S). El archivo no existe hasta guardarlo; si mientras tanto apareció otro
+con ese nombre, no se sobrescribe. Desde la línea de comandos:
+
+```text
+!edit pagina.html
+```
+
+Si el archivo ya existe, `edit` y **Nuevo archivo…** lo abren en el editor normal.
+Tras guardar, el editor **sigue abierto** para continuar editando (las propuestas
+del chat sí se cierran al aplicarse).
+
+### Editor integrado
+
+Pensado para no necesitar otro editor:
+
+- Resaltado de sintaxis (JS/TS, HTML con <script>/<style>, CSS, JSON, Python,
+  shell, Markdown), números de línea y minimapa clicable y arrastrable.
+- Buscar/reemplazar flotante con mayúsculas (Aa), expresiones regulares (.*) y $1,
+  contador de resultados; ir a línea sin prompt().
+- Cierre automático de paréntesis, comillas y etiquetas HTML; Enter con sangría
+  inteligente; Backspace borra pares vacíos.
+- HTML: **Vista previa** en vivo del borrador (sin scripts ni red) y **Pestaña**,
+  que se refresca al guardar (ideal en pantalla dividida).
+- JSON: **Formatear**. Tamaño de letra A−/A+ (se recuerda), Copiar, Pegar,
+  Descargar el borrador, indicador ● de cambios y aviso al cerrar la página.
+- Barra de estado: Ln/Col, selección, líneas, bytes, lenguaje, LF/CRLF.
+- Todo cambio sigue pasando por diff y aprobación; deshacer (Ctrl+Z) se conserva.
+
+| Atajo | Acción |
+| --- | --- |
+| Ctrl+S / 💾 Guardar | Muestra el diff y pide confirmación antes de guardar (se activa al editar) |
+| Ctrl+F / Ctrl+H / F3 | Buscar / reemplazar / siguiente (barra flotante; ▶/▼ muestra el reemplazo, Esc solo la cierra) |
+| Ctrl+D | Selecciona la palabra o la siguiente coincidencia de la selección |
+| Ctrl+G | Ir a la línea |
+| Ctrl+/ | Comentar o descomentar |
+| Alt+↑/↓ · Shift+Alt+↑/↓ | Mover línea · duplicar |
+| Ctrl+Shift+K | Borrar línea |
+| Tab / Shift+Tab | Sangrar / quitar sangría |
+| Shift+Alt+F | Formatear JSON |
+| Esc | Cierra ayuda, ir a línea o búsqueda; si no, el editor |
+
 ### Importar y explorar
 
 Pulsa **Explorar / Importar archivos…**. Los archivos se guardan en la raíz del
@@ -166,8 +212,14 @@ y su HEAD; fallos durante staging pueden dejar staging parcial, informado sin
 rollback automático. No hay bloqueo entre pestañas.
 
 El estado se actualiza tras las operaciones del panel. Cambios desde otra pestaña
-pueden requerir **Actualizar lista**. No hay botón de Revertir: consultar `git log`
-o `git show` no restaura ni deshace un commit.
+pueden requerir **Actualizar lista**.
+
+**Revertir…** abre la misma lista con un botón **Revertir** junto a cada archivo
+que existe en el último commit (los archivos nuevos no lo tienen; usa Eliminar).
+Equivale a `git restore --source HEAD archivo`: abre el editor con el diff, no
+escribe nada hasta **Aplicar**, crea un checkpoint de tu versión actual y vuelve
+a comprobar el hash antes de guardar. Binarios o archivos borrados piden
+confirmación. No toca el staging ni hace commit; un commit ya hecho no se deshace.
 
 **Todos los comandos siguen disponibles**, para controlar staging por separado:
 
@@ -326,7 +378,9 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!propose propuesta.json` | Prepara un cambio JSON para el editor |
 | `!replace archivo old new [--all] [--hash SHA256] [--dry-run]` | Literal único o todas las coincidencias no solapadas; diff/aprobación obligatorios |
 | `!run archivo.html` / `!run archivo.js` | HTML estático en pestaña conectada o JS de consola aislado |
-| `!journal [-n N]` | Consulta el journal básico, no toda la sesión |
+| `!edit archivo` | Abre el editor; si no existe, empieza en blanco y lo crea al guardar |
+| `!journal [-n N]` | Consulta el journal con el estado de cada escritura (PREPARED/COMMITTED/ABORTED/CONFLICT) |
+| `!recover` | Revisa escrituras interrumpidas y limpia temporales huérfanos |
 
 ### Git
 
@@ -340,17 +394,22 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!git diff [--staged] [ref]` | Staging/HEAD/ref frente a staging o working tree; no dos commits |
 | `!git show [ref]` | Metadatos del commit; no su diff |
 | `!git show ref:archivo` | Texto de archivo histórico sin restaurarlo |
+| `!git restore archivo` | Vuelve a la versión del staging, con diff y checkpoint previo |
+| `!git restore --source ref archivo` | Vuelve a la versión de HEAD, una rama o un SHA completo |
+| `!git restore --staged archivo` | Saca el archivo del staging; no cambia el archivo |
 | `!git branch [nombre]` | Lista o crea rama; crear no cambia de rama |
 | `!git checkout rama` | Cambia a rama local existente con confirmación y estado limpio |
 
-Las referencias admitidas por `show` son HEAD, rama o SHA completo; no SHA
+Las referencias admitidas por `show` y `restore --source` son HEAD, rama o SHA completo; no SHA
 abreviado, `HEAD~N` ni resolución de tags anotados.
 Checkout bloquea editor abierto, modificaciones, staging pendiente y archivos
 sin seguimiento o ignorados. No tiene force, checkout de archivos/commits ni
 rollback automático. Un checkpoint no limpia esos cambios.
 
-`!restore ID` restaura un checkpoint, **no es `git restore`**. Git remoto,
-restauración Git de archivos y exportación de repositorios siguen pendientes.
+`!restore ID` restaura un checkpoint; `!git restore` restaura desde Git. Ambos
+crean un checkpoint de la versión actual antes de sobrescribir. `git restore` no
+borra archivos nuevos, no acepta carpetas ni varios archivos y no combina
+`--staged` con el working tree. Git remoto y exportación de repositorios siguen pendientes.
 
 ### Pipes y redirección
 
@@ -462,13 +521,27 @@ No existe cuota estricta de memoria para el Worker. CSP del sitio puede bloquear
 el entorno; no se degrada a ejecutar en la página principal.
 
 Git protege estados confirmados; checkpoints guardan estados por archivo.
-Journal registra algunas escrituras, pero es básico, no cubre toda la sesión y
-sus fallos aún pueden ocultarse. No hay garantía de reversibilidad total:
 
-- No hay backup universal antes de write/import/rm y otras operaciones.
-- El helper llamado `atomicWrite` no implementa temp+rename ni recuperación
-  persistente ante interrupciones.
-- No hay bloqueo multipestaña; persisten ventanas de carrera.
+Las escrituras del editor, propuestas y `write` son transaccionales:
+
+1. El contenido se escribe en `.dv_tmp/<id>.tmp` y se verifica su SHA-256.
+2. Se registra `PREPARED` en `.dv/journal.jsonl` (si no se puede registrar, no se escribe).
+3. Se comprueba de nuevo que el destino no cambió, se escribe y se verifica.
+4. Se registra `COMMITTED` y se borra el temporal.
+
+OPFS no tiene `rename` atómico de archivos, así que el temporal verificado hace de
+copia de recuperación. Al abrir DeepSeek (o con `!recover`), cada `PREPARED` sin
+cierre de más de 2 minutos se resuelve: si el destino ya tiene la versión nueva se
+marca completada; si conserva la anterior se revierte; si cambió por otra vía **no
+se sobrescribe** y la versión aprobada se guarda junto a él como
+`archivo.recuperado-<id>`. Los temporales huérfanos se eliminan. Las transacciones
+recientes de otra pestaña se respetan, y donde existe Web Locks las escrituras de
+varias pestañas se serializan.
+
+No hay garantía de reversibilidad total:
+
+- No hay backup universal antes de import/rm y otras operaciones.
+- Sin Web Locks persisten ventanas de carrera entre pestañas.
 - Una limpieza interrumpida puede dejar un checkpoint incompleto o binario huérfano.
 - `Working tree limpio` no certifica los archivos ignorados ni todo el disco.
 
@@ -490,7 +563,7 @@ npm test
 npm run check
 ```
 
-114 pruebas cubren OPFS simulado y Git real, hashes, edición, sharing, checkpoints,
+129 pruebas cubren OPFS simulado y Git real, hashes, edición, creación de archivos, escrituras transaccionales y recuperación, sharing, checkpoints,
 descarga, checkout protegido, guardado Git con botones y pestañas HTML conectadas. Hay comprobaciones adicionales en OPFS nativo
 en orígenes localhost aislados. Eso no certifica todos los flujos en DeepSeek;
 las pruebas reales reportadas por el usuario se distinguen en el roadmap.
@@ -502,6 +575,9 @@ Las pruebas de i18n cubren catálogos completos, preferencias, idiomas del naveg
 ayuda, errores, compartir, cambio de interfaz y preservación de datos.
 La selección de idioma, su persistencia y la ayuda en chino simplificado se
 comprobaron también en el navegador, usando un origen local aislado.
+En v1.5.34 se comprobó en chat.deepseek.com real (OPFS nativo): Nuevo archivo…,
+Tab, Ctrl+S, journal PREPARED/COMMITTED sin temporales, `!edit`, `!recover`, Esc
+y la recuperación al iniciar de una escritura interrumpida con conflicto.
 No existe aún `!test` para ejecutar frameworks sobre archivos del disco virtual.
 
 Para reportar un fallo, incluye versión, navegador, comando/pasos, resultado
@@ -523,8 +599,8 @@ ni como una declaración de patrocinio o afiliación oficial con sus proveedores
 
 ## Roadmap y licencia
 
-Consulta [roadmap.md](./roadmap.md). Las fases son parciales: faltan recuperación,
-validadores, formateadores/linters, Git restore, diff entre commits, exportación
+Consulta [roadmap.md](./roadmap.md). Las fases son parciales: faltan
+validadores, formateadores/linters, diff entre commits, exportación
 histórica exacta, grafo, experimentos/recetas, Git remoto y motores adicionales.
 
 La licencia del proyecto **no está formalizada en un archivo LICENSE**.
