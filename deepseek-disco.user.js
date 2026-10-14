@@ -1,8 +1,12 @@
 // ==UserScript==
 // @name         DeepSeek Disco Virtual (Dual-Channel OPFS + Git)
+// @name:en      DeepSeek Virtual Disk (Dual-Channel OPFS + Git)
+// @name:zh-CN   DeepSeek 虚拟磁盘（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.5.29
+// @version      1.5.32
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
+// @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
+// @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
 // @match        https://chat.deepseek.com/*
 // @grant        none
 // @run-at       document-idle
@@ -17,7 +21,8 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.5.29',
+    VERSION: '1.5.32',
+    ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 256 * 1024,
     RUN_TIMEOUT_MS: 3000,
     MAX_SHARE_FILE_BYTES: 64 * 1024,
@@ -35,6 +40,2234 @@
     WELCOME_KEY: 'dv.welcome.v1',
     HOST_ID: 'dv-host',
   };
+
+  const I18N = {
+    "\n... (truncado, {0} caracteres más)": [
+      "\n... ({0} more characters truncated)",
+      "\n...（已截断 {0} 个字符）"
+    ],
+    "valor no válido para {0}: {1}": [
+      "invalid value for {0}: {1}",
+      "{0} 的值无效：{1}"
+    ],
+    "regex no válida: {0}": [
+      "invalid regex: {0}",
+      "正则表达式无效：{0}"
+    ],
+    "OPFS listo": [
+      "OPFS ready",
+      "OPFS 已就绪"
+    ],
+    "ruta vacía": [
+      "empty path",
+      "路径为空"
+    ],
+    "ruta no permitida: {0}": [
+      "path not allowed: {0}",
+      "不允许的路径：{0}"
+    ],
+    "nombre no válido: {0}": [
+      "invalid name: {0}",
+      "名称无效：{0}"
+    ],
+    "nombre demasiado largo: {0}…": [
+      "name too long: {0}…",
+      "名称过长：{0}…"
+    ],
+    "no existe: {0}": [
+      "does not exist: {0}",
+      "不存在：{0}"
+    ],
+    "es una carpeta: {0}": [
+      "is a folder: {0}",
+      "是一个文件夹：{0}"
+    ],
+    "ruta no válida": [
+      "invalid path",
+      "路径无效"
+    ],
+    "no se puede borrar la raíz": [
+      "cannot delete the root",
+      "无法删除根目录"
+    ],
+    "uso: {0} <origen> <destino> (solo archivos)": [
+      "usage: {0} <source> <destination> (files only)",
+      "用法：{0} <源路径> <目标路径>（仅限文件）"
+    ],
+    "raíz y metadatos internos no permitidos": [
+      "root and internal metadata are not allowed",
+      "不允许使用根目录和内部元数据"
+    ],
+    "origen y destino son el mismo archivo": [
+      "source and destination are the same file",
+      "源文件和目标文件相同"
+    ],
+    "archivo demasiado grande para verificar: máximo {0}": [
+      "file too large to verify: maximum {0}",
+      "文件过大，无法验证：最大值为 {0}"
+    ],
+    "destino es una carpeta; indica la ruta completa del archivo": [
+      "destination is a folder; specify the full file path",
+      "目标是文件夹；请指定完整文件路径"
+    ],
+    "Mover \"{0}\" a \"{1}\" y borrar el origen": [
+      "Move \"{0}\" to \"{1}\" and delete the source",
+      "将“{0}”移动到“{1}”并删除源文件"
+    ],
+    "Reemplazar \"{0}\" con \"{1}\"": [
+      "Replace \"{0}\" with \"{1}\"",
+      "将“{0}”替换为“{1}”"
+    ],
+    "¿{0}?{1} No hay deshacer automático.": [
+      "{0}?{1} There is no automatic undo.",
+      "要{0}吗？{1} 不会自动撤销。"
+    ],
+    " El destino existente será reemplazado.": [
+      " The existing destination will be replaced.",
+      " 现有目标文件将被替换。"
+    ],
+    "{0} cancelado; no se ha modificado nada": [
+      "{0} canceled; nothing was changed",
+      "已取消{0}；未做任何更改"
+    ],
+    "el origen cambió durante la copia; no se ha borrado y el destino contiene la versión copiada": [
+      "the source changed during copying; it was not deleted, and the destination contains the copied version",
+      "复制期间源文件发生变化；未删除源文件，目标文件包含已复制的版本"
+    ],
+    "copia verificada en \"{0}\", pero no se pudo borrar \"{1}\": {2}": [
+      "copy verified at \"{0}\", but could not delete \"{1}\": {2}",
+      "已验证“{0}”中的副本，但无法删除“{1}”：{2}"
+    ],
+    "copia verificada, pero el origen sigue existiendo: {0}": [
+      "copy verified, but the source still exists: {0}",
+      "副本已验证，但源文件仍然存在：{0}"
+    ],
+    "copia fallida: {0}; no se pudo retirar el destino incompleto \"{1}\": {2}": [
+      "copy failed: {0}; could not remove the incomplete destination \"{1}\": {2}",
+      "复制失败：{0}；无法移除不完整的目标文件“{1}”：{2}"
+    ],
+    "verificación de copia fallida: {0}; el origen se conserva": [
+      "copy verification failed: {0}; the source is preserved",
+      "副本验证失败：{0}；源文件已保留"
+    ],
+    "⏳ Hay una operación en curso; vuelve a seleccionar los archivos al terminar.": [
+      "⏳ An operation is in progress; reselect the files when it finishes.",
+      "⏳ 操作正在进行；完成后请重新选择文件。"
+    ],
+    "nombre de archivo no permitido: {0}": [
+      "file name not allowed: {0}",
+      "不允许的文件名：{0}"
+    ],
+    "{0}: supera el máximo verificable de {1}": [
+      "{0}: exceeds the verifiable maximum of {1}",
+      "{0}：超过可验证的最大值 {1}"
+    ],
+    "{0}: ya existe una carpeta con ese nombre": [
+      "{0}: a folder with that name already exists",
+      "{0}：已存在同名文件夹"
+    ],
+    "¿Reemplazar \"{0}\" en el disco virtual ({1})? No hay deshacer automático.": [
+      "Replace \"{0}\" on the virtual disk ({1})? There is no automatic undo.",
+      "要替换虚拟磁盘（{1}）上的“{0}”吗？不会自动撤销。"
+    ],
+    "Omitido sin cambios: {0}": [
+      "Skipped; unchanged: {0}",
+      "已跳过，未更改：{0}"
+    ],
+    "Importado localmente: {0} ({1}, SHA256: {2}...)": [
+      "Imported locally: {0} ({1}, SHA256: {2}...)",
+      "已在本地导入：{0}（{1}，SHA256：{2}...）"
+    ],
+    "Importación terminada: {0} archivo(s), {1} omitido(s). Nada enviado a DeepSeek.": [
+      "Import complete: {0} file(s), {1} skipped. Nothing was sent to DeepSeek.",
+      "导入完成：{0} 个文件，跳过 {1} 个。未向 DeepSeek 发送任何内容。"
+    ],
+    "❌ Importación detenida: {0}. {1} archivo(s) importados y {2} omitidos; los anteriores se conservan.": [
+      "❌ Import stopped: {0}. {1} file(s) imported and {2} skipped; earlier files are preserved.",
+      "❌ 导入已停止：{0}。已导入 {1} 个文件，跳过 {2} 个；此前导入的文件已保留。"
+    ],
+    "no se puede añadir (>>) a un .gz": [
+      "cannot append (>>) to a .gz file",
+      "无法向 .gz 文件追加内容（>>）"
+    ],
+    "Auditoría no guardada: {0}": [
+      "Audit log not saved: {0}",
+      "审计日志未保存：{0}"
+    ],
+    "Integridad de temporal comprometida.": [
+      "Temporary file integrity compromised.",
+      "临时文件完整性已受损。"
+    ],
+    "archivo cambió durante la preparación; no se sobrescribió": [
+      "file changed during preparation; it was not overwritten",
+      "准备期间文件发生变化；未覆盖文件"
+    ],
+    "Verificación post-escritura fallida.": [
+      "Post-write verification failed.",
+      "写入后验证失败。"
+    ],
+    "no existe: ": [
+      "does not exist: ",
+      "不存在： "
+    ],
+    "no es dir": [
+      "is not a directory",
+      "不是目录"
+    ],
+    "no symlinks": [
+      "no symbolic links",
+      "不允许符号链接"
+    ],
+    "Cargando isomorphic-git...": [
+      "Loading isomorphic-git...",
+      "正在加载 isomorphic-git..."
+    ],
+    "sin fecha: timestamp ausente o no válido": [
+      "no date: timestamp missing or invalid",
+      "无日期：时间戳缺失或无效"
+    ],
+    "sin fecha: timestamp fuera de rango": [
+      "no date: timestamp out of range",
+      "无日期：时间戳超出范围"
+    ],
+    ".git no es una carpeta; revisa el repositorio": [
+      ".git is not a folder; check the repository",
+      ".git 不是文件夹；请检查仓库"
+    ],
+    "Git contiene metadatos internos versionados; revisa el repositorio antes de guardar": [
+      "Git contains versioned internal metadata; check the repository before saving",
+      "Git 中包含已纳入版本控制的内部元数据；保存前请检查仓库"
+    ],
+    "guardar con botón requiere una rama local activa; revisa git branch": [
+      "saving with the button requires an active local branch; check git branch",
+      "使用按钮保存需要当前存在活动的本地分支；请检查 git branch"
+    ],
+    "Git: archivo demasiado grande para verificar: {0}": [
+      "Git: file too large to verify: {0}",
+      "Git：文件过大，无法验证：{0}"
+    ],
+    "cierra el editor o espera a que termine la operación antes de versionar": [
+      "close the editor or wait for the operation to finish before committing",
+      "提交前请关闭编辑器或等待操作完成"
+    ],
+    "escribe un mensaje de commit": [
+      "enter a commit message",
+      "请输入提交说明"
+    ],
+    "actualiza la revisión de cambios antes de guardar": [
+      "refresh the change review before saving",
+      "保存前请刷新更改审查"
+    ],
+    "repositorio cambió desde la revisión; actualiza la lista antes de guardar": [
+      "repository changed since review; refresh the list before saving",
+      "审查后仓库发生变化；保存前请刷新列表"
+    ],
+    "archivos o rama cambiaron durante staging; no se hizo commit": [
+      "files or branch changed during staging; no commit was created",
+      "暂存期间文件或分支发生变化；未创建提交"
+    ],
+    "la versión actual coincide con HEAD; staging actualizado, no hay cambios para un commit": [
+      "current version matches HEAD; staging updated, no changes to commit",
+      "当前版本与 HEAD 一致；暂存区已更新，没有可提交的更改"
+    ],
+    "commit {0} creado, pero HEAD cambió; revisa git log y git status": [
+      "commit {0} created, but HEAD changed; check git log and git status",
+      "已创建提交 {0}，但 HEAD 已变化；请检查 git log 和 git status"
+    ],
+    "commit {0} creado con historial inesperado; revisa git log": [
+      "commit {0} created with unexpected history; check git log",
+      "已创建提交 {0}，但提交历史异常；请检查 git log"
+    ],
+    "commit {0} creado, pero su contenido no coincide con el staging revisado; revisa git show": [
+      "commit {0} created, but its contents do not match the reviewed staging area; check git show",
+      "已创建提交 {0}，但其内容与已审查的暂存区不一致；请检查 git show"
+    ],
+    "[{0} {1}] {2}. Git local; nada enviado al chat ni a un servidor.": [
+      "[{0} {1}] {2}. Local Git; nothing was sent to the chat or a server.",
+      "[{0} {1}] {2}。本地 Git；未向聊天或服务器发送任何内容。"
+    ],
+    "Hay cambios pendientes posteriores al commit; revisa el estado Git.": [
+      "There are pending changes after the commit; check Git status.",
+      "提交后仍有待处理的更改；请检查 Git 状态。"
+    ],
+    ". El staging puede haber cambiado; revisa git status. Sin rollback automático.": [
+      ". The staging area may have changed; check git status. No automatic rollback.",
+      "。暂存区可能已发生变化；请检查 git status。不会自动回滚。"
+    ],
+    "checkout: rama local no existe; créala con git branch <nombre>": [
+      "checkout: local branch does not exist; create it with git branch <name>",
+      "checkout：本地分支不存在；请使用 git branch <名称> 创建"
+    ],
+    "checkout: rama contiene metadatos protegidos: {0}": [
+      "checkout: branch contains protected metadata: {0}",
+      "checkout：分支包含受保护的元数据：{0}"
+    ],
+    "checkout: ruta no válida en rama: {0}": [
+      "checkout: invalid path in branch: {0}",
+      "checkout：分支中的路径无效：{0}"
+    ],
+    "checkout: tipo no soportado en rama: {0}": [
+      "checkout: unsupported type in branch: {0}",
+      "checkout：分支中的类型不受支持：{0}"
+    ],
+    "checkout bloqueado: cambios pendientes en {0} archivo(s). Revisa git status y confirma o conserva tus archivos.": [
+      "checkout blocked: pending changes in {0} file(s). Check git status and commit or preserve your files.",
+      "checkout 已阻止：{0} 个文件有未提交的更改。请检查 git status 并提交或保留文件。"
+    ],
+    "checkout bloqueado: staging contiene metadatos protegidos; revisa el repositorio": [
+      "checkout blocked: staging area contains protected metadata; check the repository",
+      "checkout 已阻止：暂存区包含受保护的元数据；请检查仓库"
+    ],
+    "checkout bloqueado: commit actual contiene metadatos protegidos": [
+      "checkout blocked: current commit contains protected metadata",
+      "checkout 已阻止：当前提交包含受保护的元数据"
+    ],
+    "checkout bloqueado: {0} archivo(s) sin seguimiento o ignorados. No se descartan automáticamente.": [
+      "checkout blocked: {0} untracked or ignored file(s). They are not discarded automatically.",
+      "checkout 已阻止：有 {0} 个未跟踪或已忽略的文件。不会自动丢弃这些文件。"
+    ],
+    "checkout: archivo demasiado grande para verificar": [
+      "checkout: file too large to verify",
+      "checkout：文件过大，无法验证"
+    ],
+    "Ya estás en la rama {0}; working tree limpio.": [
+      "You are already on branch {0}; working tree is clean.",
+      "当前已在分支 {0} 上；工作区干净。"
+    ],
+    "¿Cambiar a la rama local \"{0}\" ({1})?\nWorking tree y staging limpios. Se reemplazarán archivos por la versión confirmada de esa rama.\nSin --force, sin descarte automático. Checkpoints conservados.": [
+      "Switch to local branch \"{0}\" ({1})?\nWorking tree and staging area are clean. Files will be replaced with that branch's committed version.\nNo --force and no automatic discarding. Checkpoints are preserved.",
+      "要切换到本地分支“{0}”（{1}）吗？\n工作区和暂存区均干净。文件将替换为该分支中已提交的版本。\n不使用 --force，不会自动丢弃内容。检查点会保留。"
+    ],
+    "checkout cancelado; rama y archivos intactos": [
+      "checkout canceled; branch and files are unchanged",
+      "checkout 已取消；分支和文件均未更改"
+    ],
+    "checkout: repositorio cambió durante confirmación; no se cambió de rama": [
+      "checkout: repository changed during confirmation; branch was not switched",
+      "checkout：确认期间仓库发生变化；未切换分支"
+    ],
+    "estado final no coincide con la rama o no está limpio": [
+      "final state does not match the branch or is not clean",
+      "最终状态与分支不匹配或工作区不干净"
+    ],
+    "checkout no completado/verificado: {0}. Revisa git status y git branch; no hay rollback automático.": [
+      "checkout not completed/verified: {0}. Check git status and git branch; there is no automatic rollback.",
+      "checkout 未完成/验证：{0}。请检查 git status 和 git branch；不会自动回滚。"
+    ],
+    "Rama activa: {0} ({1}). Working tree y staging verificados limpios.": [
+      "Active branch: {0} ({1}). Working tree and staging area verified clean.",
+      "活动分支：{0}（{1}）。工作区和暂存区均已验证为干净。"
+    ],
+    "uso: git show [ref|ref:archivo]": [
+      "usage: git show [ref|ref:file]",
+      "用法：git show [ref|ref:文件]"
+    ],
+    "referencia Git no válida; usa HEAD, nombre de referencia o SHA completo": [
+      "invalid Git reference; use HEAD, a reference name, or a full SHA",
+      "Git 引用无效；请使用 HEAD、引用名称或完整 SHA"
+    ],
+    "archivo histórico no permitido": [
+      "historical file not allowed",
+      "不允许访问历史文件"
+    ],
+    "git show: máximo 256 KB por archivo histórico": [
+      "git show: maximum 256 KB per historical file",
+      "git show：每个历史文件最大 256 KB"
+    ],
+    "git show requiere texto UTF-8 sin NUL; exportación binaria pendiente": [
+      "git show requires UTF-8 text without NUL; binary export is not supported",
+      "git show 需要不含 NUL 的 UTF-8 文本；暂不支持导出二进制文件"
+    ],
+    "git show requiere texto UTF-8 válido": [
+      "git show requires valid UTF-8 text",
+      "git show 需要有效的 UTF-8 文本"
+    ],
+    "uso: git diff [--staged] [ref]": [
+      "usage: git diff [--staged] [ref]",
+      "用法：git diff [--staged] [ref]"
+    ],
+    "archivo demasiado grande para diff: {0}": [
+      "file too large to diff: {0}",
+      "文件过大，无法生成 diff：{0}"
+    ],
+    "diff demasiado grande para procesar en memoria": [
+      "diff too large to process in memory",
+      "diff 过大，无法在内存中处理"
+    ],
+    "diff excedió el tiempo límite: {0}": [
+      "diff timed out: {0}",
+      "diff 超时：{0}"
+    ],
+    "Sin diferencias. Los archivos sin seguimiento se muestran en git status.": [
+      "No differences. Untracked files are shown in git status.",
+      "没有差异。未跟踪的文件会显示在 git status 中。"
+    ],
+    "falta fichero o entrada por pipe": [
+      "missing file or piped input",
+      "缺少文件或管道输入"
+    ],
+    "comillas sin cerrar": [
+      "unclosed quotation marks",
+      "引号未闭合"
+    ],
+    "⏳ Hay una operación en curso; reintenta la descarga al terminar.": [
+      "⏳ An operation is in progress; retry the download when it finishes.",
+      "⏳ 操作正在进行；完成后请重试下载。"
+    ],
+    "archivo a descargar no permitido": [
+      "file not allowed for download",
+      "不允许下载此文件"
+    ],
+    "Descarga solicitada: {0} ({1}). Comprueba las descargas del navegador; nada enviado al chat.": [
+      "Download requested: {0} ({1}). Check your browser downloads; nothing was sent to the chat.",
+      "已请求下载：{0}（{1}）。请检查浏览器下载内容；未向聊天发送任何内容。"
+    ],
+    "❌ Descarga: {0}": [
+      "❌ Download: {0}",
+      "❌ 下载：{0}"
+    ],
+    "--share repetido": [
+      "--share repeated",
+      "--share 重复"
+    ],
+    "--share-file repetido": [
+      "--share-file repeated",
+      "--share-file 重复"
+    ],
+    "--share-file requiere una ruta: --share-file \"archivo.txt\"": [
+      "--share-file requires a path: --share-file \"file.txt\"",
+      "--share-file 需要路径：--share-file \"file.txt\""
+    ],
+    "archivo a compartir no permitido": [
+      "file not allowed for sharing",
+      "不允许分享此文件"
+    ],
+    "pipe sin comando": [
+      "pipe without a command",
+      "管道符前后缺少命令"
+    ],
+    "la redirección solo puede ir en el último comando": [
+      "redirection can only be used in the last command",
+      "重定向只能用于最后一个命令"
+    ],
+    "falta fichero tras {0}": [
+      "missing file after {0}",
+      "{0} 后缺少文件"
+    ],
+    "solo una redirección por comando": [
+      "only one redirection per command",
+      "每个命令只能有一个重定向"
+    ],
+    "comando vacío": [
+      "empty command",
+      "命令为空"
+    ],
+    "opción desconocida: {0}": [
+      "unknown option: {0}",
+      "未知选项：{0}"
+    ],
+    "falta valor para {0}": [
+      "missing value for {0}",
+      "{0} 缺少值"
+    ],
+    "no se editan metadatos internos": [
+      "internal metadata cannot be edited",
+      "无法编辑内部元数据"
+    ],
+    "editor: máximo 256 KB": [
+      "editor: maximum 256 KB",
+      "编辑器：最大 256 KB"
+    ],
+    "el editor requiere texto, no binarios": [
+      "editor requires text, not binary data",
+      "编辑器需要文本，不能处理二进制数据"
+    ],
+    "el editor requiere UTF-8 válido": [
+      "editor requires valid UTF-8",
+      "编辑器需要有效的 UTF-8"
+    ],
+    "escribe un texto para buscar": [
+      "enter text to search for",
+      "请输入要搜索的文本"
+    ],
+    "no se encontró el texto exacto": [
+      "exact text not found",
+      "未找到完全匹配的文本"
+    ],
+    "checkpoint: raíz y metadatos internos no permitidos": [
+      "checkpoint: root and internal metadata are not allowed",
+      "checkpoint：不允许使用根目录和内部元数据"
+    ],
+    "checkpoint/restore: máximo 256 KB por archivo": [
+      "checkpoint/restore: maximum 256 KB per file",
+      "checkpoint/restore：每个文件最大 256 KB"
+    ],
+    "checkpoint: ID ya existe; no se reemplazó la copia": [
+      "checkpoint: ID already exists; the copy was not replaced",
+      "checkpoint：ID 已存在；未替换副本"
+    ],
+    "checkpoint: copia no verificada; no se publicó el checkpoint": [
+      "checkpoint: copy not verified; checkpoint was not published",
+      "checkpoint：副本未经验证；未发布检查点"
+    ],
+    "ID de checkpoint no válido": [
+      "invalid checkpoint ID",
+      "检查点 ID 无效"
+    ],
+    "checkpoint: metadatos demasiado grandes": [
+      "checkpoint: metadata too large",
+      "checkpoint：元数据过大"
+    ],
+    "checkpoint: metadatos no válidos": [
+      "checkpoint: invalid metadata",
+      "checkpoint：元数据无效"
+    ],
+    "checkpoint: tamaño de copia incorrecto": [
+      "checkpoint: incorrect copy size",
+      "checkpoint：副本大小不正确"
+    ],
+    "checkpoint: hash de copia incorrecto": [
+      "checkpoint: incorrect copy hash",
+      "checkpoint：副本哈希不正确"
+    ],
+    "checkpoint: almacenamiento no es una carpeta": [
+      "checkpoint: storage is not a folder",
+      "checkpoint：存储位置不是文件夹"
+    ],
+    "checkpoint: contenido binario; diff/content requieren texto UTF-8 sin NUL": [
+      "checkpoint: binary content; diff/content require UTF-8 text without NUL",
+      "checkpoint：内容为二进制；diff/content 需要不含 NUL 的 UTF-8 文本"
+    ],
+    "checkpoint: contenido no es UTF-8 válido": [
+      "checkpoint: content is not valid UTF-8",
+      "checkpoint：内容不是有效的 UTF-8"
+    ],
+    "No hay checkpoints eliminables; se conserva la copia más reciente de cada archivo.": [
+      "No checkpoints can be deleted; the most recent copy of each file is preserved.",
+      "没有可删除的检查点；每个文件的最新副本都会保留。"
+    ],
+    "¿Borrar definitivamente {0} checkpoint(s)?\n{1}\nNo hay deshacer. Se conserva la copia más reciente de cada archivo. Archivos actuales y Git no se modifican.": [
+      "Permanently delete {0} checkpoint(s)?\n{1}\nThis cannot be undone. The most recent copy of each file will be preserved. Current files and Git will not be changed.",
+      "要永久删除 {0} 个检查点吗？\n{1}\n此操作无法撤销。每个文件的最新副本都会保留。当前文件和 Git 不会更改。"
+    ],
+    "borrado de checkpoints cancelado; copias intactas": [
+      "checkpoint deletion canceled; copies are intact",
+      "已取消删除检查点；副本保持完整"
+    ],
+    "checkpoints cambiaron durante confirmación; no se borró nada": [
+      "checkpoints changed during confirmation; nothing was deleted",
+      "确认期间检查点发生变化；未删除任何内容"
+    ],
+    "copia sigue existiendo: {0}": [
+      "copy still exists: {0}",
+      "副本仍然存在：{0}"
+    ],
+    "limpieza detenida: {0} checkpoint(s) eliminados; {1}. No se revierten borrados; el ID en curso puede quedar incompleto.": [
+      "cleanup stopped: {0} checkpoint(s) deleted; {1}. Deletions are not rolled back; the current ID may be incomplete.",
+      "清理已停止：已删除 {0} 个检查点；{1}。不会回滚已删除内容；当前 ID 可能不完整。"
+    ],
+    "Eliminados y verificados: {0} checkpoint(s). Últimas copias por archivo conservadas.": [
+      "Deleted and verified: {0} checkpoint(s). The latest copies for each file were preserved.",
+      "已删除并验证：{0} 个检查点。每个文件的最新副本均已保留。"
+    ],
+    "checkpoint <archivo> [etiqueta] | --list [--file ruta] [--tag texto] | show ID [--content] | diff ID1 ID2 | delete ID | prune <--keep N|--older-than Nd>": [
+      "checkpoint <file> [label] | --list [--file path] [--tag text] | show ID [--content] | diff ID1 ID2 | delete ID | prune <--keep N|--older-than Nd>",
+      "checkpoint <文件> [标签] | --list [--file 路径] [--tag 文本] | show ID [--content] | diff ID1 ID2 | delete ID | prune <--keep N|--older-than Nd>"
+    ],
+    "Copias locales verificadas; limpieza confirmada protege últimas versiones": [
+      "Verified local copies; confirmed cleanup protects the latest versions",
+      "本地副本已验证；确认清理会保护最新版本"
+    ],
+    "opciones incompatibles para checkpoint": [
+      "incompatible checkpoint options",
+      "checkpoint 选项不兼容"
+    ],
+    "uso: checkpoint --list [--file ruta] [--tag texto]": [
+      "usage: checkpoint --list [--file path] [--tag text]",
+      "用法：checkpoint --list [--file 路径] [--tag 文本]"
+    ],
+    "filtro de archivo no permitido": [
+      "file filter not allowed",
+      "不允许使用此文件筛选条件"
+    ],
+    "No hay checkpoints para esos filtros.": [
+      "No checkpoints match those filters.",
+      "没有符合这些筛选条件的检查点。"
+    ],
+    "uso: checkpoint show ID [--content]": [
+      "usage: checkpoint show ID [--content]",
+      "用法：checkpoint show ID [--content]"
+    ],
+    "uso: checkpoint diff ID1 ID2": [
+      "usage: checkpoint diff ID1 ID2",
+      "用法：checkpoint diff ID1 ID2"
+    ],
+    "Sin diferencias de contenido.": [
+      "No content differences.",
+      "内容没有差异。"
+    ],
+    "checkpoint diff excedió el tiempo límite": [
+      "checkpoint diff timed out",
+      "checkpoint diff 超时"
+    ],
+    "uso: checkpoint delete ID | checkpoint prune <--keep N|--older-than Nd>": [
+      "usage: checkpoint delete ID | checkpoint prune <--keep N|--older-than Nd>",
+      "用法：checkpoint delete ID | checkpoint prune <--keep N|--older-than Nd>"
+    ],
+    "checkpoint no existe en inventario": [
+      "checkpoint does not exist in inventory",
+      "清单中不存在此检查点"
+    ],
+    "no se borra el checkpoint más reciente de ese archivo (también se protegen empates de fecha)": [
+      "the most recent checkpoint for that file is not deleted (ties are also protected)",
+      "不会删除该文件的最新检查点（日期相同的检查点也会受到保护）"
+    ],
+    "--keep requiere entero positivo": [
+      "--keep requires a positive integer",
+      "--keep 需要正整数"
+    ],
+    "--older-than requiere días enteros positivos, por ejemplo 7d": [
+      "--older-than requires a positive whole number of days, for example 7d",
+      "--older-than 需要正整数天数，例如 7d"
+    ],
+    "uso: checkpoint <archivo> [etiqueta hasta 200 caracteres]": [
+      "usage: checkpoint <file> [label up to 200 characters]",
+      "用法：checkpoint <文件> [标签，最多 200 个字符]"
+    ],
+    "Restaura ruta original con aprobación y copia previa si existe": [
+      "Restores the original path with approval and a prior copy if one exists",
+      "经批准后恢复到原路径；如果文件存在，会先创建副本"
+    ],
+    "uso: restore <ID-checkpoint>": [
+      "usage: restore <checkpoint-ID>",
+      "用法：restore <检查点 ID>"
+    ],
+    "cierra el editor actual antes de restaurar": [
+      "close the current editor before restoring",
+      "恢复前请关闭当前编辑器"
+    ],
+    "restore: destino es una carpeta": [
+      "restore: destination is a folder",
+      "restore：目标是文件夹"
+    ],
+    "Sin cambios: el archivo ya coincide con el checkpoint.": [
+      "No changes: the file already matches the checkpoint.",
+      "没有更改：文件已与检查点一致。"
+    ],
+    "Restauración preparada: {0}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.": [
+      "Restore prepared: {0}. Review the diff and confirm Apply; a checkpoint will be created before saving.",
+      "恢复已准备：{0}。请检查 diff 并确认“应用”；保存前会创建检查点。"
+    ],
+    "¿Restaurar \"{0}\" desde checkpoint {1} ({2} B)?\n{3}\nSHA256: {4}": [
+      "Restore \"{0}\" from checkpoint {1} ({2} B)?\n{3}\nSHA256: {4}",
+      "要从检查点 {1}（{2} B）恢复“{0}”吗？\n{3}\nSHA256：{4}"
+    ],
+    "Binario/no UTF-8: sin diff de texto. Se guardará checkpoint de la versión actual.": [
+      "Binary/non-UTF-8: no text diff. A checkpoint of the current version will be saved.",
+      "二进制/非 UTF-8：无法生成文本 diff。将保存当前版本的检查点。"
+    ],
+    "Archivo ausente: se creará con los bytes guardados.": [
+      "File is missing: it will be created from the saved bytes.",
+      "文件不存在：将根据已保存的字节创建文件。"
+    ],
+    "restauración cancelada; archivo intacto": [
+      "restore canceled; file is unchanged",
+      "已取消恢复；文件未更改"
+    ],
+    "restore: destino cambió; no se sobrescribió": [
+      "restore: destination changed; it was not overwritten",
+      "restore：目标发生变化；未覆盖"
+    ],
+    "Antes de restore {0}": [
+      "Before restore {0}",
+      "恢复 {0} 之前"
+    ],
+    "Checkpoint previo: {0}": [
+      "Previous checkpoint: {0}",
+      "之前的检查点：{0}"
+    ],
+    "restore: archivo cambió; copia previa conservada": [
+      "restore: file changed; previous copy preserved",
+      "restore：文件发生变化；之前的副本已保留"
+    ],
+    "restore: verificación fallida; checkpoint original {0}{1} conservados": [
+      "restore: verification failed; original checkpoint {0}{1} preserved",
+      "restore：验证失败；原始检查点 {0}{1} 已保留"
+    ],
+    " y previo {0}": [
+      " and previous {0}",
+      " 和之前的 {0}"
+    ],
+    "Restaurado y verificado: {0}\nSHA256: {1}{2}\nNo se hizo staging ni commit.": [
+      "Restored and verified: {0}\nSHA256: {1}{2}\nNo staging or commit was performed.",
+      "已恢复并验证：{0}\nSHA256：{1}{2}\n未执行暂存或提交。"
+    ],
+    "\nCheckpoint previo: {0}": [
+      "\nPrevious checkpoint: {0}",
+      "\n之前的检查点：{0}"
+    ],
+    "candidato requiere texto sin NUL": [
+      "candidate must be text without NUL",
+      "候选内容必须是不含 NUL 的文本"
+    ],
+    "candidato supera 256 KB": [
+      "candidate exceeds 256 KB",
+      "候选内容超过 256 KB"
+    ],
+    "no hay cambios para guardar; propuesta no produce cambios": [
+      "no changes to save; proposal produces no changes",
+      "没有要保存的更改；提案不会产生任何更改"
+    ],
+    "el archivo cambió desde que abriste el editor; no se sobrescribió. Conserva tu borrador y vuelve a abrirlo": [
+      "file changed since you opened the editor; it was not overwritten. Keep your draft and reopen it",
+      "自打开编辑器后文件已发生变化；未覆盖文件。请保留草稿并重新打开"
+    ],
+    "Antes de restore desde editor": [
+      "Before restore from editor",
+      "从编辑器恢复之前"
+    ],
+    "archivo cambió; checkpoint previo conservado, no se sobrescribió": [
+      "file changed; previous checkpoint preserved, not overwritten",
+      "文件发生变化；之前的检查点已保留，未覆盖文件"
+    ],
+    "propuesta debe ser un objeto JSON": [
+      "proposal must be a JSON object",
+      "提案必须是 JSON 对象"
+    ],
+    "campos desconocidos en propuesta": [
+      "unknown fields in proposal",
+      "提案中包含未知字段"
+    ],
+    "propuesta requiere path y hash SHA256 completo en minúsculas": [
+      "proposal requires path and full lowercase SHA256 hash",
+      "提案必须包含 path 和完整的小写 SHA256 哈希"
+    ],
+    "operation/new no válidos": [
+      "invalid operation/new",
+      "operation/new 无效"
+    ],
+    "ruta de propuesta no permitida": [
+      "proposal path not allowed",
+      "不允许使用此提案路径"
+    ],
+    "append no admite old": [
+      "append does not accept old",
+      "append 不接受 old"
+    ],
+    "old debe ser un bloque exacto no vacío": [
+      "old must be a non-empty exact block",
+      "old 必须是非空的精确文本块"
+    ],
+    "hash obsoleto; usa view y solicita una propuesta para la versión actual": [
+      "stale hash; use view and request a proposal for the current version",
+      "哈希已过期；请使用 view 查看当前版本并请求新提案"
+    ],
+    "bloque old no encontrado; no se modifica el archivo": [
+      "old block not found; file is unchanged",
+      "未找到 old 文本块；文件未更改"
+    ],
+    "bloque old ambiguo; debe coincidir una sola vez": [
+      "old block is ambiguous; it must match exactly once",
+      "old 文本块存在歧义；必须且只能匹配一次"
+    ],
+    "view <archivo> [--from N] [--to N]": [
+      "view <file> [--from N] [--to N]",
+      "view <文件> [--from N] [--to N]"
+    ],
+    "Código numerado y hash para propuestas de IA": [
+      "Numbered code and hash for AI proposals",
+      "为 AI 提案提供带行号的代码和哈希"
+    ],
+    "uso: view <archivo> [--from N] [--to N]": [
+      "usage: view <file> [--from N] [--to N]",
+      "用法：view <文件> [--from N] [--to N]"
+    ],
+    "rango de líneas no válido": [
+      "invalid line range",
+      "行范围无效"
+    ],
+    "Archivo: {0}\nSHA256: {1}\nLíneas {2}-{3} de {4}; números solo referencia, no forman parte del código.\n": [
+      "File: {0}\nSHA256: {1}\nLines {2}-{3} of {4}; numbers are for reference only and are not part of the code.\n",
+      "文件：{0}\nSHA256：{1}\n第 {2}-{3} 行，共 {4} 行；行号仅供参考，不属于代码内容。\n"
+    ],
+    "propose <propuesta.json|JSON entre comillas>": [
+      "propose <proposal.json|quoted JSON>",
+      "propose <proposal.json|带引号的 JSON>"
+    ],
+    "Prepara cambio con hash; abre editor para revisar/aprobar": [
+      "Prepares a change with a hash; opens the editor for review/approval",
+      "使用哈希准备更改；打开编辑器以供审查/批准"
+    ],
+    "uso: propose <propuesta.json|JSON entre comillas>": [
+      "usage: propose <proposal.json|quoted JSON>",
+      "用法：propose <proposal.json|带引号的 JSON>"
+    ],
+    "cierra el editor actual antes de proponer otro cambio": [
+      "close the current editor before proposing another change",
+      "提出其他更改前请关闭当前编辑器"
+    ],
+    "JSON de propuesta no válido: {0}": [
+      "invalid proposal JSON: {0}",
+      "提案 JSON 无效：{0}"
+    ],
+    "Propuesta preparada: {0}. Archivo intacto; revisa el diff y confirma Aplicar.": [
+      "Proposal prepared: {0}. File unchanged; review the diff and confirm Apply.",
+      "提案已准备：{0}。文件未更改；请检查 diff 并确认“应用”。"
+    ],
+    "replace <archivo> <old> <new> [--all] [--hash SHA256] [--dry-run]": [
+      "replace <file> <old> <new> [--all] [--hash SHA256] [--dry-run]",
+      "replace <文件> <old> <new> [--all] [--hash SHA256] [--dry-run]"
+    ],
+    "Reemplazo literal con contador, diff y aprobación; nunca guarda directamente": [
+      "Literal replacement with count, diff, and approval; never saves directly",
+      "按字面内容替换并显示计数和 diff，经批准后应用；绝不直接保存"
+    ],
+    "uso: replace <archivo> <old> <new> [--all] [--hash SHA256] [--dry-run]": [
+      "usage: replace <file> <old> <new> [--all] [--hash SHA256] [--dry-run]",
+      "用法：replace <文件> <old> <new> [--all] [--hash SHA256] [--dry-run]"
+    ],
+    "hash SHA256 completo en minúsculas requerido": [
+      "full lowercase SHA256 hash required",
+      "需要完整的小写 SHA256 哈希"
+    ],
+    "hash obsoleto; usa view para la versión actual": [
+      "stale hash; use view for the current version",
+      "哈希已过期；请使用 view 查看当前版本"
+    ],
+    "{0} sustitución(es) propuesta(s): {1}. Archivo intacto (dry-run); revisa el diff y confirma Aplicar.": [
+      "{0} replacement(s) proposed: {1}. File unchanged (dry-run); review the diff and confirm Apply.",
+      "建议替换 {0} 处：{1}。文件未更改（dry-run）；请检查 diff 并确认“应用”。"
+    ],
+    "Ya hay una operación o editor abierto.": [
+      "An operation or editor is already open.",
+      "已有操作正在进行或编辑器已打开。"
+    ],
+    "archivo cambió antes de abrir la propuesta; usa view de nuevo": [
+      "file changed before opening the proposal; use view again",
+      "打开提案前文件已发生变化；请重新使用 view"
+    ],
+    "Código de {0}": [
+      "Code for {0}",
+      "{0} 的代码"
+    ],
+    "Diferencias propuestas": [
+      "Proposed changes",
+      "建议的更改"
+    ],
+    "Aplicar cambios": [
+      "Apply changes",
+      "应用更改"
+    ],
+    "Borrador local · aún no guardado": [
+      "Local draft · not saved yet",
+      "本地草稿 · 尚未保存"
+    ],
+    "Buscar texto exacto": [
+      "Search for exact text",
+      "搜索完全匹配的文本"
+    ],
+    "Buscar texto o función (literal)": [
+      "Search for text or function (literal)",
+      "搜索文本或函数（按字面内容）"
+    ],
+    "Reemplazar por": [
+      "Replace with",
+      "替换为"
+    ],
+    "Código de reemplazo": [
+      "Replacement code",
+      "替换代码"
+    ],
+    "Escribe un texto para buscar.": [
+      "Enter text to search for.",
+      "请输入要搜索的文本。"
+    ],
+    "Sin coincidencias.": [
+      "No matches.",
+      "没有匹配项。"
+    ],
+    "Coincidencia en línea {0}": [
+      "Match on line {0}",
+      "在第 {0} 行找到匹配项"
+    ],
+    "Buscar siguiente": [
+      "Find next",
+      "查找下一个"
+    ],
+    "{0} reemplazo(s) en el borrador. Revisa el diff.": [
+      "{0} replacement(s) in the draft. Review the diff.",
+      "草稿中有 {0} 处替换。请检查 diff。"
+    ],
+    "diff excedió el tiempo límite": [
+      "diff timed out",
+      "diff 超时"
+    ],
+    "Revisa el diff completo; Aplicar comprueba la versión original.": [
+      "Review the complete diff; Apply checks the original version.",
+      "请检查完整 diff；“应用”会验证原始版本。"
+    ],
+    "Revisar diff": [
+      "Review diff",
+      "检查 diff"
+    ],
+    "¿Descartar el borrador sin guardar?": [
+      "Discard the unsaved draft?",
+      "要丢弃未保存的草稿吗？"
+    ],
+    "Cerrar": [
+      "Close",
+      "关闭"
+    ],
+    "Revisa de nuevo el diff o espera a que termine la operación.": [
+      "Review the diff again or wait for the operation to finish.",
+      "请重新检查 diff，或等待操作完成。"
+    ],
+    "¿Aplicar el diff revisado a \"{0}\"? {1} No crea commit.": [
+      "Apply the reviewed diff to \"{0}\"? {1} No commit will be created.",
+      "要将已审查的 diff 应用到“{0}”吗？{1} 不会创建提交。"
+    ],
+    "Se creará y verificará un checkpoint previo; si falla, no se guarda.": [
+      "A prior checkpoint will be created and verified; if that fails, nothing will be saved.",
+      "将创建并验证先前版本的检查点；如果失败，则不会保存。"
+    ],
+    "No crea backup automático.": [
+      "No automatic backup is created.",
+      "不会自动创建备份。"
+    ],
+    "Editor: guardado y verificado {0} (SHA256 {1}). Revisa git diff.": [
+      "Editor: saved and verified {0} (SHA256 {1}). Review git diff.",
+      "编辑器：已保存并验证 {0}（SHA256 {1}）。请检查 git diff。"
+    ],
+    "Reemplazar primero": [
+      "Replace first",
+      "替换第一个"
+    ],
+    "Reemplazar todos": [
+      "Replace all",
+      "全部替换"
+    ],
+    "SHA256 original: {0} · UTF-8 · pega o edita funciones": [
+      "Original SHA256: {0} · UTF-8 · paste or edit functions",
+      "原始 SHA256：{0} · UTF-8 · 粘贴或编辑函数"
+    ],
+    "❌ Editor: {0}": [
+      "❌ Editor: {0}",
+      "❌ 编辑器：{0}"
+    ],
+    "⏳ Hay una operación en curso; no se ha borrado nada.": [
+      "⏳ An operation is in progress; nothing has been deleted.",
+      "⏳ 操作正在进行；未删除任何内容。"
+    ],
+    "no se pueden borrar metadatos internos": [
+      "internal metadata cannot be deleted",
+      "无法删除内部元数据"
+    ],
+    "No hay archivos de usuario para eliminar.": [
+      "There are no user files to delete.",
+      "没有可删除的用户文件。"
+    ],
+    "\n... y {0} más": [
+      "\n... and {0} more",
+      "\n...以及另外 {0} 个"
+    ],
+    "¿Eliminar {0} archivo(s) de usuario?\n{1}\nSe conservan .git, .dv y .dv_tmp. No hay deshacer automático.": [
+      "Delete {0} user file(s)?\n{1}\n.git, .dv, and .dv_tmp are preserved. There is no automatic undo.",
+      "要删除 {0} 个用户文件吗？\n{1}\n.git、.dv 和 .dv_tmp 将保留。不会自动撤销。"
+    ],
+    "Borrado cancelado; no se ha eliminado nada.": [
+      "Deletion canceled; nothing was deleted.",
+      "已取消删除；未删除任何内容。"
+    ],
+    "el archivo sigue existiendo: {0}": [
+      "file still exists: {0}",
+      "文件仍然存在：{0}"
+    ],
+    "Eliminados {0} archivo(s). Git y journal conservados; revisa git status.": [
+      "Deleted {0} file(s). Git and journal preserved; check git status.",
+      "已删除 {0} 个文件。Git 和日志均已保留；请检查 git status。"
+    ],
+    "❌ Borrado detenido tras {0} archivo(s): {1}. No se revierten los borrados anteriores.": [
+      "❌ Deletion stopped after {0} file(s): {1}. Earlier deletions are not rolled back.",
+      "❌ 删除 {0} 个文件后停止：{1}。不会回滚此前的删除操作。"
+    ],
+    "Vista previa estática": [
+      "Static preview",
+      "静态预览"
+    ],
+    "Vista previa {0}: {1}": [
+      "Preview {0}: {1}",
+      "预览 {0}：{1}"
+    ],
+    "¿Abrir \"{0}\" en una pestaña de vista previa HTML estática?\nSin scripts, red ni recursos externos. Se actualizará al guardar; requiere mantener DeepSeek abierto.": [
+      "Open \"{0}\" in a static HTML preview tab?\nNo scripts, network access, or external resources. It will update on save; DeepSeek must remain open.",
+      "要在静态 HTML 预览标签页中打开“{0}”吗？\n不运行脚本，不访问网络或外部资源。保存时会更新；需保持 DeepSeek 打开。"
+    ],
+    "ejecución cancelada": [
+      "execution canceled",
+      "执行已取消"
+    ],
+    "el navegador no admite BroadcastChannel para conectar la vista previa": [
+      "browser does not support BroadcastChannel for connecting the preview",
+      "浏览器不支持使用 BroadcastChannel 连接预览"
+    ],
+    "Vista previa HTML actualizada en su pestaña: {0}.": [
+      "HTML preview updated in its tab: {0}.",
+      "HTML 预览已在其标签页中更新：{0}。"
+    ],
+    "dv-preview-": [
+      "dv-preview-",
+      "dv-preview-"
+    ],
+    "el navegador bloqueó la pestaña; permite ventanas emergentes para DeepSeek y reintenta": [
+      "browser blocked the tab; allow pop-ups for DeepSeek and try again",
+      "浏览器已阻止打开标签页；请允许 DeepSeek 弹出窗口后重试"
+    ],
+    "Vista previa HTML abierta en pestaña: {0}. Actualización automática al guardar y botón Actualizar desde disco; F5 vuelve a leer OPFS mientras el panel siga abierto. Sin scripts, red ni recursos OPFS relativos.": [
+      "HTML preview opened in tab: {0}. Automatically updates on save and has a Refresh from disk button; F5 rereads OPFS while the panel remains open. No scripts, network access, or relative OPFS resources.",
+      "HTML 预览已在标签页中打开：{0}。保存时自动更新，并提供“从磁盘刷新”按钮；只要面板仍打开，按 F5 就会重新读取 OPFS。不运行脚本，不访问网络或相对 OPFS 资源。"
+    ],
+    "uso: run <archivo.html|archivo.js>": [
+      "usage: run <file.html|file.js>",
+      "用法：run <文件.html|文件.js>"
+    ],
+    "no se ejecutan metadatos internos": [
+      "internal metadata is not executed",
+      "不会执行内部元数据"
+    ],
+    "motor no disponible; run admite HTML estático y JavaScript de consola, no Node/Python/shell": [
+      "engine unavailable; run supports static HTML and console JavaScript, not Node/Python/shell",
+      "运行引擎不可用；run 支持静态 HTML 和控制台 JavaScript，不支持 Node/Python/shell"
+    ],
+    "archivo supera 256 KB para run": [
+      "file exceeds the 256 KB limit for run",
+      "文件超过 run 的 256 KB 限制"
+    ],
+    "run requiere texto UTF-8 válido": [
+      "run requires valid UTF-8 text",
+      "run 需要有效的 UTF-8 文本"
+    ],
+    "¿Abrir \"{0}\" ({1}) en modo {2}? Sin acceso al disco, sesión ni red.": [
+      "Open \"{0}\" ({1}) in {2} mode? No access to disk, session, or network.",
+      "要以 {2} 模式打开“{0}”（{1}）吗？无法访问磁盘、会话或网络。"
+    ],
+    "JavaScript de consola aislado, máximo 3 segundos": [
+      "Isolated console JavaScript, maximum 3 seconds",
+      "隔离的控制台 JavaScript，最长 3 秒"
+    ],
+    "vista previa HTML sin scripts": [
+      "HTML preview without scripts",
+      "不运行脚本的 HTML 预览"
+    ],
+    "(sin salida)": [
+      "(no output)",
+      "（无输出）"
+    ],
+    "limite de salida excedido": [
+      "output limit exceeded",
+      "超出输出限制"
+    ],
+    "no respondió el entorno aislado dentro del límite": [
+      "isolated environment did not respond within the time limit",
+      "隔离环境未能在时限内响应"
+    ],
+    "run <archivo.html|archivo.js>": [
+      "run <file.html|file.js>",
+      "run <文件.html|文件.js>"
+    ],
+    "HTML estático o consola JS aislada (sin Node/red/OPFS)": [
+      "Static HTML or isolated JS console (no Node/network/OPFS)",
+      "静态 HTML 或隔离的 JS 控制台（不支持 Node/网络/OPFS）"
+    ],
+    "ls [-R] [ruta]": [
+      "ls [-R] [path]",
+      "ls [-R] [路径]"
+    ],
+    "Lista archivos": [
+      "List files",
+      "列出文件"
+    ],
+    "uso: ls [-R] [ruta]": [
+      "usage: ls [-R] [path]",
+      "用法：ls [-R] [路径]"
+    ],
+    "(carpeta vacía)": [
+      "(empty folder)",
+      "（空文件夹）"
+    ],
+    "rm [-r] <ruta>": [
+      "rm [-r] <path>",
+      "rm [-r] <路径>"
+    ],
+    "Elimina una ruta tras confirmación (sin deshacer)": [
+      "Deletes a path after confirmation (cannot be undone)",
+      "确认后删除路径（无法撤销）"
+    ],
+    "uso: rm [-r] <ruta>": [
+      "usage: rm [-r] <path>",
+      "用法：rm [-r] <路径>"
+    ],
+    "no se pueden borrar metadatos internos con rm": [
+      "internal metadata cannot be deleted with rm",
+      "无法使用 rm 删除内部元数据"
+    ],
+    "para borrar una carpeta usa rm -r": [
+      "use rm -r to delete a folder",
+      "请使用 rm -r 删除文件夹"
+    ],
+    "¿Eliminar \"{0}\"{1}? Esta operación no tiene deshacer automático.": [
+      "Delete \"{0}\"{1}? This operation cannot be automatically undone.",
+      "要删除“{0}”{1}吗？此操作无法自动撤销。"
+    ],
+    "borrado cancelado; no se ha eliminado nada": [
+      "deletion canceled; nothing was deleted",
+      "已取消删除；未删除任何内容"
+    ],
+    "no se pudo verificar el borrado: {0}": [
+      "could not verify deletion: {0}",
+      "无法验证删除操作：{0}"
+    ],
+    "cp <origen> <destino>": [
+      "cp <source> <destination>",
+      "cp <源路径> <目标路径>"
+    ],
+    "Copia archivo y verifica SHA256; confirma reemplazo": [
+      "Copies a file and verifies SHA256; confirms replacement",
+      "复制文件并验证 SHA256；替换前需确认"
+    ],
+    "mv <origen> <destino>": [
+      "mv <source> <destination>",
+      "mv <源路径> <目标路径>"
+    ],
+    "Copia verificada + borrado confirmado del origen": [
+      "Verified copy + confirmed deletion of the source",
+      "副本已验证 + 已确认删除源文件"
+    ],
+    "write <file> <texto...>": [
+      "write <file> <text...>",
+      "write <file> <文本...>"
+    ],
+    "Escritura atómica segura (Capa 2)": [
+      "Safe atomic write (Layer 2)",
+      "安全原子写入（第 2 层）"
+    ],
+    "uso: write <file> <texto...>": [
+      "usage: write <file> <text...>",
+      "用法：write <file> <文本...>"
+    ],
+    "Guarda último resultado atómicamente": [
+      "Atomically saves the last result",
+      "以原子方式保存上一次结果"
+    ],
+    "uso: save <file>": [
+      "usage: save <file>",
+      "用法：save <file>"
+    ],
+    "no hay resultado previo": [
+      "no previous result",
+      "没有上一个结果"
+    ],
+    "Muestra contenido": [
+      "Show content",
+      "显示内容"
+    ],
+    "Primeras N líneas": [
+      "First N lines",
+      "前 N 行"
+    ],
+    "grep [-i] [-n] [-F] <patrón> [archivo]": [
+      "grep [-i] [-n] [-F] <pattern> [file]",
+      "grep [-i] [-n] [-F] <模式> [文件]"
+    ],
+    "Busca regex o texto literal por líneas; acepta pipes": [
+      "Searches lines using a regex or literal text; accepts pipes",
+      "按行搜索正则表达式或字面文本；支持管道"
+    ],
+    "uso: grep [-i] [-n] [-F] <patrón> [archivo]": [
+      "usage: grep [-i] [-n] [-F] <pattern> [file]",
+      "用法：grep [-i] [-n] [-F] <模式> [文件]"
+    ],
+    "Ver registro de transacciones (.dv/journal)": [
+      "View transaction log (.dv/journal)",
+      "查看事务日志（.dv/journal）"
+    ],
+    "(registro de auditoría vacío)": [
+      "(audit log is empty)",
+      "（审计日志为空）"
+    ],
+    "Control de versiones local (sin remoto)": [
+      "Local version control (no remote)",
+      "本地版本控制（无远程仓库）"
+    ],
+    "uso: git <init|status|add|commit|log|diff|show|branch|checkout>": [
+      "usage: git <init|status|add|commit|log|diff|show|branch|checkout>",
+      "用法：git <init|status|add|commit|log|diff|show|branch|checkout>"
+    ],
+    "no hay repositorio Git. Usa: git init": [
+      "no Git repository. Use: git init",
+      "没有 Git 仓库。请使用：git init"
+    ],
+    "Working tree limpio. Nada pendiente de confirmar.": [
+      "Working tree clean. Nothing to commit.",
+      "工作区干净。没有待提交的更改。"
+    ],
+    "uso: git add <ruta|--all>": [
+      "usage: git add <path|--all>",
+      "用法：git add <路径|--all>"
+    ],
+    "{0} archivos añadidos al staging area.": [
+      "{0} file(s) added to the staging area.",
+      "已将 {0} 个文件添加到暂存区。"
+    ],
+    "no se pueden versionar metadatos internos": [
+      "internal metadata cannot be versioned",
+      "无法对内部元数据进行版本控制"
+    ],
+    "Añadido al staging: {0}": [
+      "Added to staging: {0}",
+      "已添加到暂存区：{0}"
+    ],
+    "uso: git commit -m \"mensaje\"": [
+      "usage: git commit -m \"message\"",
+      "用法：git commit -m \"提交说明\""
+    ],
+    "nada nuevo en staging. Usa: git add <archivo> o git add --all": [
+      "nothing new in staging. Use: git add <file> or git add --all",
+      "暂存区没有新内容。请使用：git add <文件> 或 git add --all"
+    ],
+    "uso: git branch [nombre] (sin borrar, renombrar ni --force)": [
+      "usage: git branch [name] (no deleting, renaming, or --force)",
+      "用法：git branch [名称]（不支持删除、重命名或 --force）"
+    ],
+    "* {0} (sin commits)": [
+      "* {0} (no commits)",
+      "* {0}（无提交）"
+    ],
+    "(sin ramas locales; HEAD separado)": [
+      "(no local branches; detached HEAD)",
+      "（没有本地分支；HEAD 处于分离状态）"
+    ],
+    "crea el primer commit antes de crear otra rama": [
+      "create the first commit before creating another branch",
+      "创建其他分支前，请先创建首次提交"
+    ],
+    "Rama creada: {0}. No se cambió de rama; usa git checkout {1}.": [
+      "Branch created: {0}. Not switched to it; use git checkout {1}.",
+      "已创建分支：{0}。尚未切换到该分支；请使用 git checkout {1}。"
+    ],
+    "uso: git checkout <rama-local> (sin --force ni checkout de archivos/commits)": [
+      "usage: git checkout <local-branch> (no --force or checkout of files/commits)",
+      "用法：git checkout <本地分支>（不支持 --force 或检出文件/提交）"
+    ],
+    "cierra el editor antes de cambiar de rama": [
+      "close the editor before switching branches",
+      "切换分支前请关闭编辑器"
+    ],
+    "Sin commits aún en esta rama.": [
+      "No commits on this branch yet.",
+      "此分支尚无提交。"
+    ],
+    "subcomando no implementado: {0}": [
+      "subcommand not implemented: {0}",
+      "子命令尚未实现：{0}"
+    ],
+    "Muestra ayuda de comandos": [
+      "Show command help",
+      "显示命令帮助"
+    ],
+    "Ficheros": [
+      "Files",
+      "文件"
+    ],
+    "Texto": [
+      "Text",
+      "文本"
+    ],
+    "Auditoría": [
+      "Audit",
+      "审计"
+    ],
+    "Sistema": [
+      "System",
+      "系统"
+    ],
+    "PIPES Y REDIRECCIONES:": [
+      "PIPES AND REDIRECTIONS:",
+      "管道和重定向："
+    ],
+    "  > reemplaza; >> añade; .gz se comprime (sin >>).": [
+      "  > replaces; >> appends; .gz is compressed (no >>).",
+      "  > 替换；>> 追加；.gz 会压缩（不支持 >>）。"
+    ],
+    "  rm pide confirmación y no ofrece deshacer automático.": [
+      "  rm asks for confirmation and offers no automatic undo.",
+      "  rm 会请求确认，且不提供自动撤销。"
+    ],
+    "  Explorador: Eliminar por archivo o Eliminar todos (conserva Git/journal).": [
+      "  Explorer: Delete a file or Delete all (preserves Git/journal).",
+      "  浏览器：逐个删除文件或“全部删除”（保留 Git/journal）。"
+    ],
+    "  Editar: código numerado, buscar/reemplazar literal y diff antes de Aplicar.": [
+      "  Edit: numbered code, literal find/replace, and diff before Apply.",
+      "  编辑：显示带行号的代码，按字面内容查找/替换，并在应用前查看 diff。"
+    ],
+    "  Ejecutar junto a Editar: mismo run local con confirmación, HTML estático o consola JS.": [
+      "  Run next to Edit: same local run with confirmation, static HTML, or JS console.",
+      "  “编辑”旁的“运行”：通过确认执行相同的本地 run，支持静态 HTML 或 JS 控制台。"
+    ],
+    "  Primeros pasos prepara ejemplos sin ejecutarlos; Ampliar/Reducir conserva el comando escrito.": [
+      "  Getting Started prepares examples without running them; Expand/Collapse preserves the entered command.",
+      "  “入门”会准备示例但不会执行；展开/折叠时会保留已输入的命令。"
+    ],
+    "  Descargar por archivo: bytes originales a la PC (también binarios/gzip), sin chat ni staging.": [
+      "  Download per file: original bytes to the PC (including binary/gzip), without chat or staging.",
+      "  逐个下载文件：将原始字节保存到电脑（包括二进制/gzip），不经过聊天或暂存区。"
+    ],
+    "  El navegador decide guardar/preguntar; descarga solicitada no confirma guardado en la PC.": [
+      "  The browser decides whether to save or ask; a requested download does not confirm it was saved to the PC.",
+      "  是否保存或询问由浏览器决定；请求下载并不表示文件已保存到电脑。"
+    ],
+    "  checkpoint archivo [etiqueta]: copia bytes/hash hasta 256 KB; checkpoint --list muestra IDs.": [
+      "  checkpoint file [label]: copies bytes/hash up to 256 KB; checkpoint --list shows IDs.",
+      "  checkpoint 文件 [标签]：复制最多 256 KB 的字节/哈希；checkpoint --list 显示 ID。"
+    ],
+    "  restore ID: ruta original; texto existente en editor/diff, binario o ausente con confirmación.": [
+      "  restore ID: original path; existing text in editor/diff, binary or missing file with confirmation.",
+      "  restore ID：恢复到原路径；现有文本会在编辑器/diff 中显示，二进制或缺失文件需确认。"
+    ],
+    "  Restore conserva checkpoint previo si sobrescribe; no hace staging/commit ni elimina copias.": [
+      "  Restore preserves a prior checkpoint when overwriting; it does not stage/commit or delete copies.",
+      "  Restore 覆盖文件时会保留之前的检查点；不会暂存/提交或删除副本。"
+    ],
+    "  checkpoint --list [--file ruta] [--tag texto]: recientes primero; tag busca literal en etiqueta.": [
+      "  checkpoint --list [--file path] [--tag text]: newest first; tag searches the label literally.",
+      "  checkpoint --list [--file 路径] [--tag 文本]：按最新优先排列；tag 按字面内容搜索标签。"
+    ],
+    "  checkpoint show ID [--content] / diff ID1 ID2: consulta sin restaurar; contenido/diff solo UTF-8.": [
+      "  checkpoint show ID [--content] / diff ID1 ID2: inspect without restoring; content/diff is UTF-8 only.",
+      "  checkpoint show ID [--content] / diff ID1 ID2：仅查看，不执行恢复；内容/diff 仅支持 UTF-8。"
+    ],
+    "  Limpieza protege más reciente por archivo y empates; --keep N cuenta globalmente, conserva además esas copias.": [
+      "  Cleanup protects the newest per file and ties; --keep N counts globally and preserves those copies too.",
+      "  清理会保护每个文件的最新副本及并列最新项；--keep N 按全局计数，并额外保留这些副本。"
+    ],
+    "  Editor UTF-8 hasta 256 KB; sin corrector automático ni commit automático.": [
+      "  UTF-8 editor up to 256 KB; no automatic correction or commit.",
+      "  UTF-8 编辑器，最大 256 KB；不会自动更正或提交。"
+    ],
+    "  view archivo --from 1 --to 40: líneas + hash; --share requiere confirmación.": [
+      "  view file --from 1 --to 40: lines + hash; --share requires confirmation.",
+      "  view 文件 --from 1 --to 40：显示行和哈希；--share 需要确认。"
+    ],
+    "  propose propuesta.json o propose JSON entre comillas: candidato, diff y aprobación.": [
+      "  propose proposal.json or propose quoted JSON: candidate, diff, and approval.",
+      "  propose proposal.json 或 propose 带引号的 JSON：生成候选内容、diff 并请求批准。"
+    ],
+    "  replace archivo \"old\" \"new\": bloque literal único; --all reemplaza todas las coincidencias no solapadas.": [
+      "  replace file \"old\" \"new\": one literal block; --all replaces all non-overlapping matches.",
+      "  replace 文件 \"old\" \"new\"：替换一个字面文本块；--all 替换所有不重叠的匹配项。"
+    ],
+    "  replace siempre prepara sin guardar (también --dry-run); --hash SHA256 exige esa versión.": [
+      "  replace always prepares without saving (including --dry-run); --hash SHA256 requires that version.",
+      "  replace 始终只准备更改而不保存（包括 --dry-run）；--hash SHA256 要求指定该版本。"
+    ],
+    "  Para bloques multilínea o propuestas IA usa propose con hash y JSON.": [
+      "  For multiline blocks or AI proposals, use propose with a hash and JSON.",
+      "  对于多行文本块或 AI 提案，请使用带哈希和 JSON 的 propose。"
+    ],
+    "  Chat: bloque dv con JSON puro o !propose inline; Revisar parche en DV abre diff, nunca ejecuta otros comandos.": [
+      "  Chat: dv block with plain JSON or inline !propose; Review patch in DV opens a diff and never runs other commands.",
+      "  聊天：使用包含纯 JSON 的 dv 代码块或内联 !propose；“在 DV 中检查补丁”会打开 diff，绝不会执行其他命令。"
+    ],
+    "  Aprobar parche del chat crea checkpoint previo y valida hash; no envía nada ni hace commit.": [
+      "  Approving a chat patch creates a prior checkpoint and validates the hash; it sends nothing and does not commit.",
+      "  批准聊天补丁时会创建先前版本的检查点并验证哈希；不会发送任何内容或执行提交。"
+    ],
+    "  Compartir archivo incluye SHA256 y protocolo dv; no comparte archivos automáticamente.": [
+      "  Sharing a file includes SHA256 and the dv protocol; files are not shared automatically.",
+      "  分享文件时会包含 SHA256 和 dv 协议；不会自动分享文件。"
+    ],
+    "  grep [-i] [-n] [-F] patrón [archivo]: regex/literal, números de línea y pipes.": [
+      "  grep [-i] [-n] [-F] pattern [file]: regex/literal, line numbers, and pipes.",
+      "  grep [-i] [-n] [-F] 模式 [文件]：支持正则表达式/字面文本、行号和管道。"
+    ],
+    "  POSIBLE FUGA: solo correlaciona un intento manual reciente (5 s) con el comando exacto en el DOM.": [
+      "  POSSIBLE LEAK: only correlates a recent manual attempt (5 s) with the exact command in the DOM.",
+      "  可能泄漏：仅将最近一次手动尝试（5 秒内）与 DOM 中的确切命令进行关联。"
+    ],
+    "  Ignora carga automática sin intento; no verifica tráfico ni recepción del servidor.": [
+      "  Ignores automatic loading without an attempt; does not verify traffic or server receipt.",
+      "  忽略没有尝试操作的自动加载；不验证流量或服务器是否收到内容。"
+    ],
+    "  JSON: path, hash completo, operation, old (bloque único), new (texto exacto).": [
+      "  JSON: path, full hash, operation, old (single block), new (exact text).",
+      "  JSON：path、完整 hash、operation、old（单个文本块）、new（精确文本）。"
+    ],
+    "  operation: replace, insert-before, insert-after, append (sin old).": [
+      "  operation: replace, insert-before, insert-after, append (without old).",
+      "  operation：replace、insert-before、insert-after、append（不带 old）。"
+    ],
+    "  Saltos dentro del JSON: \\n o \\r\\n; no se añaden saltos automáticamente.": [
+      "  Line breaks in JSON: \\n or \\r\\n; line breaks are not added automatically.",
+      "  JSON 中的换行：使用 \\n 或 \\r\\n；不会自动添加换行。"
+    ],
+    "  Explorar / Importar: elige archivos del equipo; guarda bytes en la raíz OPFS.": [
+      "  Browse / Import: choose files from your computer; saves bytes to the OPFS root.",
+      "  浏览/导入：从电脑中选择文件；将字节保存到 OPFS 根目录。"
+    ],
+    "  Importación local, máximo 512 MB por archivo; confirma reemplazos, sin staging.": [
+      "  Local import, maximum 512 MB per file; replacements require confirmation, no staging.",
+      "  本地导入，每个文件最大 512 MB；替换需确认，不会暂存。"
+    ],
+    "  cp/mv: solo archivos, destino completo; preservan bytes (también .gz).": [
+      "  cp/mv: files only, full destination path; preserves bytes (including .gz).",
+      "  cp/mv：仅限文件，需提供完整目标路径；保留原始字节（包括 .gz）。"
+    ],
+    "  cp confirma reemplazos; mv siempre confirma. Máximo verificable: 512 MB.": [
+      "  cp confirms replacements; mv always requires confirmation. Verifiable maximum: 512 MB.",
+      "  cp 替换前会请求确认；mv 始终需要确认。可验证的最大值：512 MB。"
+    ],
+    "  mv no es rename atómico: copia y verifica antes de borrar el origen.": [
+      "  mv is not an atomic rename: it copies and verifies before deleting the source.",
+      "  mv 不是原子重命名：会先复制并验证，然后再删除源文件。"
+    ],
+    "  run: HTML estático (sin scripts/recursos relativos); JS de consola aislado.": [
+      "  run: static HTML (no scripts/relative resources); isolated console JS.",
+      "  run：静态 HTML（不含脚本/相对资源）；隔离的控制台 JS。"
+    ],
+    "  HTML abre pestaña conectada: autoactualiza al guardar, Actualizar desde disco y F5; mantén DeepSeek abierto.": [
+      "  HTML opens a connected tab: auto-updates on save, Refresh from disk, and F5; keep DeepSeek open.",
+      "  HTML 会在已连接的标签页中打开：保存时自动更新，也可“从磁盘刷新”或按 F5；请保持 DeepSeek 打开。"
+    ],
+    "  JS: máximo 3 segundos, 100 mensajes/20 KB; usa await para trabajo asíncrono.": [
+      "  JS: maximum 3 seconds, 100 messages/20 KB; use await for asynchronous work.",
+      "  JS：最长 3 秒，最多 100 条消息/20 KB；异步任务请使用 await。"
+    ],
+    "  Sin DOM, Node, dependencias, red ni OPFS; salida disponible para save/--share.": [
+      "  No DOM, Node, dependencies, network, or OPFS; output is available to save/--share.",
+      "  不支持 DOM、Node、依赖项、网络或 OPFS；输出可用于 save/--share。"
+    ],
+    "  git diff: staging vs archivos; git diff --staged: HEAD vs staging.": [
+      "  git diff: staging vs. files; git diff --staged: HEAD vs. staging.",
+      "  git diff：比较暂存区与文件；git diff --staged：比较 HEAD 与暂存区。"
+    ],
+    "  git diff [--staged] <ref>: referencia vs archivos o staging.": [
+      "  git diff [--staged] <ref>: reference vs. files or staging.",
+      "  git diff [--staged] <ref>：比较引用与文件或暂存区。"
+    ],
+    "  Diff unificado UTF-8; binarios solo informan cambio; sin seguimiento: git status.": [
+      "  Unified UTF-8 diff; binaries only report a change; untracked files: git status.",
+      "  UTF-8 统一 diff；二进制文件仅报告是否更改；未跟踪文件请使用 git status 查看。"
+    ],
+    "  git show [ref]: datos del commit (HEAD por defecto), no su diff.": [
+      "  git show [ref]: commit data (HEAD by default), not its diff.",
+      "  git show [ref]：提交数据（默认为 HEAD），而不是 diff。"
+    ],
+    "  git show ref:archivo: texto histórico UTF-8 hasta 256 KB; sin checkout ni restauración.": [
+      "  git show ref:file: historical UTF-8 text up to 256 KB; no checkout or restore.",
+      "  git show ref:文件：最多 256 KB 的历史 UTF-8 文本；不执行 checkout 或恢复。"
+    ],
+    "  Referencias de commit: HEAD, nombre de rama o SHA completo; sin HEAD~N ni SHA abreviado.": [
+      "  Commit references: HEAD, branch name, or full SHA; no HEAD~N or abbreviated SHA.",
+      "  提交引用：HEAD、分支名称或完整 SHA；不支持 HEAD~N 或缩写 SHA。"
+    ],
+    "  El log resume 800 caracteres; git show HEAD:archivo | head -n 20 permite ver un fragmento.": [
+      "  The log summarizes 800 characters; git show HEAD:file | head -n 20 shows a snippet.",
+      "  日志摘要为 800 个字符；使用 git show HEAD:文件 | head -n 20 可查看片段。"
+    ],
+    "  Redirigir show guarda texto, no exporta bytes exactos (saltos/BOM pueden cambiar).": [
+      "  Redirecting show saves text, not exact bytes (line endings/BOM may change).",
+      "  重定向 show 会保存文本，而非精确字节（换行符/BOM 可能发生变化）。"
+    ],
+    "  Git remoto todavía no está implementado.": [
+      "  Remote Git is not implemented yet.",
+      "  尚未实现远程 Git。"
+    ],
+    "  Guardar cambios en Git: revisa lista y mensaje; confirma add --all + commit local, incluidos borrados.": [
+      "  Save changes in Git: review the list and message; confirm add --all + local commit, including deletions.",
+      "  在 Git 中保存更改：检查列表和提交说明；确认执行 add --all 并创建本地提交，包括删除项。"
+    ],
+    "  El botón usa los archivos actuales, reemplaza staging anterior y excluye metadatos; no elimina comandos.": [
+      "  The button uses current files, replaces previous staging, and excludes metadata; it does not delete commands.",
+      "  此按钮使用当前文件，替换之前的暂存内容并排除元数据；不会删除命令。"
+    ],
+    "  Ver cambios muestra estado, diff sin staging y diff staged; sin revertir automático.": [
+      "  View changes shows status, unstaged diff, and staged diff; no automatic revert.",
+      "  “查看更改”会显示状态、未暂存的 diff 和已暂存的 diff；不会自动还原。"
+    ],
+    "  git branch [nombre]: lista/crea ramas locales; * indica activa; crear no cambia de rama.": [
+      "  git branch [name]: lists/creates local branches; * marks the active one; creation does not switch branches.",
+      "  git branch [名称]：列出/创建本地分支；* 表示当前分支；创建分支不会切换分支。"
+    ],
+    "  git checkout rama: confirma cambio; bloquea staging/cambios/archivos ignorados o sin seguimiento.": [
+      "  git checkout branch: confirms the switch; blocked by staging/changes/ignored or untracked files.",
+      "  git checkout 分支：确认切换；若有暂存内容、更改、已忽略或未跟踪的文件，则会阻止切换。"
+    ],
+    "  Sin --force, borrado de ramas, HEAD separado ni restauración Git de archivos.": [
+      "  No --force, branch deletion, detached HEAD, or Git file restore.",
+      "  不支持 --force、删除分支、分离 HEAD 或使用 Git 恢复文件。"
+    ],
+    "CANALES DE USO:": [
+      "USAGE CHANNELS:",
+      "使用方式："
+    ],
+    "  1. Panel Soberano: Entrada robusta y privada (0 tokens consumidos).": [
+      "  1. Sovereign Panel: robust, private input (0 tokens consumed).",
+      "  1. 独立面板：稳定且私密的输入方式（不消耗 token）。"
+    ],
+    "  2. Atajo en Chat: Escribe !cmd directamente (se ejecuta local y no va al chat).": [
+      "  2. Chat shortcut: type !cmd directly (runs locally and is not sent to chat).",
+      "  2. 聊天快捷方式：直接输入 !cmd（在本地运行，不会发送到聊天）。"
+    ],
+    "  3. Compartir con IA:": [
+      "  3. Share with AI:",
+      "  3. 与 AI 分享："
+    ],
+    "     - Añade --share para enviar el resumen del comando al chat.": [
+      "     - Add --share to send the command summary to chat.",
+      "     - 添加 --share 可将命令摘要发送到聊天。"
+    ],
+    "     - Añade --share-file <ruta> para transferir el archivo completo tras confirmación.": [
+      "     - Add --share-file <path> to transfer the full file after confirmation.",
+      "     - 添加 --share-file <路径> 可在确认后传输完整文件。"
+    ],
+    "     - Vista previa y confirmación antes de enviar; no se reemplazan borradores.": [
+      "     - Preview and confirm before sending; drafts are not replaced.",
+      "     - 发送前可预览并确认；不会替换草稿。"
+    ],
+    "     - Archivos UTF-8 sin NUL, máximo 64 KB; metadatos internos excluidos.": [
+      "     - UTF-8 files without NUL, maximum 64 KB; internal metadata is excluded.",
+      "     - UTF-8 文件不得含 NUL，最大 64 KB；内部元数据除外。"
+    ],
+    "     - \"--share\" entre comillas es texto literal; -- termina las opciones.": [
+      "     - Quoted \"--share\" is literal text; -- ends the options.",
+      "     - 带引号的 \"--share\" 是字面文本；-- 表示选项结束。"
+    ],
+    "     - Usa los botones correspondientes en el panel.": [
+      "     - Use the corresponding buttons in the panel.",
+      "     - 请使用面板中的相应按钮。"
+    ],
+    "git checkout no admite pipes ni redirecciones": [
+      "git checkout does not support pipes or redirections",
+      "git checkout 不支持管道或重定向"
+    ],
+    "{0} no admite pipes ni redirecciones": [
+      "{0} does not support pipes or redirections",
+      "{0} 不支持管道或重定向"
+    ],
+    "comando no reconocido: {0}": [
+      "unrecognized command: {0}",
+      "无法识别的命令：{0}"
+    ],
+    "destino de redirección no permitido": [
+      "redirection destination not allowed",
+      "不允许使用此重定向目标"
+    ],
+    "Guardado: {0} ({1} de texto)": [
+      "Saved: {0} ({1} of text)",
+      "已保存：{0}（文本 {1}）"
+    ],
+    "salida demasiado grande; usa head o redirige a un archivo": [
+      "output too large; use head or redirect to a file",
+      "输出过大；请使用 head 或重定向到文件"
+    ],
+    "hay otro envío al chat en curso": [
+      "another chat send is in progress",
+      "另一个聊天发送操作正在进行"
+    ],
+    "no se encontró una entrada de chat visible": [
+      "no visible chat input was found",
+      "未找到可见的聊天输入框"
+    ],
+    "hay un borrador en el chat; consérvalo o vacía la entrada antes de compartir": [
+      "there is a chat draft; keep it or clear the input before sharing",
+      "聊天中有草稿；请先保留草稿或清空输入框，再进行分享"
+    ],
+    "la entrada del chat cambió; envío cancelado": [
+      "chat input changed; sending canceled",
+      "聊天输入内容已更改；已取消发送"
+    ],
+    "no se encontró un botón de envío habilitado; no se envió el mensaje": [
+      "no enabled send button was found; the message was not sent",
+      "未找到已启用的发送按钮；消息未发送"
+    ],
+    "la entrada o el botón del chat cambió; envío cancelado": [
+      "chat input or button changed; sending canceled",
+      "聊天输入框或按钮已更改；已取消发送"
+    ],
+    "no se pudo verificar el envío; comprueba el chat antes de reintentar": [
+      "could not verify the send; check the chat before retrying",
+      "无法验证是否已发送；重试前请检查聊天"
+    ],
+    "archivo supera 64 KB; comparte un resumen con head": [
+      "file exceeds 64 KB; share a summary with head",
+      "文件超过 64 KB；请使用 head 分享摘要"
+    ],
+    "no se comparten archivos binarios; usa un resumen de texto": [
+      "binary files cannot be shared; use a text summary",
+      "无法分享二进制文件；请使用文本摘要"
+    ],
+    "el archivo no es texto UTF-8 válido": [
+      "file is not valid UTF-8 text",
+      "文件不是有效的 UTF-8 文本"
+    ],
+    "Analiza este archivo. Si propones una corrección, devuelve un bloque Markdown con lenguaje dv y un único objeto JSON puro, sin comandos ni comillas de shell.\n": [
+      "Analyze this file. If you propose a correction, return a Markdown block with language dv containing a single plain JSON object, with no commands or shell quotes.\n",
+      "请分析此文件。如果建议修改，请返回一个语言标记为 dv 的 Markdown 代码块，其中仅包含一个纯 JSON 对象，不得包含命令或 shell 引号。\n"
+    ],
+    "Usa path={0} y hash=\"{1}\" exactamente; no inventes ni recalcules el hash.\n": [
+      "Use path={0} and hash=\"{1}\" exactly; do not invent or recalculate the hash.\n",
+      "请完全照用 path={0} 和 hash=\"{1}\"；不要编造或重新计算哈希。\n"
+    ],
+    "Campos: path, hash, operation, old, new. operation: replace, insert-before, insert-after o append (sin old).\n": [
+      "Fields: path, hash, operation, old, new. operation: replace, insert-before, insert-after, or append (without old).\n",
+      "字段：path、hash、operation、old、new。operation：replace、insert-before、insert-after 或 append（不带 old）。\n"
+    ],
+    "old debe ser texto exacto y coincidir una sola vez; new es texto exacto, no un diff ni código con puntos suspensivos. ": [
+      "old must be exact text and match once; new is exact text, not a diff or code with ellipses. ",
+      "old 必须是精确文本且只匹配一次；new 必须是精确文本，不能是 diff 或带省略号的代码。 "
+    ],
+    "Escapa saltos como \\n (o \\r\\n si el original los usa). Una propuesta por bloque y archivo. ": [
+      "Escape line breaks as \\n (or \\r\\n if used by the original). One proposal per block and file. ",
+      "将换行转义为 \\n（如果原文使用 \\r\\n，则使用 \\r\\n）。每个代码块和文件只提交一个提案。 "
+    ],
+    "Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.": [
+      "If context is missing, ask for it; do not assume access to the disk. The user will review the diff and approve before saving.",
+      "如果缺少上下文，请先询问；不要假设可以访问磁盘。用户会在保存前检查 diff 并批准。"
+    ],
+    "hay un borrador en el chat; no se ha reemplazado": [
+      "there is a chat draft; it was not replaced",
+      "聊天中有草稿；未将其替换"
+    ],
+    "¿Compartir con DeepSeek ({0} caracteres)?\nVista previa:\n{1}": [
+      "Share with DeepSeek ({0} characters)?\nPreview:\n{1}",
+      "要与 DeepSeek 分享吗（{0} 个字符）？\n预览：\n{1}"
+    ],
+    "envío cancelado; no se ha compartido nada": [
+      "sending canceled; nothing was shared",
+      "已取消发送；未分享任何内容"
+    ],
+    "📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta de DeepSeek.": [
+      "📤 Chat cleared the input after the send was requested; check DeepSeek's response.",
+      "📤 请求发送后聊天输入框已清空；请检查 DeepSeek 的回复。"
+    ],
+    "⏳ Hay una operación en curso; reintenta al terminar.": [
+      "⏳ An operation is in progress; try again when it finishes.",
+      "⏳ 操作正在进行；完成后请重试。"
+    ],
+    "⏳ Hay una operación en curso...": [
+      "⏳ An operation is in progress...",
+      "⏳ 操作正在进行..."
+    ],
+    "⚠ Comando vacío": [
+      "⚠ Empty command",
+      "⚠ 命令为空"
+    ],
+    "$ {0}  [ejecutado localmente, no enviado al chat]": [
+      "$ {0}  [executed locally, not sent to chat]",
+      "$ {0}  [在本地执行，未发送到聊天]"
+    ],
+    "[Diagnóstico DV: {0}]\n{1}\n{2}\n{3}\nAnaliza este resultado.": [
+      "[DV diagnostic: {0}]\n{1}\n{2}\n{3}\nAnalyze this result.",
+      "[DV 诊断：{0}]\n{1}\n{2}\n{3}\n请分析此结果。"
+    ],
+    "el comando falló; no se compartió el archivo": [
+      "command failed; file was not shared",
+      "命令失败；文件未分享"
+    ],
+    "❌ Error: {0}": [
+      "❌ Error: {0}",
+      "❌ 错误：{0}"
+    ],
+    "bloque de propuesta demasiado grande": [
+      "proposal block too large",
+      "提案代码块过大"
+    ],
+    "solo se admite JSON dv o !propose con JSON inline": [
+      "only dv JSON or !propose with inline JSON is supported",
+      "仅支持 dv JSON 或带内联 JSON 的 !propose"
+    ],
+    "chat: solo propose con un JSON inline, sin pipes, archivos ni opciones": [
+      "chat: only propose with inline JSON, no pipes, files, or options",
+      "聊天：仅支持带内联 JSON 的 propose，不支持管道、文件或选项"
+    ],
+    "cierra el editor o espera a que termine la operación antes de revisar otro parche": [
+      "close the editor or wait for the operation to finish before reviewing another patch",
+      "检查其他补丁前，请关闭编辑器或等待操作完成"
+    ],
+    "se abrió otra operación durante la preparación; reintenta al terminar": [
+      "another operation opened during preparation; try again when it finishes",
+      "准备期间启动了另一项操作；完成后请重试"
+    ],
+    "Antes de parche desde chat": [
+      "Before patch from chat",
+      "应用聊天补丁之前"
+    ],
+    "Revisar parche en DV": [
+      "Review patch in DV",
+      "在 DV 中检查补丁"
+    ],
+    "el bloque ya no está en el chat": [
+      "block is no longer in the chat",
+      "代码块已不在聊天中"
+    ],
+    "Propuesta: {0}. Revisa el diff; aún no guardada.": [
+      "Proposal: {0}. Review the diff; not saved yet.",
+      "提案：{0}。请检查 diff；尚未保存。"
+    ],
+    "Parche desde chat: {0}. Archivo intacto; aprobación y checkpoint requeridos.": [
+      "Patch from chat: {0}. File unchanged; approval and checkpoint required.",
+      "聊天补丁：{0}。文件未更改；需要批准并创建检查点。"
+    ],
+    "no se pudo abrir el editor; consulta el error en el panel. Archivo intacto.": [
+      "could not open the editor; check the error in the panel. File unchanged.",
+      "无法打开编辑器；请查看面板中的错误。文件未更改。"
+    ],
+    "No se preparó: {0}": [
+      "Not prepared: {0}",
+      "未准备：{0}"
+    ],
+    "Parche desde chat: {0}": [
+      "Patch from chat: {0}",
+      "聊天补丁：{0}"
+    ],
+    "Abrir diff local; al aprobar se crea checkpoint. No ejecuta código ni envía mensajes.": [
+      "Opens a local diff; approval creates a checkpoint. Does not run code or send messages.",
+      "打开本地 diff；批准后会创建检查点。不会运行代码或发送消息。"
+    ],
+    "Revisión local con hash y checkpoint.": [
+      "Local review with hash and checkpoint.",
+      "使用哈希和检查点进行本地审查。"
+    ],
+    "Propuesta incompleta o inválida: {0}": [
+      "Incomplete or invalid proposal: {0}",
+      "提案不完整或无效：{0}"
+    ],
+    "no hay document.body; no se pueden instalar interceptores ni detector": [
+      "document.body is missing; interceptors and detector cannot be installed",
+      "缺少 document.body；无法安装拦截器和检测器"
+    ],
+    "⏳ Hay una operación en curso... El comando permanece en la entrada.": [
+      "⏳ An operation is in progress... The command remains in the input.",
+      "⏳ 操作正在进行...命令仍保留在输入框中。"
+    ],
+    "⚠ POSIBLE FUGA: Tras intentar enviar, apareció el comando exacto ({0}...) fuera del panel. ": [
+      "⚠ POSSIBLE LEAK: After an attempted send, the exact command ({0}...) appeared outside the panel. ",
+      "⚠ 可能泄漏：尝试发送后，面板外出现了确切命令（{0}...）。 "
+    ],
+    "Comprueba el chat; el DOM no confirma un envío al servidor.": [
+      "Check the chat; the DOM does not confirm delivery to the server.",
+      "请检查聊天；DOM 无法确认内容已发送到服务器。"
+    ],
+    "Seleccionar archivos para importar al disco virtual": [
+      "Select files to import to the virtual disk",
+      "选择要导入虚拟磁盘的文件"
+    ],
+    "Elegir archivos de la PC y copiarlos al disco local; no se comparten": [
+      "Choose files from the PC and copy them to the local disk; they are not shared",
+      "从电脑中选择文件并复制到本地磁盘；不会分享这些文件"
+    ],
+    "⏳ Hay una operación en curso; espera antes de importar.": [
+      "⏳ An operation is in progress; wait before importing.",
+      "⏳ 操作正在进行；请等待后再导入。"
+    ],
+    "Explorar / Importar archivos…": [
+      "Browse / Import files…",
+      "浏览/导入文件…"
+    ],
+    "Comandos locales... (Enter ejecuta, Shift+Enter nueva línea)\nEj: !git status · !ls · !write f.txt \"hola\"": [
+      "Local commands... (Enter runs, Shift+Enter adds a new line)\nE.g.: !git status · !ls · !write f.txt \"hello\"",
+      "本地命令...（Enter 执行，Shift+Enter 换行）\n例如：!git status · !ls · !write f.txt \"你好\""
+    ],
+    "Listo · local": [
+      "Ready · local",
+      "就绪 · 本地"
+    ],
+    "Archivos incluidos en el commit": [
+      "Files included in the commit",
+      "提交中包含的文件"
+    ],
+    "Mensaje del commit": [
+      "Commit message",
+      "提交说明"
+    ],
+    "Cierra el editor o espera antes de revisar Git.": [
+      "Close the editor or wait before reviewing Git.",
+      "检查 Git 前请关闭编辑器或等待。"
+    ],
+    "Verificando archivos y staging...": [
+      "Verifying files and staging...",
+      "正在验证文件和暂存区..."
+    ],
+    "Git no está inicializado; cierra y pulsa Inicializar Git local": [
+      "Git is not initialized; close this and click Initialize local Git",
+      "Git 尚未初始化；请关闭并点击“初始化本地 Git”"
+    ],
+    "Rama: {0}. {1} archivo(s). ": [
+      "Branch: {0}. {1} file(s). ",
+      "分支：{0}。{1} 个文件。 "
+    ],
+    "Se guardan las versiones actuales y los borrados de esta lista. El staging anterior se reemplaza por esos archivos actuales. ": [
+      "The current versions and deletions in this list will be saved. Previous staging is replaced with these current files. ",
+      "将保存此列表中的当前版本和删除项。之前的暂存内容将替换为这些当前文件。 "
+    ],
+    "Los archivos ignorados sin seguimiento y metadatos internos se excluyen. No sube nada a un servidor.": [
+      "Untracked ignored files and internal metadata are excluded. Nothing is uploaded to a server.",
+      "未跟踪的忽略文件和内部元数据将被排除。不会上传任何内容到服务器。"
+    ],
+    "{0}: cambios": [
+      "{0}: changes",
+      "{0}：更改"
+    ],
+    "Guardar {0} archivos": [
+      "Save {0} files",
+      "保存 {0} 个文件"
+    ],
+    "No se pudo preparar: {0}": [
+      "Could not prepare: {0}",
+      "无法准备：{0}"
+    ],
+    "Revisar todos los cambios y confirmar un commit Git local; no sube archivos ni elimina comandos": [
+      "Review all changes and confirm a local Git commit; does not upload files or delete commands",
+      "检查所有更改并确认创建本地 Git 提交；不会上传文件或删除命令"
+    ],
+    "Espera o cierra el editor antes de versionar.": [
+      "Wait or close the editor before committing.",
+      "提交前请等待或关闭编辑器。"
+    ],
+    "Guardar cambios en Git": [
+      "Save changes in Git",
+      "在 Git 中保存更改"
+    ],
+    "Ver cambios": [
+      "View changes",
+      "查看更改"
+    ],
+    "No se completó el guardado: {0}": [
+      "Save did not complete: {0}",
+      "保存未完成：{0}"
+    ],
+    "Confirmar commit local": [
+      "Confirm local commit",
+      "确认本地提交"
+    ],
+    "Actualizar lista": [
+      "Refresh list",
+      "刷新列表"
+    ],
+    "Ver diferencias": [
+      "View differences",
+      "查看差异"
+    ],
+    "Cancelar": [
+      "Cancel",
+      "取消"
+    ],
+    "Archivos nuevos sin seguimiento: consulta la lista (no aparecen en git diff).\n\n": [
+      "New untracked files: see the list (they do not appear in git diff).\n\n",
+      "新建的未跟踪文件：请查看列表（不会显示在 git diff 中）。\n\n"
+    ],
+    "No se pudo mostrar el diff: {0}": [
+      "Could not show the diff: {0}",
+      "无法显示 diff：{0}"
+    ],
+    "Guardar cambios en Git local": [
+      "Save changes to local Git",
+      "将更改保存到本地 Git"
+    ],
+    "Panel Soberano": [
+      "Sovereign Panel",
+      "独立面板"
+    ],
+    "Ejecutar el comando en el navegador sin enviarlo a la IA": [
+      "Run the command in the browser without sending it to AI",
+      "在浏览器中运行命令，不发送给 AI"
+    ],
+    "Ejecutar": [
+      "Run",
+      "运行"
+    ],
+    "Ejecutar y enviar directamente el resumen a DeepSeek, sin vista previa; no reemplaza borradores del chat": [
+      "Run and send the summary directly to DeepSeek without a preview; does not replace chat drafts",
+      "运行并将摘要直接发送给 DeepSeek，不提供预览；不会替换聊天草稿"
+    ],
+    "Ejecutar + Compartir": [
+      "Run + Share",
+      "运行 + 分享"
+    ],
+    "Máximo 64 KB por archivo; solo texto UTF-8. Los archivos mayores se muestran deshabilitados.": [
+      "Maximum 64 KB per file; UTF-8 text only. Larger files are shown disabled.",
+      "每个文件最大 64 KB；仅限 UTF-8 文本。较大的文件会显示为禁用状态。"
+    ],
+    "Enviar directamente el archivo seleccionado a DeepSeek, sin confirmación adicional; no reemplaza borradores del chat": [
+      "Send the selected file directly to DeepSeek without additional confirmation; does not replace chat drafts",
+      "无需额外确认，直接将选定文件发送给 DeepSeek；不会替换聊天草稿"
+    ],
+    "Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.": [
+      "Select a file up to 64 KB; for a larger file, share a summary with head.",
+      "请选择不超过 64 KB 的文件；对于较大的文件，请使用 head 分享摘要。"
+    ],
+    "Enviar archivo a DeepSeek": [
+      "Send file to DeepSeek",
+      "将文件发送给 DeepSeek"
+    ],
+    "Selecciona archivo a compartir:": [
+      "Select a file to share:",
+      "选择要分享的文件："
+    ],
+    "No hay archivos de usuario para compartir.": [
+      "There are no user files to share.",
+      "没有可分享的用户文件。"
+    ],
+    " — supera 64 KB; comparte un resumen": [
+      " — exceeds 64 KB; share a summary",
+      " — 超过 64 KB；请分享摘要"
+    ],
+    "Enviar archivo a DeepSeek comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 \"archivo\" --share.": [
+      "Send file to DeepSeek shares the full text directly, without additional confirmation. Maximum 64 KB; UTF-8 only. Larger files are disabled. For a summary: head -n 30 \"file\" --share.",
+      "“将文件发送给 DeepSeek”会直接分享完整文本，无需额外确认。最大 64 KB；仅限 UTF-8。较大的文件会被禁用。要分享摘要，请使用：head -n 30 \"文件\" --share。"
+    ],
+    "Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 \"archivo\" --share.": [
+      "All files exceed 64 KB. They are not hidden: share a summary with head -n 30 \"file\" --share.",
+      "所有文件都超过 64 KB。它们不会被隐藏；请使用 head -n 30 \"文件\" --share 分享摘要。"
+    ],
+    "❌ No se pudieron listar archivos: {0}": [
+      "❌ Could not list files: {0}",
+      "❌ 无法列出文件：{0}"
+    ],
+    "Compartir archivo...": [
+      "Share file...",
+      "分享文件..."
+    ],
+    "Ayuda de comandos": [
+      "Command help",
+      "命令帮助"
+    ],
+    "Comandos disponibles (ejecución local por defecto)": [
+      "Available commands (local execution by default)",
+      "可用命令（默认在本地执行）"
+    ],
+    "Cerrar ayuda": [
+      "Close help",
+      "关闭帮助"
+    ],
+    "❌ No se pudo mostrar ayuda: {0}": [
+      "❌ Could not show help: {0}",
+      "❌ 无法显示帮助：{0}"
+    ],
+    "Ayuda": [
+      "Help",
+      "帮助"
+    ],
+    "¿Reemplazar el comando que estás preparando?": [
+      "Replace the command you are preparing?",
+      "要替换正在准备的命令吗？"
+    ],
+    "Primeros pasos": [
+      "Getting Started",
+      "入门"
+    ],
+    "Bienvenido a loopwork": [
+      "Welcome to loopwork",
+      "欢迎使用 loopwork"
+    ],
+    "Importa un archivo o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.": [
+      "Import a file or prepare an example. Nothing runs or is shared by opening this guide.",
+      "导入文件或准备示例。打开本指南不会运行或分享任何内容。"
+    ],
+    "Preparar !ls para listar archivos; luego pulsa Ejecutar": [
+      "Prepare !ls to list files; then click Run",
+      "准备 !ls 以列出文件；然后点击“运行”"
+    ],
+    "Ver archivos: !ls": [
+      "View files: !ls",
+      "查看文件：!ls"
+    ],
+    "Preparar consulta del estado Git; requiere git init previo": [
+      "Prepare a Git status check; requires git init first",
+      "准备查询 Git 状态；需要先运行 git init"
+    ],
+    "Preparar el comando de ayuda, sin ejecutarlo": [
+      "Prepare the help command without running it",
+      "准备帮助命令，但不运行"
+    ],
+    "Editar → revisar diff → aprobar. Descarga copias importantes: borrar datos del sitio también elimina el disco y Git.": [
+      "Edit → review diff → approve. Download important copies: deleting site data also deletes the disk and Git.",
+      "编辑 → 检查 diff → 批准。请下载重要副本：删除网站数据也会删除磁盘和 Git。"
+    ],
+    "No se pudo guardar la preferencia de bienvenida: {0}": [
+      "Could not save the welcome preference: {0}",
+      "无法保存欢迎设置：{0}"
+    ],
+    "Entendido": [
+      "Got it",
+      "知道了"
+    ],
+    "Ver introducción": [
+      "View introduction",
+      "查看介绍"
+    ],
+    "Explorador OPFS": [
+      "OPFS Explorer",
+      "OPFS 浏览器"
+    ],
+    "Eliminar todos": [
+      "Delete all",
+      "全部删除"
+    ],
+    "Abrir": [
+      "Open",
+      "打开"
+    ],
+    "Abrir panel": [
+      "Open panel",
+      "打开面板"
+    ],
+    "Mostrar el contenido del panel": [
+      "Show panel content",
+      "显示面板内容"
+    ],
+    "Ocultar el contenido sin borrar borradores": [
+      "Hide content without deleting drafts",
+      "隐藏内容，但不删除草稿"
+    ],
+    "Volver al tamaño y posición anteriores": [
+      "Restore previous size and position",
+      "恢复先前的大小和位置"
+    ],
+    "Ampliar el panel dentro de la ventana": [
+      "Expand the panel within the window",
+      "在窗口内展开面板"
+    ],
+    "Tu disco está vacío. Usa Explorar / Importar archivos para empezar.": [
+      "Your disk is empty. Use Browse / Import files to get started.",
+      "磁盘为空。请使用“浏览/导入文件”开始操作。"
+    ],
+    "Editar {0}": [
+      "Edit {0}",
+      "编辑 {0}"
+    ],
+    "Editar localmente y revisar el diff antes de guardar": [
+      "Edit locally and review the diff before saving",
+      "在本地编辑并在保存前检查 diff"
+    ],
+    "Editar": [
+      "Edit",
+      "编辑"
+    ],
+    "Ejecutar {0}": [
+      "Run {0}",
+      "运行 {0}"
+    ],
+    "HTML en pestaña con actualización al guardar; JS en consola aislada. Requiere confirmación": [
+      "HTML in a tab that updates on save; JS in an isolated console. Requires confirmation",
+      "HTML 在标签页中打开并在保存时更新；JS 在隔离控制台中运行。需要确认"
+    ],
+    "Descargar {0}": [
+      "Download {0}",
+      "下载 {0}"
+    ],
+    "Guardar los bytes originales en la PC, sin enviarlos al chat": [
+      "Save the original bytes to the PC without sending them to chat",
+      "将原始字节保存到电脑，不发送到聊天"
+    ],
+    "Descargar": [
+      "Download",
+      "下载"
+    ],
+    "Eliminar {0}": [
+      "Delete {0}",
+      "删除 {0}"
+    ],
+    "Borrar este archivo tras confirmar; sin deshacer automático": [
+      "Delete this file after confirmation; no automatic undo",
+      "确认后删除此文件；不会自动撤销"
+    ],
+    "Eliminar": [
+      "Delete",
+      "删除"
+    ],
+    "Mostrando 50 de {0}; Eliminar todos incluye la lista completa.": [
+      "Showing 50 of {0}; Delete all includes the full list.",
+      "显示 {0} 项中的 50 项；“全部删除”会包含完整列表。"
+    ],
+    "Git local: sin inicializar": [
+      "Local Git: not initialized",
+      "本地 Git：尚未初始化"
+    ],
+    "{0} cambios pendientes": [
+      "{0} pending changes",
+      "{0} 项待处理更改"
+    ],
+    "Working tree limpio": [
+      "Working tree clean",
+      "工作区干净"
+    ],
+    "Todo guardado en Git": [
+      "Everything saved in Git",
+      "所有内容均已保存到 Git"
+    ],
+    "Guardar {0} en Git": [
+      "Save {0} to Git",
+      "将 {0} 保存到 Git"
+    ],
+    "Guardar {0} cambios en Git": [
+      "Save {0} changes in Git",
+      "将 {0} 项更改保存到 Git"
+    ],
+    "Revisar Git": [
+      "Review Git",
+      "检查 Git"
+    ],
+    "Operación en curso": [
+      "Operation in progress",
+      "操作正在进行"
+    ],
+    "No se pudo leer la preferencia de bienvenida: {0}": [
+      "Could not read the welcome preference: {0}",
+      "无法读取欢迎设置：{0}"
+    ],
+    "Panel Soberano v{0} activo. 100% local por defecto.": [
+      "Sovereign Panel v{0} active. 100% local by default.",
+      "独立面板 v{0} 已启用。默认 100% 在本地运行。"
+    ],
+    "DeepSeek se cerró o recargó; vuelve a abrir la vista previa desde Ejecutar.": [
+      "DeepSeek was closed or reloaded; reopen the preview from Run.",
+      "DeepSeek 已关闭或重新加载；请从“运行”重新打开预览。"
+    ],
+    "OPFS no está disponible; no se puede montar el panel": [
+      "OPFS is unavailable; the panel cannot be mounted",
+      "OPFS 不可用；无法加载面板"
+    ],
+    "no se encontró document.body; no se puede montar el panel": [
+      "document.body was not found; the panel cannot be mounted",
+      "未找到 document.body；无法加载面板"
+    ],
+    "Git": [
+      "Git",
+      "Git"
+    ],
+    "deleted (staged)": [
+      "deleted (staged)",
+      "已删除（已暂存）"
+    ],
+    "added (staged)": [
+      "added (staged)",
+      "已添加（已暂存）"
+    ],
+    "modified (staged)": [
+      "modified (staged)",
+      "已修改（已暂存）"
+    ],
+    "deleted (unstaged)": [
+      "deleted (unstaged)",
+      "已删除（未暂存）"
+    ],
+    "modified (unstaged)": [
+      "modified (unstaged)",
+      "已修改（未暂存）"
+    ],
+    "untracked": [
+      "untracked",
+      "未跟踪"
+    ],
+    "detached HEAD": [
+      "detached HEAD",
+      "分离的 HEAD"
+    ]
+  };
+  const EXTRA_I18N = {
+    'Idioma': ['Language', '语言'],
+    'Acerca de': ['About', '关于'],
+    'Acerca de este proyecto': ['About this project', '关于本项目'],
+    'Un proyecto de Geeknome · División de Informática': ['A Geeknome project · Computing Division', 'Geeknome 项目 · 信息技术部'],
+    '“La IA propone, el usuario ejecuta, ambos observan en vivo.”': ['“The AI proposes, the user executes, both observe live.”', '“AI 提出建议，用户执行，双方实时观察。”'],
+    'Autor: {0}': ['Author: {0}', '作者：{0}'],
+    'Visitar Geeknome (se abre en una pestaña nueva)': ['Visit Geeknome (opens in a new tab)', '访问 Geeknome（在新标签页中打开）'],
+    'Cerrar': ['Close', '关闭'],
+    'Actualizar desde disco': ['Refresh from disk', '从磁盘刷新'],
+    'No se pudo guardar el idioma: {0}': ['Could not save the language: {0}', '无法保存语言设置：{0}'],
+    'No se pudieron cargar los ajustes: {0}': ['Could not load settings: {0}', '无法加载设置：{0}'],
+    'Idioma no admitido: {0}': ['Unsupported language: {0}', '不支持的语言：{0}'],
+    'COMANDOS DISCO VIRTUAL (100% Local por defecto):': ['VIRTUAL DISK COMMANDS (100% local by default):', '虚拟磁盘命令（默认完全在本地运行）：'],
+    'Repositorio Git local inicializado (rama: main).': ['Local Git repository initialized (branch: main).', '本地 Git 仓库已初始化（分支：main）。'],
+    'Conectando con el panel...': ['Connecting to the panel...', '正在连接面板……'],
+    'HTML estático · sin scripts ni red': ['Static HTML · no scripts or network', '静态 HTML · 无脚本或网络'],
+    'Vista previa HTML aislada': ['Isolated HTML preview', '隔离的 HTML 预览'],
+    'Leyendo la versión guardada en OPFS...': ['Reading the version saved in OPFS...', '正在读取 OPFS 中保存的版本……'],
+    'El panel no responde. Mantén DeepSeek abierto. Si lo recargaste, vuelve a pulsar Ejecutar allí.':
+      ['The panel is not responding. Keep DeepSeek open. If you reloaded it, click Run there again.', '面板无响应。请保持 DeepSeek 打开。如果已重新加载，请在面板中再次点击“运行”。'],
+    'Actualizado: ': ['Updated: ', "已更新： "],
+    ' · Solo cambios guardados. Actualización automática mientras el panel esté abierto.':
+      [' · Saved changes only. Updates automatically while the panel is open.', ' · 仅显示已保存的更改。面板打开时自动更新。'],
+    'No se pudo actualizar: ': ['Could not refresh: ', "无法刷新： "],
+    'No se pudo conectar la vista previa: ': ['Could not connect the preview: ', "无法连接预览： "],
+    'limite de salida excedido': ['output limit exceeded', '超出输出限制'],
+    'tiempo limite de 3 segundos excedido': ['3-second time limit exceeded', '超过 3 秒时间限制'],
+    'error de sintaxis o arranque del Worker': ['Worker syntax or startup error', 'Worker 语法或启动错误'],
+    '[valor no serializable]': ['[non-serializable value]', '[无法序列化的值]'],
+    'Binary files {0} and {1} differ ({2} -> {3} B)': ['Binary files {0} and {1} differ ({2} -> {3} B)', '二进制文件 {0} 与 {1} 不同（{2} -> {3} B）'],
+    'Checkpoint: {0}\nArchivo: {1}\nFecha: {2}\nEtiqueta: {3}\nBytes: {4}\nSHA256: {5}':
+      ['Checkpoint: {0}\nFile: {1}\nDate: {2}\nLabel: {3}\nBytes: {4}\nSHA256: {5}', '检查点：{0}\n文件：{1}\n日期：{2}\n标签：{3}\n字节：{4}\nSHA256: {5}'],
+    'Checkpoint: {0}\nArchivo: {1} ({2} B)\nSHA256: {3}\nRestaurar: {4}restore {5}':
+      ['Checkpoint: {0}\nFile: {1} ({2} B)\nSHA256: {3}\nRestore: {4}restore {5}', '检查点：{0}\n文件：{1}（{2} B）\nSHA256: {3}\n恢复：{4}restore {5}'],
+    'Editor de {0}': ['Editor for {0}', '{0} 的编辑器'],
+    'Editor local · {0}': ['Local editor · {0}', '本地编辑器 · {0}'],
+    'Eliminado: {0}': ['Deleted: {0}', '已删除：{0}'],
+    '[Tx OK] Guardado {0} ({1})': ['[Tx OK] Saved {0} ({1})', '[Tx OK] 已保存 {0}（{1}）'],
+    '  checkpoint delete ID / prune --keep N / prune --older-than 7d: borrado confirmado.':
+      ['  checkpoint delete ID / prune --keep N / prune --older-than 7d: deletion requires confirmation.', '  checkpoint delete ID / prune --keep N / prune --older-than 7d：删除前需确认。'],
+    '[Archivo OPFS: {0}; {1}]\nSHA256: {2}\n{3}\n{4}\n{5}\n':
+      ['[OPFS file: {0}; {1}]\nSHA256: {2}\n{3}\n{4}\n{5}\n', '[OPFS 文件：{0}；{1}]\nSHA256: {2}\n{3}\n{4}\n{5}\n'],
+    'Comando local': ['Local command', '本地命令'],
+    'Git: consultando...': ['Git: checking...', 'Git：正在检查……'],
+    'Estado y diferencias Git': ['Git status and differences', 'Git 状态和差异'],
+    'Commit local verificado: {0}.': ['Local commit verified: {0}.', '本地提交已验证：{0}。'],
+    'Contraer panel': ['Collapse panel', '收起面板'],
+    'Ampliar panel': ['Expand panel', '展开面板'],
+    'Archivo a compartir': ['File to share', '要分享的文件'],
+    'Estado: !git status': ['Status: !git status', '状态：!git status'],
+    'Comandos: !help': ['Commands: !help', '命令：!help'],
+    'Limpiar log': ['Clear log', '清空日志'],
+    'Git: error de consulta': ['Git: status query failed', 'Git：状态查询失败'],
+    'Inicializar Git local': ['Initialize local Git', '初始化本地 Git'],
+    '[DV] Error de arranque:': ['[DV] Startup error:', '[DV] 启动错误：'],
+    'Git: {0}': ['Git: {0}', 'Git：{0}'],
+    'Git diff: {0}': ['Git diff: {0}', 'Git diff：{0}'],
+    'Ampliar': ['Expand', '展开'],
+    'Reducir': ['Reduce', '缩小'],
+    'Contraer': ['Collapse', '收起'],
+    'Reducir panel': ['Reduce panel', '缩小面板'],
+  };
+  const LANGUAGES = ['es', 'en', 'zh-CN'];
+  let language = 'es';
+
+  function t(message, ...values) {
+    const key = typeof message === 'string' ? message :
+      message.reduce((text, part, i) => text + part + (i < values.length ? `{${i}}` : ''), '');
+    const pair = Object.hasOwn(I18N, key) ? I18N[key] :
+      Object.hasOwn(EXTRA_I18N, key) ? EXTRA_I18N[key] : null;
+    if (language !== 'es' && !pair) throw new Error(`Missing translation: ${key}`);
+    const pattern = language === 'es' ? key : pair[language === 'en' ? 0 : 1];
+    return pattern.replace(/\{(\d+)\}/g, (token, index) => index < values.length ? String(values[index]) : token);
+  }
+
+  function detectLanguage(preferences) {
+    for (const locale of preferences || []) {
+      const base = String(locale).toLowerCase().split('-')[0];
+      if (base === 'zh') return 'zh-CN';
+      if (base === 'en' || base === 'es') return base;
+    }
+    return 'es';
+  }
+
+  function setLanguage(next) {
+    if (!LANGUAGES.includes(next)) throw new Error(t`Idioma no admitido: ${next}`);
+    localStorage.setItem(CFG.SETTINGS_KEY, JSON.stringify({ ...settings, language: next }));
+    language = next;
+    settings.language = next;
+  }
+
+  let refreshChatCodeActions = () => {};
 
   const dvLog = (...a) => console.log('[DV]', ...a);
 
@@ -61,7 +2294,7 @@
   };
 
   const truncate = (s, n = CFG.MAX_OUTPUT_CHARS) =>
-    s.length > n ? s.slice(0, n) + `\n... (truncado, ${s.length - n} caracteres más)` : s;
+    s.length > n ? s.slice(0, n) + t`\n... (truncado, ${s.length - n} caracteres más)` : s;
 
   function safeFence(text) {
     let max = 2, run = 0;
@@ -74,7 +2307,7 @@
   function toInt(v, dflt, flag) {
     if (v === undefined) return dflt;
     const n = Number(v);
-    if (!Number.isInteger(n) || n < 0) throw new Error(`valor no válido para ${flag}: ${v}`);
+    if (!Number.isInteger(n) || n < 0) throw new Error(t`valor no válido para ${flag}: ${v}`);
     return n;
   }
 
@@ -83,21 +2316,24 @@
       const src = fixed ? pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : pattern;
       return new RegExp(src, ignoreCase ? 'i' : '');
     } catch (e) {
-      throw new Error(`regex no válida: ${e.message}`);
+      throw new Error(t`regex no válida: ${e.message}`);
     }
   }
 
   // ============================================================
   // AJUSTES
   // ============================================================
-  const settings = { prefix: '!' };
+  const settings = { prefix: '!', language: 'es' };
   const PREFIX_RE = /^[!#$%&*+=;:~^?@]{1,2}$/;
 
   function loadSettings() {
+    language = detectLanguage(typeof navigator === 'undefined' ? [] : navigator.languages || [navigator.language]);
     try {
       const o = JSON.parse(localStorage.getItem(CFG.SETTINGS_KEY) || '{}');
       if (typeof o.prefix === 'string' && PREFIX_RE.test(o.prefix)) settings.prefix = o.prefix;
-    } catch { /* defaults */ }
+      if (LANGUAGES.includes(o.language)) language = o.language;
+    } catch (e) { console.error('[DV]', t`No se pudieron cargar los ajustes: ${e.message}`); }
+    settings.language = language;
   }
 
   // ============================================================
@@ -111,17 +2347,17 @@
     if (!navigator.storage?.getDirectory) return false;
     rootDir = await navigator.storage.getDirectory();
     try { await navigator.storage.persist?.(); } catch { /* */ }
-    dvLog('OPFS listo');
+    dvLog(t('OPFS listo'));
     return true;
   }
 
   function splitPath(p) {
-    if (typeof p !== 'string' || !p) throw new Error('ruta vacía');
+    if (typeof p !== 'string' || !p) throw new Error(t('ruta vacía'));
     const parts = p.replaceAll('\\', '/').split('/').filter(Boolean);
     for (const s of parts) {
-      if (s === '..') throw new Error(`ruta no permitida: ${p}`);
-      if (BAD_NAME.test(s)) throw new Error(`nombre no válido: ${s}`);
-      if (s.length > 200) throw new Error(`nombre demasiado largo: ${s.slice(0, 20)}…`);
+      if (s === '..') throw new Error(t`ruta no permitida: ${p}`);
+      if (BAD_NAME.test(s)) throw new Error(t`nombre no válido: ${s}`);
+      if (s.length > 200) throw new Error(t`nombre demasiado largo: ${s.slice(0, 20)}…`);
     }
     return parts.filter((s) => s !== '.');
   }
@@ -143,14 +2379,14 @@
 
   async function requireFile(path) {
     const h = await getHandle(path);
-    if (!h) throw Object.assign(new Error(`no existe: ${path}`), { name: 'NotFoundError' });
-    if (h.kind !== 'file') throw Object.assign(new Error(`es una carpeta: ${path}`), { code: 'EISDIR' });
+    if (!h) throw Object.assign(new Error(t`no existe: ${path}`), { name: 'NotFoundError' });
+    if (h.kind !== 'file') throw Object.assign(new Error(t`es una carpeta: ${path}`), { code: 'EISDIR' });
     return h;
   }
 
   async function parentOf(path, create) {
     const parts = splitPath(path);
-    if (!parts.length) throw new Error('ruta no válida');
+    if (!parts.length) throw new Error(t('ruta no válida'));
     const name = parts.pop();
     let dir = rootDir;
     for (const p of parts) dir = await dir.getDirectoryHandle(p, { create });
@@ -183,7 +2419,7 @@
 
   async function removePath(path, recursive) {
     const parts = splitPath(path);
-    if (!parts.length) throw new Error('no se puede borrar la raíz');
+    if (!parts.length) throw new Error(t('no se puede borrar la raíz'));
     const { dir, name } = await parentOf(path, false);
     await dir.removeEntry(name, { recursive: !!recursive });
     notifyHTMLPreviews(parts.join('/'));
@@ -207,23 +2443,23 @@
   async function copyOrMove(args, move) {
     const command = move ? 'mv' : 'cp';
     const { pos } = parseArgs(args, {});
-    if (pos.length !== 2) throw new Error(`uso: ${command} <origen> <destino> (solo archivos)`);
+    if (pos.length !== 2) throw new Error(t`uso: ${command} <origen> <destino> (solo archivos)`);
     const paths = pos.map((path) => {
       const parts = splitPath(path);
-      if (!parts.length || isInternalPath(path)) throw new Error('raíz y metadatos internos no permitidos');
+      if (!parts.length || isInternalPath(path)) throw new Error(t('raíz y metadatos internos no permitidos'));
       return parts.join('/');
     });
     const [sourcePath, targetPath] = paths;
-    if (sourcePath === targetPath) throw new Error('origen y destino son el mismo archivo');
+    if (sourcePath === targetPath) throw new Error(t('origen y destino son el mismo archivo'));
     const sourceHandle = await requireFile(sourcePath);
     const sourceFile = await sourceHandle.getFile();
-    if (sourceFile.size > CFG.MAX_HASH_BYTES) throw new Error(`archivo demasiado grande para verificar: máximo ${fmtBytes(CFG.MAX_HASH_BYTES)}`);
+    if (sourceFile.size > CFG.MAX_HASH_BYTES) throw new Error(t`archivo demasiado grande para verificar: máximo ${fmtBytes(CFG.MAX_HASH_BYTES)}`);
     const targetHandle = await getHandle(targetPath);
-    if (targetHandle?.kind === 'directory') throw new Error('destino es una carpeta; indica la ruta completa del archivo');
+    if (targetHandle?.kind === 'directory') throw new Error(t('destino es una carpeta; indica la ruta completa del archivo'));
     if (move || targetHandle) {
-      const action = move ? `Mover "${sourcePath}" a "${targetPath}" y borrar el origen` : `Reemplazar "${targetPath}" con "${sourcePath}"`;
-      if (!confirm(`¿${action}?${targetHandle ? ' El destino existente será reemplazado.' : ''} No hay deshacer automático.`)) {
-        throw new Error(`${command} cancelado; no se ha modificado nada`);
+      const action = move ? t`Mover "${sourcePath}" a "${targetPath}" y borrar el origen` : t`Reemplazar "${targetPath}" con "${sourcePath}"`;
+      if (!confirm(t`¿${action}?${targetHandle ? t(' El destino existente será reemplazado.') : ''} No hay deshacer automático.`)) {
+        throw new Error(t`${command} cancelado; no se ha modificado nada`);
       }
     }
     const sourceHash = await copyVerifiedFile(sourceFile, targetPath, targetHandle);
@@ -231,11 +2467,11 @@
       const currentSource = await (await requireFile(sourcePath)).getFile();
       if (currentSource.size !== sourceFile.size ||
           await computeSha256(await currentSource.arrayBuffer()) !== sourceHash) {
-        throw new Error('el origen cambió durante la copia; no se ha borrado y el destino contiene la versión copiada');
+        throw new Error(t('el origen cambió durante la copia; no se ha borrado y el destino contiene la versión copiada'));
       }
       try { await removePath(sourcePath, false); }
-      catch (e) { throw new Error(`copia verificada en "${targetPath}", pero no se pudo borrar "${sourcePath}": ${e.message}`); }
-      if (await getHandle(sourcePath)) throw new Error(`copia verificada, pero el origen sigue existiendo: ${sourcePath}`);
+      catch (e) { throw new Error(t`copia verificada en "${targetPath}", pero no se pudo borrar "${sourcePath}": ${e.message}`); }
+      if (await getHandle(sourcePath)) throw new Error(t`copia verificada, pero el origen sigue existiendo: ${sourcePath}`);
     }
     return `${move ? 'Movido' : 'Copiado'}: ${sourcePath} -> ${targetPath} (${fmtBytes(sourceFile.size)}, SHA256: ${sourceHash.slice(0, 8)}...)`;
   }
@@ -249,7 +2485,7 @@
       if (!targetHandle && await getHandle(targetPath)) {
         try { await removePath(targetPath, false); }
         catch (cleanupError) {
-          throw new Error(`copia fallida: ${e.message}; no se pudo retirar el destino incompleto "${targetPath}": ${cleanupError.message}`);
+          throw new Error(t`copia fallida: ${e.message}; no se pudo retirar el destino incompleto "${targetPath}": ${cleanupError.message}`);
         }
       }
       throw e;
@@ -257,36 +2493,36 @@
     const copiedFile = await (await requireFile(targetPath)).getFile();
     if (copiedFile.size !== sourceFile.size ||
         await computeSha256(await copiedFile.arrayBuffer()) !== sourceHash) {
-      throw new Error(`verificación de copia fallida: ${targetPath}; el origen se conserva`);
+      throw new Error(t`verificación de copia fallida: ${targetPath}; el origen se conserva`);
     }
     return sourceHash;
   }
 
   async function importLocalFiles(files) {
-    if (busy) { uiLog('⏳ Hay una operación en curso; vuelve a seleccionar los archivos al terminar.', 'err'); return; }
+    if (busy) { uiLog(t('⏳ Hay una operación en curso; vuelve a seleccionar los archivos al terminar.'), 'err'); return; }
     setBusy(true);
     let imported = 0, skipped = 0;
     try {
       for (const file of files) {
         const parts = splitPath(file.name);
         if (parts.length !== 1 || parts[0] !== file.name || isInternalPath(file.name)) {
-          throw new Error(`nombre de archivo no permitido: ${file.name}`);
+          throw new Error(t`nombre de archivo no permitido: ${file.name}`);
         }
-        if (file.size > CFG.MAX_HASH_BYTES) throw new Error(`${file.name}: supera el máximo verificable de ${fmtBytes(CFG.MAX_HASH_BYTES)}`);
+        if (file.size > CFG.MAX_HASH_BYTES) throw new Error(t`${file.name}: supera el máximo verificable de ${fmtBytes(CFG.MAX_HASH_BYTES)}`);
         const target = await getHandle(file.name);
-        if (target?.kind === 'directory') throw new Error(`${file.name}: ya existe una carpeta con ese nombre`);
-        if (target && !confirm(`¿Reemplazar "${file.name}" en el disco virtual (${fmtBytes(file.size)})? No hay deshacer automático.`)) {
+        if (target?.kind === 'directory') throw new Error(t`${file.name}: ya existe una carpeta con ese nombre`);
+        if (target && !confirm(t`¿Reemplazar "${file.name}" en el disco virtual (${fmtBytes(file.size)})? No hay deshacer automático.`)) {
           skipped++;
-          uiLog(`Omitido sin cambios: ${file.name}`, 'info');
+          uiLog(t`Omitido sin cambios: ${file.name}`, 'info');
           continue;
         }
         const hash = await copyVerifiedFile(file, file.name, target);
         imported++;
-        uiLog(`Importado localmente: ${file.name} (${fmtBytes(file.size)}, SHA256: ${hash.slice(0, 8)}...)`, 'info');
+        uiLog(t`Importado localmente: ${file.name} (${fmtBytes(file.size)}, SHA256: ${hash.slice(0, 8)}...)`, 'info');
       }
-      uiLog(`Importación terminada: ${imported} archivo(s), ${skipped} omitido(s). Nada enviado a DeepSeek.`, 'info');
+      uiLog(t`Importación terminada: ${imported} archivo(s), ${skipped} omitido(s). Nada enviado a DeepSeek.`, 'info');
     } catch (e) {
-      uiLog(`❌ Importación detenida: ${e.message}. ${imported} archivo(s) importados y ${skipped} omitidos; los anteriores se conservan.`, 'err');
+      uiLog(t`❌ Importación detenida: ${e.message}. ${imported} archivo(s) importados y ${skipped} omitidos; los anteriores se conservan.`, 'err');
     } finally {
       setBusy(false);
       await ui?.refresh();
@@ -295,7 +2531,7 @@
 
   async function openWriter(path, { append = false } = {}) {
     const gz = /\.gz$/i.test(path);
-    if (gz && append) throw new Error('no se puede añadir (>>) a un .gz');
+    if (gz && append) throw new Error(t('no se puede añadir (>>) a un .gz'));
     const ws = await openRawWriter(path, { append });
     const enc = new TextEncoder();
     let target = ws, gzWriter = null, pipe = null;
@@ -343,7 +2579,7 @@
       const w = await openWriter('.dv/journal.jsonl', { append: true });
       await w.write(line);
       await w.close();
-    } catch (e) { uiLog(`Auditoría no guardada: ${e.message}`, 'err'); }
+    } catch (e) { uiLog(t`Auditoría no guardada: ${e.message}`, 'err'); }
   }
 
   async function atomicWrite(targetPath, newContent, { expectedHash = null } = {}) {
@@ -367,12 +2603,12 @@
     const writtenTmpHash = await computeSha256(await writtenTmp.arrayBuffer());
     if (writtenTmpHash !== candidateHash) {
       await removePath(tmpPath, false);
-      throw new Error('Integridad de temporal comprometida.');
+      throw new Error(t('Integridad de temporal comprometida.'));
     }
 
     if (expectedHash !== null && (await editorSnapshot(targetPath)).hash !== expectedHash) {
       await removePath(tmpPath, false);
-      throw new Error('archivo cambió durante la preparación; no se sobrescribió');
+      throw new Error(t('archivo cambió durante la preparación; no se sobrescribió'));
     }
     await writeBytes(targetPath, candidateBytes);
     await removePath(tmpPath, false);
@@ -380,7 +2616,7 @@
     const finalFile = await (await requireFile(targetPath)).getFile();
     const finalHash = await computeSha256(await finalFile.arrayBuffer());
     if (finalHash !== candidateHash) {
-      throw new Error('Verificación post-escritura fallida.');
+      throw new Error(t('Verificación post-escritura fallida.'));
     }
 
     await appendJournal({
@@ -430,8 +2666,8 @@
       },
       async readdir(path) {
         const h = path ? await getHandle(path) : rootDir;
-        if (!h) throw Object.assign(new Error('no existe: ' + path), { name: 'NotFoundError' });
-        if (h.kind !== 'directory') throw Object.assign(new Error('no es dir'), { name: 'TypeMismatchError' });
+        if (!h) throw Object.assign(new Error(t('no existe: ') + path), { name: 'NotFoundError' });
+        if (h.kind !== 'directory') throw Object.assign(new Error(t('no es dir')), { name: 'TypeMismatchError' });
         const out = [];
         for await (const [name] of h.entries()) out.push(name);
         return out.sort();
@@ -443,7 +2679,7 @@
           return { isFile: () => false, isDirectory: () => true, isSymbolicLink: () => false, size: 0, mode: 0o40755, mtime: now, ctime: now, mtimeMs: now.getTime(), ctimeMs: now.getTime() };
         }
         const h = await getHandle(path);
-        if (!h) throw Object.assign(new Error('no existe: ' + path), { name: 'NotFoundError' });
+        if (!h) throw Object.assign(new Error(t('no existe: ') + path), { name: 'NotFoundError' });
         if (h.kind === 'file') {
           const f = await h.getFile();
           const d = new Date(f.lastModified || Date.now());
@@ -458,8 +2694,8 @@
       },
       async unlink(path) { await removePath(path, false); },
       async rmdir(path) { await removePath(path, false); },
-      async readlink() { throw Object.assign(new Error('no symlinks'), { code: 'ENOSYS' }); },
-      async symlink() { throw Object.assign(new Error('no symlinks'), { code: 'ENOSYS' }); },
+      async readlink() { throw Object.assign(new Error(t('no symlinks')), { code: 'ENOSYS' }); },
+      async symlink() { throw Object.assign(new Error(t('no symlinks')), { code: 'ENOSYS' }); },
       async chmod() {}, async utimes() {}, async fsync() {}
     };
     const p = {};
@@ -476,7 +2712,7 @@
 
   async function getGit() {
     if (gitInstance) return { git: gitInstance, fs: gitFs };
-    uiLog('Cargando isomorphic-git...', 'info');
+    uiLog(t('Cargando isomorphic-git...'), 'info');
     const mod = await import('https://esm.sh/isomorphic-git@1.32.1');
     gitInstance = mod.default || mod;
     gitFs = makeFs();
@@ -501,18 +2737,18 @@
   }
 
   function formatGitDate(timestamp, iso = false) {
-    if (!Number.isFinite(timestamp)) return 'sin fecha: timestamp ausente o no válido';
+    if (!Number.isFinite(timestamp)) return t('sin fecha: timestamp ausente o no válido');
     const date = new Date(timestamp * 1000);
-    if (!Number.isFinite(date.getTime())) return 'sin fecha: timestamp fuera de rango';
-    return iso ? date.toISOString() : date.toLocaleTimeString();
+    if (!Number.isFinite(date.getTime())) return t('sin fecha: timestamp fuera de rango');
+    return iso ? date.toISOString() : date.toLocaleTimeString(language);
   }
 
   function gitChangeDescription(head, work, stage) {
     const states = [];
-    if (head === 0 && stage === 0) states.push('untracked');
+    if (head === 0 && stage === 0) states.push(t('untracked'));
     else {
-      if (head !== stage) states.push(stage === 0 ? 'deleted (staged)' : head === 0 ? 'added (staged)' : 'modified (staged)');
-      if (work !== stage) states.push(work === 0 ? 'deleted (unstaged)' : stage === 0 ? 'untracked' : 'modified (unstaged)');
+      if (head !== stage) states.push(t(stage === 0 ? 'deleted (staged)' : head === 0 ? 'added (staged)' : 'modified (staged)'));
+      if (work !== stage) states.push(t(work === 0 ? 'deleted (unstaged)' : stage === 0 ? 'untracked' : 'modified (unstaged)'));
     }
     return states.join(', ');
   }
@@ -543,11 +2779,11 @@
   async function getGitStatus({ capture = false } = {}) {
     const repository = await getHandle('.git');
     if (!repository) return { initialized: false, changes: [] };
-    if (repository.kind !== 'directory') throw new Error('.git no es una carpeta; revisa el repositorio');
+    if (repository.kind !== 'directory') throw new Error(t('.git no es una carpeta; revisa el repositorio'));
     const { git, fs } = await getGit();
     const matrix = await git.statusMatrix({ fs, dir: '.' });
     if (matrix.some(([path, head, , stage]) => isInternalPath(path) && (head !== 0 || stage !== 0))) {
-      throw new Error('Git contiene metadatos internos versionados; revisa el repositorio antes de guardar');
+      throw new Error(t('Git contiene metadatos internos versionados; revisa el repositorio antes de guardar'));
     }
     const rows = matrix.filter(([path]) => !isInternalPath(path));
     const changes = rows.filter(([, head, work, stage]) => head !== work || work !== stage)
@@ -556,13 +2792,13 @@
     const head = await gitHeadOid(git, fs);
     const state = { initialized: true, changes, branch, head };
     if (!capture) return state;
-    if (!branch) throw new Error('guardar con botón requiere una rama local activa; revisa git branch');
+    if (!branch) throw new Error(t('guardar con botón requiere una rama local activa; revisa git branch'));
     const working = [];
     for (const [path, , work] of rows) {
       let hash = null;
       if (work !== 0) {
         const file = await (await requireFile(path)).getFile();
-        if (file.size > CFG.MAX_HASH_BYTES) throw new Error(`Git: archivo demasiado grande para verificar: ${path}`);
+        if (file.size > CFG.MAX_HASH_BYTES) throw new Error(t`Git: archivo demasiado grande para verificar: ${path}`);
         hash = await computeSha256(await file.arrayBuffer());
       }
       working.push([path, hash]);
@@ -576,39 +2812,39 @@
   }
 
   async function saveGitChanges(review, message) {
-    if (busy || editorOpen) throw new Error('cierra el editor o espera a que termine la operación antes de versionar');
-    if (typeof message !== 'string' || !message.trim()) throw new Error('escribe un mensaje de commit');
-    if (!review?.initialized || !review.signature || !review.changes.length) throw new Error('actualiza la revisión de cambios antes de guardar');
+    if (busy || editorOpen) throw new Error(t('cierra el editor o espera a que termine la operación antes de versionar'));
+    if (typeof message !== 'string' || !message.trim()) throw new Error(t('escribe un mensaje de commit'));
+    if (!review?.initialized || !review.signature || !review.changes.length) throw new Error(t('actualiza la revisión de cambios antes de guardar'));
     setBusy(true);
     let staged = false;
     try {
       const current = await getGitStatus({ capture: true });
-      if (current.signature !== review.signature) throw new Error('repositorio cambió desde la revisión; actualiza la lista antes de guardar');
+      if (current.signature !== review.signature) throw new Error(t('repositorio cambió desde la revisión; actualiza la lista antes de guardar'));
       const { git, fs } = await getGit();
       staged = true;
       await stageAllGitFiles(git, fs);
       const ready = await getGitStatus({ capture: true });
       if (ready.workSignature !== review.workSignature || ready.changes.some(c => c.work !== c.stage)) {
-        throw new Error('archivos o rama cambiaron durante staging; no se hizo commit');
+        throw new Error(t('archivos o rama cambiaron durante staging; no se hizo commit'));
       }
       if (!ready.changes.some(c => c.head !== c.stage)) {
-        throw new Error('la versión actual coincide con HEAD; staging actualizado, no hay cambios para un commit');
+        throw new Error(t('la versión actual coincide con HEAD; staging actualizado, no hay cambios para un commit'));
       }
       const oid = await git.commit({ fs, dir: '.', message: message.trim(),
         author: { name: 'DV User', email: 'user@local.lan' } });
-      if (await gitHeadOid(git, fs) !== oid) throw new Error(`commit ${oid} creado, pero HEAD cambió; revisa git log y git status`);
+      if (await gitHeadOid(git, fs) !== oid) throw new Error(t`commit ${oid} creado, pero HEAD cambió; revisa git log y git status`);
       const commit = await git.readCommit({ fs, dir: '.', oid });
       if ((review.head && !commit.commit.parent.includes(review.head)) ||
-          !review.head && commit.commit.parent.length) throw new Error(`commit ${oid} creado con historial inesperado; revisa git log`);
+          !review.head && commit.commit.parent.length) throw new Error(t`commit ${oid} creado con historial inesperado; revisa git log`);
       if (JSON.stringify(await gitBlobOids(git, fs, git.TREE({ ref: oid }))) !== JSON.stringify(ready.stagedOids)) {
-        throw new Error(`commit ${oid} creado, pero su contenido no coincide con el staging revisado; revisa git show`);
+        throw new Error(t`commit ${oid} creado, pero su contenido no coincide con el staging revisado; revisa git show`);
       }
       const final = await getGitStatus();
-      uiLog(`[${review.branch} ${oid.slice(0, 7)}] ${message.trim()}. Git local; nada enviado al chat ni a un servidor.`, 'info');
-      if (final.changes.length) uiLog('Hay cambios pendientes posteriores al commit; revisa el estado Git.', 'err');
+      uiLog(t`[${review.branch} ${oid.slice(0, 7)}] ${message.trim()}. Git local; nada enviado al chat ni a un servidor.`, 'info');
+      if (final.changes.length) uiLog(t('Hay cambios pendientes posteriores al commit; revisa el estado Git.'), 'err');
       return oid;
     } catch (e) {
-      throw new Error(`${e.message}${staged ? '. El staging puede haber cambiado; revisa git status. Sin rollback automático.' : ''}`);
+      throw new Error(`${e.message}${staged ? t('. El staging puede haber cambiado; revisa git status. Sin rollback automático.') : ''}`);
     } finally {
       setBusy(false);
       await ui?.refresh();
@@ -617,17 +2853,17 @@
 
   async function checkoutBranch(git, fs, ref) {
     const branches = await git.listBranches({ fs, dir: '.' });
-    if (!branches.includes(ref)) throw new Error('checkout: rama local no existe; créala con git branch <nombre>');
+    if (!branches.includes(ref)) throw new Error(t('checkout: rama local no existe; créala con git branch <nombre>'));
     const oid = await git.resolveRef({ fs, dir: '.', ref: `refs/heads/${ref}` });
     await git.walk({
       fs, dir: '.', trees: [git.TREE({ ref: oid })],
       map: async (path, [entry]) => {
         if (path === '.' || !entry) return;
-        if (isInternalPath(path)) throw new Error(`checkout: rama contiene metadatos protegidos: ${path}`);
-        if (splitPath(path).join('/') !== path) throw new Error(`checkout: ruta no válida en rama: ${path}`);
+        if (isInternalPath(path)) throw new Error(t`checkout: rama contiene metadatos protegidos: ${path}`);
+        if (splitPath(path).join('/') !== path) throw new Error(t`checkout: ruta no válida en rama: ${path}`);
         const type = await entry.type();
         if (!['tree', 'blob'].includes(type) || type === 'blob' && ![0o100644, 0o100755].includes(await entry.mode())) {
-          throw new Error(`checkout: tipo no soportado en rama: ${path}`);
+          throw new Error(t`checkout: tipo no soportado en rama: ${path}`);
         }
       }
     });
@@ -635,30 +2871,30 @@
       const matrix = await git.statusMatrix({ fs, dir: '.' });
       const dirty = matrix.filter(([path, head, work, stage]) => !isInternalPath(path) &&
         (head !== work || work !== stage));
-      if (dirty.length) throw new Error(`checkout bloqueado: cambios pendientes en ${dirty.length} archivo(s). Revisa git status y confirma o conserva tus archivos.`);
+      if (dirty.length) throw new Error(t`checkout bloqueado: cambios pendientes en ${dirty.length} archivo(s). Revisa git status y confirma o conserva tus archivos.`);
       const tracked = new Set(await git.listFiles({ fs, dir: '.' }));
-      if ([...tracked].some(isInternalPath)) throw new Error('checkout bloqueado: staging contiene metadatos protegidos; revisa el repositorio');
+      if ([...tracked].some(isInternalPath)) throw new Error(t('checkout bloqueado: staging contiene metadatos protegidos; revisa el repositorio'));
       if (matrix.some(([path, head]) => head !== 0 && isInternalPath(path))) {
-        throw new Error('checkout bloqueado: commit actual contiene metadatos protegidos');
+        throw new Error(t('checkout bloqueado: commit actual contiene metadatos protegidos'));
       }
       const files = (await listFiles()).filter(f => !isInternalPath(f.path));
       const untracked = files.filter(f => !tracked.has(f.path));
-      if (untracked.length) throw new Error(`checkout bloqueado: ${untracked.length} archivo(s) sin seguimiento o ignorados. No se descartan automáticamente.`);
+      if (untracked.length) throw new Error(t`checkout bloqueado: ${untracked.length} archivo(s) sin seguimiento o ignorados. No se descartan automáticamente.`);
       const hashes = [];
       for (const f of files) {
-        if (f.size > CFG.MAX_HASH_BYTES) throw new Error('checkout: archivo demasiado grande para verificar');
+        if (f.size > CFG.MAX_HASH_BYTES) throw new Error(t('checkout: archivo demasiado grande para verificar'));
         hashes.push([f.path, await computeSha256(await (await (await requireFile(f.path)).getFile()).arrayBuffer())]);
       }
       return JSON.stringify({ head: await gitHeadOid(git, fs),
         branch: await git.currentBranch({ fs, dir: '.' }), hashes });
     };
     const before = await inspect();
-    if (await git.currentBranch({ fs, dir: '.' }) === ref) return `Ya estás en la rama ${ref}; working tree limpio.`;
-    if (!confirm(`¿Cambiar a la rama local "${ref}" (${oid.slice(0, 7)})?\nWorking tree y staging limpios. Se reemplazarán archivos por la versión confirmada de esa rama.\nSin --force, sin descarte automático. Checkpoints conservados.`)) {
-      throw new Error('checkout cancelado; rama y archivos intactos');
+    if (await git.currentBranch({ fs, dir: '.' }) === ref) return t`Ya estás en la rama ${ref}; working tree limpio.`;
+    if (!confirm(t`¿Cambiar a la rama local "${ref}" (${oid.slice(0, 7)})?\nWorking tree y staging limpios. Se reemplazarán archivos por la versión confirmada de esa rama.\nSin --force, sin descarte automático. Checkpoints conservados.`)) {
+      throw new Error(t('checkout cancelado; rama y archivos intactos'));
     }
     if (await inspect() !== before || await git.resolveRef({ fs, dir: '.', ref: `refs/heads/${ref}` }) !== oid) {
-      throw new Error('checkout: repositorio cambió durante confirmación; no se cambió de rama');
+      throw new Error(t('checkout: repositorio cambió durante confirmación; no se cambió de rama'));
     }
     try {
       await git.checkout({ fs, dir: '.', ref, force: false });
@@ -666,24 +2902,24 @@
       if (await git.currentBranch({ fs, dir: '.' }) !== ref ||
           await gitHeadOid(git, fs) !== oid ||
           matrix.some(([path, head, work, stage]) => !isInternalPath(path) && (head !== work || work !== stage))) {
-        throw new Error('estado final no coincide con la rama o no está limpio');
+        throw new Error(t('estado final no coincide con la rama o no está limpio'));
       }
     } catch (e) {
-      throw new Error(`checkout no completado/verificado: ${e.message}. Revisa git status y git branch; no hay rollback automático.`);
+      throw new Error(t`checkout no completado/verificado: ${e.message}. Revisa git status y git branch; no hay rollback automático.`);
     }
-    return `Rama activa: ${ref} (${oid.slice(0, 7)}). Working tree y staging verificados limpios.`;
+    return t`Rama activa: ${ref} (${oid.slice(0, 7)}). Working tree y staging verificados limpios.`;
   }
 
   async function gitShow(git, fs, args) {
-    if (args.length > 1) throw new Error('uso: git show [ref|ref:archivo]');
+    if (args.length > 1) throw new Error(t('uso: git show [ref|ref:archivo]'));
     const spec = args[0] || 'HEAD';
     const colon = spec.indexOf(':');
     const ref = colon < 0 ? spec : spec.slice(0, colon);
-    if (!ref || ref.startsWith('-')) throw new Error('referencia Git no válida; usa HEAD, nombre de referencia o SHA completo');
+    if (!ref || ref.startsWith('-')) throw new Error(t('referencia Git no válida; usa HEAD, nombre de referencia o SHA completo'));
     let path = null;
     if (colon >= 0) {
       path = spec.slice(colon + 1);
-      if (!path || !splitPath(path).length || isInternalPath(path)) throw new Error('archivo histórico no permitido');
+      if (!path || !splitPath(path).length || isInternalPath(path)) throw new Error(t('archivo histórico no permitido'));
       path = splitPath(path).join('/');
     }
     const oid = await git.resolveRef({ fs, dir: '.', ref });
@@ -694,15 +2930,15 @@
         `Date: ${formatGitDate(commit.author?.timestamp, true)}\n\n${commit.message.trimEnd()}`;
     }
     const { blob } = await git.readBlob({ fs, dir: '.', oid, filepath: path });
-    if (blob.length > CFG.MAX_RUN_BYTES) throw new Error('git show: máximo 256 KB por archivo histórico');
-    if (blob.includes(0)) throw new Error('git show requiere texto UTF-8 sin NUL; exportación binaria pendiente');
+    if (blob.length > CFG.MAX_RUN_BYTES) throw new Error(t('git show: máximo 256 KB por archivo histórico'));
+    if (blob.includes(0)) throw new Error(t('git show requiere texto UTF-8 sin NUL; exportación binaria pendiente'));
     try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(blob); }
-    catch (e) { if (e.name === 'TypeError') throw new Error('git show requiere texto UTF-8 válido'); throw e; }
+    catch (e) { if (e.name === 'TypeError') throw new Error(t('git show requiere texto UTF-8 válido')); throw e; }
   }
 
   async function gitDiff(git, fs, args) {
     const { flags, pos } = parseArgs(args, { staged: 'b' });
-    if (pos.length > 1) throw new Error('uso: git diff [--staged] [ref]');
+    if (pos.length > 1) throw new Error(t('uso: git diff [--staged] [ref]'));
     const ref = pos[0] || 'HEAD';
     const headOid = pos[0]
       ? await git.resolveRef({ fs, dir: '.', ref })
@@ -739,12 +2975,12 @@
         if (flags.staged) newBytes = await readStage();
         else {
           const file = await (await requireFile(path)).getFile();
-          if (file.size > CFG.MAX_COLLECT_CHARS) throw new Error(`archivo demasiado grande para diff: ${path}`);
+          if (file.size > CFG.MAX_COLLECT_CHARS) throw new Error(t`archivo demasiado grande para diff: ${path}`);
           newBytes = new Uint8Array(await file.arrayBuffer());
         }
       }
       total += oldBytes.length + newBytes.length;
-      if (total > CFG.MAX_COLLECT_CHARS) throw new Error('diff demasiado grande para procesar en memoria');
+      if (total > CFG.MAX_COLLECT_CHARS) throw new Error(t('diff demasiado grande para procesar en memoria'));
       if (oldPresent === newPresent && oldBytes.length === newBytes.length &&
           oldBytes.every((b, i) => b === newBytes[i])) continue;
       const oldName = oldPresent ? `a/${path}` : '/dev/null';
@@ -756,15 +2992,15 @@
       };
       const oldText = decode(oldBytes), newText = decode(newBytes);
       if (oldText === null || newText === null) {
-        patches.push(`Binary files ${JSON.stringify(oldName)} and ${JSON.stringify(newName)} differ (${oldBytes.length} -> ${newBytes.length} B)`);
+        patches.push(t`Binary files ${JSON.stringify(oldName)} and ${JSON.stringify(newName)} differ (${oldBytes.length} -> ${newBytes.length} B)`);
       } else {
         const patch = createTwoFilesPatch(JSON.stringify(oldName), JSON.stringify(newName),
           oldText, newText, '', '', { context: 3, timeout: 2000 });
-        if (patch === undefined) throw new Error(`diff excedió el tiempo límite: ${path}`);
+        if (patch === undefined) throw new Error(t`diff excedió el tiempo límite: ${path}`);
         patches.push(patch);
       }
     }
-    return patches.join('\n') || 'Sin diferencias. Los archivos sin seguimiento se muestran en git status.';
+    return patches.join('\n') || t('Sin diferencias. Los archivos sin seguimiento se muestran en git status.');
   }
 
   // ============================================================
@@ -812,7 +3048,7 @@
   function source(ctx, file) {
     if (file) return lines(file);
     if (ctx.stdin) return ctx.stdin;
-    throw new Error('falta fichero o entrada por pipe');
+    throw new Error(t('falta fichero o entrada por pipe'));
   }
 
   function tokenize(str) {
@@ -839,7 +3075,7 @@
       if (!has) start = i;
       cur += ch; has = true;
     }
-    if (q) throw new Error('comillas sin cerrar');
+    if (q) throw new Error(t('comillas sin cerrar'));
     push(str.length);
     return out;
   }
@@ -850,12 +3086,12 @@
   }
 
   async function downloadUserFile(path) {
-    if (busy) { uiLog('⏳ Hay una operación en curso; reintenta la descarga al terminar.', 'err'); return; }
+    if (busy) { uiLog(t('⏳ Hay una operación en curso; reintenta la descarga al terminar.'), 'err'); return; }
     setBusy(true);
     let url = null, link = null;
     try {
       const parts = splitPath(path);
-      if (!parts.length || isInternalPath(path)) throw new Error('archivo a descargar no permitido');
+      if (!parts.length || isInternalPath(path)) throw new Error(t('archivo a descargar no permitido'));
       const file = await (await requireFile(parts.join('/'))).getFile();
       url = URL.createObjectURL(file);
       link = document.createElement('a');
@@ -867,9 +3103,9 @@
       const pendingUrl = url;
       setTimeout(() => URL.revokeObjectURL(pendingUrl), 60000);
       url = null;
-      uiLog(`Descarga solicitada: ${path} (${fmtBytes(file.size)}). Comprueba las descargas del navegador; nada enviado al chat.`, 'info');
+      uiLog(t`Descarga solicitada: ${path} (${fmtBytes(file.size)}). Comprueba las descargas del navegador; nada enviado al chat.`, 'info');
     } catch (e) {
-      uiLog(`❌ Descarga: ${e.message}`, 'err');
+      uiLog(t`❌ Descarga: ${e.message}`, 'err');
     } finally {
       link?.remove();
       if (url) URL.revokeObjectURL(url);
@@ -893,15 +3129,15 @@
       }
       if (!token.quoted && !literal && token.v === '--') literal = true;
       if (!token.quoted && !literal && token.v === '--share') {
-        if (share) throw new Error('--share repetido');
+        if (share) throw new Error(t('--share repetido'));
         share = true;
       } else if (!token.quoted && !literal && token.v === '--share-file') {
-        if (file !== null) throw new Error('--share-file repetido');
+        if (file !== null) throw new Error(t('--share-file repetido'));
         const next = tokens[++i];
         if (!next || next.t !== 'w' || !next.v || (!next.quoted && next.v.startsWith('--'))) {
-          throw new Error('--share-file requiere una ruta: --share-file "archivo.txt"');
+          throw new Error(t('--share-file requiere una ruta: --share-file "archivo.txt"'));
         }
-        if (!splitPath(next.v).length || isInternalPath(next.v)) throw new Error('archivo a compartir no permitido');
+        if (!splitPath(next.v).length || isInternalPath(next.v)) throw new Error(t('archivo a compartir no permitido'));
         file = next.v;
       } else clean.push(token);
     }
@@ -916,19 +3152,19 @@
       const t = toks[i];
       if (t.t === 'w') { cur.argv.push(t.v); continue; }
       if (t.v === '|') {
-        if (!cur.argv.length) throw new Error('pipe sin comando');
-        if (cur.redirect) throw new Error('la redirección solo puede ir en el último comando');
+        if (!cur.argv.length) throw new Error(t('pipe sin comando'));
+        if (cur.redirect) throw new Error(t('la redirección solo puede ir en el último comando'));
         segs.push(cur);
         cur = { argv: [], redirect: null };
         continue;
       }
       const nx = toks[i + 1];
-      if (!nx || nx.t !== 'w') throw new Error(`falta fichero tras ${t.v}`);
-      if (cur.redirect) throw new Error('solo una redirección por comando');
+      if (!nx || nx.t !== 'w') throw new Error(t`falta fichero tras ${t.v}`);
+      if (cur.redirect) throw new Error(t('solo una redirección por comando'));
       cur.redirect = { mode: t.v, file: nx.v };
       i++;
     }
-    if (!cur.argv.length) throw new Error('comando vacío');
+    if (!cur.argv.length) throw new Error(t('comando vacío'));
     segs.push(cur);
     return segs;
   }
@@ -944,9 +3180,9 @@
           continue;
         }
         const key = a.replace(/^-+/, '');
-        if (!(key in spec)) throw new Error(`opción desconocida: ${a}`);
+        if (!(key in spec)) throw new Error(t`opción desconocida: ${a}`);
         if (spec[key] === 'v') {
-          if (k + 1 >= args.length) throw new Error(`falta valor para ${a}`);
+          if (k + 1 >= args.length) throw new Error(t`falta valor para ${a}`);
           flags[key] = args[++k];
         } else flags[key] = true;
       } else pos.push(a);
@@ -959,7 +3195,9 @@
   // ============================================================
   const REG = new Map();
   function def(name, group, usage, desc, run) {
-    REG.set(name, { name, group, usage, desc, run });
+    REG.set(name, { name, group,
+      get usage() { return I18N[usage] || EXTRA_I18N[usage] ? t(usage) : usage; },
+      get desc() { return I18N[desc] || EXTRA_I18N[desc] ? t(desc) : desc; }, run });
   }
 
   let lastResult = '';
@@ -967,21 +3205,21 @@
   const chatHistory = [];
 
   async function editorSnapshot(path) {
-    if (isInternalPath(path)) throw new Error('no se editan metadatos internos');
+    if (isInternalPath(path)) throw new Error(t('no se editan metadatos internos'));
     const file = await (await requireFile(path)).getFile();
-    if (file.size > CFG.MAX_RUN_BYTES) throw new Error('editor: máximo 256 KB');
+    if (file.size > CFG.MAX_RUN_BYTES) throw new Error(t('editor: máximo 256 KB'));
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (bytes.includes(0)) throw new Error('el editor requiere texto, no binarios');
+    if (bytes.includes(0)) throw new Error(t('el editor requiere texto, no binarios'));
     let text;
     try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
-    catch (e) { if (e.name === 'TypeError') throw new Error('el editor requiere UTF-8 válido'); throw e; }
+    catch (e) { if (e.name === 'TypeError') throw new Error(t('el editor requiere UTF-8 válido')); throw e; }
     return { path, text, hash: await computeSha256(bytes) };
   }
 
   function replaceEditorText(text, search, replacement, all) {
-    if (!search) throw new Error('escribe un texto para buscar');
+    if (!search) throw new Error(t('escribe un texto para buscar'));
     const index = text.indexOf(search);
-    if (index < 0) throw new Error('no se encontró el texto exacto');
+    if (index < 0) throw new Error(t('no se encontró el texto exacto'));
     if (!all) return { text: text.slice(0, index) + replacement + text.slice(index + search.length), count: 1 };
     const parts = text.split(search);
     return { text: parts.join(replacement), count: parts.length - 1 };
@@ -989,10 +3227,10 @@
 
   async function fileSnapshot(path) {
     const parts = splitPath(path);
-    if (!parts.length || isInternalPath(path)) throw new Error('checkpoint: raíz y metadatos internos no permitidos');
+    if (!parts.length || isInternalPath(path)) throw new Error(t('checkpoint: raíz y metadatos internos no permitidos'));
     path = parts.join('/');
     const file = await (await requireFile(path)).getFile();
-    if (file.size > CFG.MAX_RUN_BYTES) throw new Error('checkpoint/restore: máximo 256 KB por archivo');
+    if (file.size > CFG.MAX_RUN_BYTES) throw new Error(t('checkpoint/restore: máximo 256 KB por archivo'));
     const bytes = new Uint8Array(await file.arrayBuffer());
     return { path, bytes, hash: await computeSha256(bytes) };
   }
@@ -1001,13 +3239,13 @@
     const snapshot = await fileSnapshot(path);
     const id = crypto.randomUUID();
     const base = `.dv/checkpoints/${id}`;
-    if (await getHandle(`${base}.bin`) || await getHandle(`${base}.json`)) throw new Error('checkpoint: ID ya existe; no se reemplazó la copia');
+    if (await getHandle(`${base}.bin`) || await getHandle(`${base}.json`)) throw new Error(t('checkpoint: ID ya existe; no se reemplazó la copia'));
     const metadata = { version: 1, id, path: snapshot.path, hash: snapshot.hash,
       size: snapshot.bytes.length, created: new Date().toISOString(), label };
     await writeBytes(`${base}.bin`, snapshot.bytes);
     const stored = await (await requireFile(`${base}.bin`)).getFile();
     if (stored.size !== metadata.size || await computeSha256(await stored.arrayBuffer()) !== metadata.hash) {
-      throw new Error('checkpoint: copia no verificada; no se publicó el checkpoint');
+      throw new Error(t('checkpoint: copia no verificada; no se publicó el checkpoint'));
     }
     await writeBytes(`${base}.json`, JSON.stringify(metadata));
     await readCheckpoint(id);
@@ -1015,10 +3253,10 @@
   }
 
   async function readCheckpoint(id) {
-    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id)) throw new Error('ID de checkpoint no válido');
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id)) throw new Error(t('ID de checkpoint no válido'));
     const base = `.dv/checkpoints/${id}`;
     const manifest = await (await requireFile(`${base}.json`)).getFile();
-    if (manifest.size > 8192) throw new Error('checkpoint: metadatos demasiado grandes');
+    if (manifest.size > 8192) throw new Error(t('checkpoint: metadatos demasiado grandes'));
     const metadata = JSON.parse(await manifest.text());
     if (!metadata || metadata.version !== 1 || metadata.id !== id ||
         typeof metadata.path !== 'string' || !splitPath(metadata.path).length || isInternalPath(metadata.path) ||
@@ -1026,18 +3264,18 @@
         typeof metadata.hash !== 'string' || !/^[a-f0-9]{64}$/.test(metadata.hash) ||
         !Number.isInteger(metadata.size) || metadata.size < 0 || metadata.size > CFG.MAX_RUN_BYTES ||
         typeof metadata.created !== 'string' || !Number.isFinite(Date.parse(metadata.created)) ||
-        typeof metadata.label !== 'string' || metadata.label.length > 200) throw new Error('checkpoint: metadatos no válidos');
+        typeof metadata.label !== 'string' || metadata.label.length > 200) throw new Error(t('checkpoint: metadatos no válidos'));
     const file = await (await requireFile(`${base}.bin`)).getFile();
-    if (file.size !== metadata.size) throw new Error('checkpoint: tamaño de copia incorrecto');
+    if (file.size !== metadata.size) throw new Error(t('checkpoint: tamaño de copia incorrecto'));
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (await computeSha256(bytes) !== metadata.hash) throw new Error('checkpoint: hash de copia incorrecto');
+    if (await computeSha256(bytes) !== metadata.hash) throw new Error(t('checkpoint: hash de copia incorrecto'));
     return { metadata, bytes };
   }
 
   async function checkpointInventory() {
     const directory = await getHandle('.dv/checkpoints');
     if (!directory) return [];
-    if (directory.kind !== 'directory') throw new Error('checkpoint: almacenamiento no es una carpeta');
+    if (directory.kind !== 'directory') throw new Error(t('checkpoint: almacenamiento no es una carpeta'));
     const records = [];
     for await (const [name, handle] of directory.entries()) {
       if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
@@ -1047,19 +3285,19 @@
   }
 
   function checkpointText(bytes) {
-    if (bytes.includes(0)) throw new Error('checkpoint: contenido binario; diff/content requieren texto UTF-8 sin NUL');
+    if (bytes.includes(0)) throw new Error(t('checkpoint: contenido binario; diff/content requieren texto UTF-8 sin NUL'));
     try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
-    catch (e) { if (e.name === 'TypeError') throw new Error('checkpoint: contenido no es UTF-8 válido'); throw e; }
+    catch (e) { if (e.name === 'TypeError') throw new Error(t('checkpoint: contenido no es UTF-8 válido')); throw e; }
   }
 
   async function deleteCheckpoints(records, selected) {
-    if (!selected.length) return 'No hay checkpoints eliminables; se conserva la copia más reciente de cada archivo.';
+    if (!selected.length) return t('No hay checkpoints eliminables; se conserva la copia más reciente de cada archivo.');
     const signature = JSON.stringify(records);
     const preview = selected.map(m => `${m.id} | ${JSON.stringify(m.path)} | ${m.created}`).join('\n');
-    if (!confirm(`¿Borrar definitivamente ${selected.length} checkpoint(s)?\n${preview}\nNo hay deshacer. Se conserva la copia más reciente de cada archivo. Archivos actuales y Git no se modifican.`)) {
-      throw new Error('borrado de checkpoints cancelado; copias intactas');
+    if (!confirm(t`¿Borrar definitivamente ${selected.length} checkpoint(s)?\n${preview}\nNo hay deshacer. Se conserva la copia más reciente de cada archivo. Archivos actuales y Git no se modifican.`)) {
+      throw new Error(t('borrado de checkpoints cancelado; copias intactas'));
     }
-    if (JSON.stringify(await checkpointInventory()) !== signature) throw new Error('checkpoints cambiaron durante confirmación; no se borró nada');
+    if (JSON.stringify(await checkpointInventory()) !== signature) throw new Error(t('checkpoints cambiaron durante confirmación; no se borró nada'));
     let deleted = 0;
     try {
       for (const m of selected) {
@@ -1067,47 +3305,47 @@
         await readCheckpoint(m.id);
         await removePath(`${base}.json`, false);
         await removePath(`${base}.bin`, false);
-        if (await getHandle(`${base}.json`) || await getHandle(`${base}.bin`)) throw new Error(`copia sigue existiendo: ${m.id}`);
+        if (await getHandle(`${base}.json`) || await getHandle(`${base}.bin`)) throw new Error(t`copia sigue existiendo: ${m.id}`);
         deleted++;
       }
     } catch (e) {
-      throw new Error(`limpieza detenida: ${deleted} checkpoint(s) eliminados; ${e.message}. No se revierten borrados; el ID en curso puede quedar incompleto.`);
+      throw new Error(t`limpieza detenida: ${deleted} checkpoint(s) eliminados; ${e.message}. No se revierten borrados; el ID en curso puede quedar incompleto.`);
     }
-    return `Eliminados y verificados: ${deleted} checkpoint(s). Últimas copias por archivo conservadas.`;
+    return t`Eliminados y verificados: ${deleted} checkpoint(s). Últimas copias por archivo conservadas.`;
   }
 
   def('checkpoint', 'Sistema', 'checkpoint <archivo> [etiqueta] | --list [--file ruta] [--tag texto] | show ID [--content] | diff ID1 ID2 | delete ID | prune <--keep N|--older-than Nd>', 'Copias locales verificadas; limpieza confirmada protege últimas versiones', async (ctx) => {
     const { pos, flags } = parseArgs(ctx.args, { list: 'b', file: 'v', tag: 'v', content: 'b', keep: 'v', 'older-than': 'v' });
     const checkFlags = (allowed) => {
-      if (Object.keys(flags).some(key => !allowed.includes(key))) throw new Error('opciones incompatibles para checkpoint');
+      if (Object.keys(flags).some(key => !allowed.includes(key))) throw new Error(t('opciones incompatibles para checkpoint'));
     };
     if (flags.list) {
       checkFlags(['list', 'file', 'tag']);
-      if (pos.length) throw new Error('uso: checkpoint --list [--file ruta] [--tag texto]');
+      if (pos.length) throw new Error(t('uso: checkpoint --list [--file ruta] [--tag texto]'));
       const path = flags.file === undefined ? null : splitPath(flags.file).join('/');
-      if (path !== null && (!path || isInternalPath(path))) throw new Error('filtro de archivo no permitido');
+      if (path !== null && (!path || isInternalPath(path))) throw new Error(t('filtro de archivo no permitido'));
       return (await checkpointInventory()).filter(m =>
         (path === null || m.path === path) && (flags.tag === undefined || m.label.includes(flags.tag)))
         .map(m => `${m.id} | ${JSON.stringify(m.path)} | ${m.created} | ${m.size} B | ${JSON.stringify(m.label)}`)
-        .join('\n') || 'No hay checkpoints para esos filtros.';
+        .join('\n') || t('No hay checkpoints para esos filtros.');
     }
     if (pos[0] === 'show') {
       checkFlags(['content']);
-      if (pos.length !== 2) throw new Error('uso: checkpoint show ID [--content]');
+      if (pos.length !== 2) throw new Error(t('uso: checkpoint show ID [--content]'));
       const { metadata: m, bytes } = await readCheckpoint(pos[1]);
       if (flags.content) return checkpointText(bytes);
-      return `Checkpoint: ${m.id}\nArchivo: ${JSON.stringify(m.path)}\nFecha: ${m.created}\nEtiqueta: ${JSON.stringify(m.label)}\nBytes: ${m.size}\nSHA256: ${m.hash}`;
+      return t`Checkpoint: ${m.id}\nArchivo: ${JSON.stringify(m.path)}\nFecha: ${m.created}\nEtiqueta: ${JSON.stringify(m.label)}\nBytes: ${m.size}\nSHA256: ${m.hash}`;
     }
     if (pos[0] === 'diff') {
       checkFlags([]);
-      if (pos.length !== 3) throw new Error('uso: checkpoint diff ID1 ID2');
+      if (pos.length !== 3) throw new Error(t('uso: checkpoint diff ID1 ID2'));
       const a = await readCheckpoint(pos[1]), b = await readCheckpoint(pos[2]);
       const oldText = checkpointText(a.bytes), newText = checkpointText(b.bytes);
-      if (a.metadata.hash === b.metadata.hash) return 'Sin diferencias de contenido.';
+      if (a.metadata.hash === b.metadata.hash) return t('Sin diferencias de contenido.');
       const engine = await getDiff();
       const patch = engine.createTwoFilesPatch(`${a.metadata.id}:${a.metadata.path}`,
         `${b.metadata.id}:${b.metadata.path}`, oldText, newText, '', '', { context: 3, timeout: 2000 });
-      if (patch === undefined) throw new Error('checkpoint diff excedió el tiempo límite');
+      if (patch === undefined) throw new Error(t('checkpoint diff excedió el tiempo límite'));
       return patch;
     }
     if (pos[0] === 'delete' || pos[0] === 'prune') {
@@ -1115,7 +3353,7 @@
       checkFlags(deleting ? [] : ['keep', 'older-than']);
       if (deleting ? pos.length !== 2 : pos.length !== 1 ||
           (flags.keep === undefined) === (flags['older-than'] === undefined)) {
-        throw new Error('uso: checkpoint delete ID | checkpoint prune <--keep N|--older-than Nd>');
+        throw new Error(t('uso: checkpoint delete ID | checkpoint prune <--keep N|--older-than Nd>'));
       }
       const records = await checkpointInventory();
       const latest = new Map();
@@ -1124,35 +3362,35 @@
       let selected;
       if (deleting) {
         const record = records.find(m => m.id === pos[1]);
-        if (!record) throw new Error('checkpoint no existe en inventario');
-        if (protectedCopy(record)) throw new Error('no se borra el checkpoint más reciente de ese archivo (también se protegen empates de fecha)');
+        if (!record) throw new Error(t('checkpoint no existe en inventario'));
+        if (protectedCopy(record)) throw new Error(t('no se borra el checkpoint más reciente de ese archivo (también se protegen empates de fecha)'));
         selected = [record];
       } else if (flags.keep !== undefined) {
-        if (!/^[1-9]\d*$/.test(flags.keep) || !Number.isSafeInteger(Number(flags.keep))) throw new Error('--keep requiere entero positivo');
+        if (!/^[1-9]\d*$/.test(flags.keep) || !Number.isSafeInteger(Number(flags.keep))) throw new Error(t('--keep requiere entero positivo'));
         selected = records.slice(Number(flags.keep)).filter(m => !protectedCopy(m));
       } else {
         const match = /^([1-9]\d*)d$/.exec(flags['older-than']);
         const days = match ? Number(match[1]) : NaN;
-        if (!Number.isSafeInteger(days) || !Number.isSafeInteger(days * 86400000)) throw new Error('--older-than requiere días enteros positivos, por ejemplo 7d');
+        if (!Number.isSafeInteger(days) || !Number.isSafeInteger(days * 86400000)) throw new Error(t('--older-than requiere días enteros positivos, por ejemplo 7d'));
         const cutoff = Date.now() - days * 86400000;
         selected = records.filter(m => Date.parse(m.created) < cutoff && !protectedCopy(m));
       }
       return deleteCheckpoints(records, selected);
     }
     checkFlags([]);
-    if (pos.length < 1 || pos.length > 2 || (pos[1] || '').length > 200) throw new Error('uso: checkpoint <archivo> [etiqueta hasta 200 caracteres]');
+    if (pos.length < 1 || pos.length > 2 || (pos[1] || '').length > 200) throw new Error(t('uso: checkpoint <archivo> [etiqueta hasta 200 caracteres]'));
     const m = await createCheckpoint(pos[0], pos[1] || '');
-    return `Checkpoint: ${m.id}\nArchivo: ${JSON.stringify(m.path)} (${m.size} B)\nSHA256: ${m.hash}\nRestaurar: ${settings.prefix}restore ${m.id}`;
+    return t`Checkpoint: ${m.id}\nArchivo: ${JSON.stringify(m.path)} (${m.size} B)\nSHA256: ${m.hash}\nRestaurar: ${settings.prefix}restore ${m.id}`;
   });
 
   def('restore', 'Sistema', 'restore <ID-checkpoint>', 'Restaura ruta original con aprobación y copia previa si existe', async (ctx) => {
-    if (ctx.args.length !== 1) throw new Error('uso: restore <ID-checkpoint>');
-    if (editorOpen) throw new Error('cierra el editor actual antes de restaurar');
+    if (ctx.args.length !== 1) throw new Error(t('uso: restore <ID-checkpoint>'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de restaurar'));
     const { metadata, bytes } = await readCheckpoint(ctx.args[0]);
     const target = await getHandle(metadata.path);
-    if (target?.kind === 'directory') throw new Error('restore: destino es una carpeta');
+    if (target?.kind === 'directory') throw new Error(t('restore: destino es una carpeta'));
     const current = target ? await fileSnapshot(metadata.path) : null;
-    if (current?.hash === metadata.hash) return 'Sin cambios: el archivo ya coincide con el checkpoint.';
+    if (current?.hash === metadata.hash) return t('Sin cambios: el archivo ya coincide con el checkpoint.');
     let text = null, original = null;
     if (!bytes.includes(0) && current && !current.bytes.includes(0)) {
       try {
@@ -1164,73 +3402,73 @@
     if (text !== null && original !== null) {
       ctx.openEditor({ snapshot: { path: current.path, text: original, hash: current.hash },
         candidate: text, checkpointBeforeSave: true });
-      return `Restauración preparada: ${metadata.path}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.`;
+      return t`Restauración preparada: ${metadata.path}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.`;
     }
-    if (!confirm(`¿Restaurar "${metadata.path}" desde checkpoint ${metadata.id} (${metadata.size} B)?\n${current ? 'Binario/no UTF-8: sin diff de texto. Se guardará checkpoint de la versión actual.' : 'Archivo ausente: se creará con los bytes guardados.'}\nSHA256: ${metadata.hash}`)) {
-      throw new Error('restauración cancelada; archivo intacto');
+    if (!confirm(t`¿Restaurar "${metadata.path}" desde checkpoint ${metadata.id} (${metadata.size} B)?\n${current ? t('Binario/no UTF-8: sin diff de texto. Se guardará checkpoint de la versión actual.') : t('Archivo ausente: se creará con los bytes guardados.')}\nSHA256: ${metadata.hash}`)) {
+      throw new Error(t('restauración cancelada; archivo intacto'));
     }
     const fresh = await getHandle(metadata.path);
-    if (current ? !fresh || (await fileSnapshot(metadata.path)).hash !== current.hash : fresh !== null) throw new Error('restore: destino cambió; no se sobrescribió');
+    if (current ? !fresh || (await fileSnapshot(metadata.path)).hash !== current.hash : fresh !== null) throw new Error(t('restore: destino cambió; no se sobrescribió'));
     let backup = null;
     if (current) {
-      backup = await createCheckpoint(metadata.path, `Antes de restore ${metadata.id}`);
-      uiLog(`Checkpoint previo: ${backup.id}`, 'info');
-      if (backup.hash !== current.hash || (await fileSnapshot(metadata.path)).hash !== current.hash) throw new Error('restore: archivo cambió; copia previa conservada');
+      backup = await createCheckpoint(metadata.path, t`Antes de restore ${metadata.id}`);
+      uiLog(t`Checkpoint previo: ${backup.id}`, 'info');
+      if (backup.hash !== current.hash || (await fileSnapshot(metadata.path)).hash !== current.hash) throw new Error(t('restore: archivo cambió; copia previa conservada'));
     }
     await writeBytes(metadata.path, bytes);
-    if ((await fileSnapshot(metadata.path)).hash !== metadata.hash) throw new Error(`restore: verificación fallida; checkpoint original ${metadata.id}${backup ? ` y previo ${backup.id}` : ''} conservados`);
-    return `Restaurado y verificado: ${metadata.path}\nSHA256: ${metadata.hash}${backup ? `\nCheckpoint previo: ${backup.id}` : ''}\nNo se hizo staging ni commit.`;
+    if ((await fileSnapshot(metadata.path)).hash !== metadata.hash) throw new Error(t`restore: verificación fallida; checkpoint original ${metadata.id}${backup ? t` y previo ${backup.id}` : ''} conservados`);
+    return t`Restaurado y verificado: ${metadata.path}\nSHA256: ${metadata.hash}${backup ? t`\nCheckpoint previo: ${backup.id}` : ''}\nNo se hizo staging ni commit.`;
   });
 
   function validateEditorCandidate(snapshot, candidate) {
-    if (candidate.includes('\0')) throw new Error('candidato requiere texto sin NUL');
-    if (new TextEncoder().encode(candidate).length > CFG.MAX_RUN_BYTES) throw new Error('candidato supera 256 KB');
-    if (candidate === snapshot.text) throw new Error('no hay cambios para guardar; propuesta no produce cambios');
+    if (candidate.includes('\0')) throw new Error(t('candidato requiere texto sin NUL'));
+    if (new TextEncoder().encode(candidate).length > CFG.MAX_RUN_BYTES) throw new Error(t('candidato supera 256 KB'));
+    if (candidate === snapshot.text) throw new Error(t('no hay cambios para guardar; propuesta no produce cambios'));
   }
 
   async function saveEditorCandidate(snapshot, candidate) {
     validateEditorCandidate(snapshot, candidate);
     const current = await editorSnapshot(snapshot.path);
-    if (current.hash !== snapshot.hash) throw new Error('el archivo cambió desde que abriste el editor; no se sobrescribió. Conserva tu borrador y vuelve a abrirlo');
+    if (current.hash !== snapshot.hash) throw new Error(t('el archivo cambió desde que abriste el editor; no se sobrescribió. Conserva tu borrador y vuelve a abrirlo'));
     if (snapshot.checkpointBeforeSave) {
-      const backup = await createCheckpoint(snapshot.path, snapshot.checkpointLabel || 'Antes de restore desde editor');
-      uiLog(`Checkpoint previo: ${backup.id}`, 'info');
-      if (backup.hash !== snapshot.hash || (await editorSnapshot(snapshot.path)).hash !== snapshot.hash) throw new Error('archivo cambió; checkpoint previo conservado, no se sobrescribió');
+      const backup = await createCheckpoint(snapshot.path, snapshot.checkpointLabel || t('Antes de restore desde editor'));
+      uiLog(t`Checkpoint previo: ${backup.id}`, 'info');
+      if (backup.hash !== snapshot.hash || (await editorSnapshot(snapshot.path)).hash !== snapshot.hash) throw new Error(t('archivo cambió; checkpoint previo conservado, no se sobrescribió'));
     }
     await atomicWrite(snapshot.path, candidate, { expectedHash: snapshot.hash });
     return editorSnapshot(snapshot.path);
   }
 
   function validateProposalValue(value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('propuesta debe ser un objeto JSON');
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(t('propuesta debe ser un objeto JSON'));
     const allowed = ['path', 'hash', 'operation', 'old', 'new'];
-    if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error('campos desconocidos en propuesta');
+    if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error(t('campos desconocidos en propuesta'));
     if (typeof value.path !== 'string' || typeof value.hash !== 'string' || !/^[a-f0-9]{64}$/.test(value.hash)) {
-      throw new Error('propuesta requiere path y hash SHA256 completo en minúsculas');
+      throw new Error(t('propuesta requiere path y hash SHA256 completo en minúsculas'));
     }
     if (!['replace', 'insert-before', 'insert-after', 'append'].includes(value.operation) ||
-        typeof value.new !== 'string' || value.new.includes('\0')) throw new Error('operation/new no válidos');
+        typeof value.new !== 'string' || value.new.includes('\0')) throw new Error(t('operation/new no válidos'));
     const parts = splitPath(value.path);
-    if (!parts.length || isInternalPath(value.path)) throw new Error('ruta de propuesta no permitida');
+    if (!parts.length || isInternalPath(value.path)) throw new Error(t('ruta de propuesta no permitida'));
     if (value.operation === 'append') {
-      if ('old' in value) throw new Error('append no admite old');
-    } else if (typeof value.old !== 'string' || !value.old) throw new Error('old debe ser un bloque exacto no vacío');
+      if ('old' in value) throw new Error(t('append no admite old'));
+    } else if (typeof value.old !== 'string' || !value.old) throw new Error(t('old debe ser un bloque exacto no vacío'));
     return value;
   }
 
   async function prepareProposal(value) {
     validateProposalValue(value);
     const snapshot = await editorSnapshot(value.path);
-    if (snapshot.hash !== value.hash) throw new Error('hash obsoleto; usa view y solicita una propuesta para la versión actual');
+    if (snapshot.hash !== value.hash) throw new Error(t('hash obsoleto; usa view y solicita una propuesta para la versión actual'));
     let candidate;
     if (value.operation === 'append') {
-      if ('old' in value) throw new Error('append no admite old');
+      if ('old' in value) throw new Error(t('append no admite old'));
       candidate = snapshot.text + value.new;
     } else {
-      if (typeof value.old !== 'string' || !value.old) throw new Error('old debe ser un bloque exacto no vacío');
+      if (typeof value.old !== 'string' || !value.old) throw new Error(t('old debe ser un bloque exacto no vacío'));
       const index = snapshot.text.indexOf(value.old);
-      if (index < 0) throw new Error('bloque old no encontrado; no se modifica el archivo');
-      if (snapshot.text.indexOf(value.old, index + 1) >= 0) throw new Error('bloque old ambiguo; debe coincidir una sola vez');
+      if (index < 0) throw new Error(t('bloque old no encontrado; no se modifica el archivo'));
+      if (snapshot.text.indexOf(value.old, index + 1) >= 0) throw new Error(t('bloque old ambiguo; debe coincidir una sola vez'));
       const replacement = value.operation === 'replace' ? value.new :
         value.operation === 'insert-before' ? value.new + value.old : value.old + value.new;
       candidate = snapshot.text.slice(0, index) + replacement + snapshot.text.slice(index + value.old.length);
@@ -1241,38 +3479,38 @@
 
   def('view', 'Texto', 'view <archivo> [--from N] [--to N]', 'Código numerado y hash para propuestas de IA', async (ctx) => {
     const { pos, flags } = parseArgs(ctx.args, { from: 'v', to: 'v' });
-    if (pos.length !== 1) throw new Error('uso: view <archivo> [--from N] [--to N]');
+    if (pos.length !== 1) throw new Error(t('uso: view <archivo> [--from N] [--to N]'));
     const snapshot = await editorSnapshot(pos[0]);
     const rows = snapshot.text.replace(/\r\n?/g, '\n').split('\n');
     const from = toInt(flags.from, 1, '--from'), to = toInt(flags.to, rows.length, '--to');
-    if (from < 1 || to < from || from > rows.length || to > rows.length) throw new Error('rango de líneas no válido');
-    return `Archivo: ${JSON.stringify(snapshot.path)}\nSHA256: ${snapshot.hash}\nLíneas ${from}-${to} de ${rows.length}; números solo referencia, no forman parte del código.\n` +
+    if (from < 1 || to < from || from > rows.length || to > rows.length) throw new Error(t('rango de líneas no válido'));
+    return t`Archivo: ${JSON.stringify(snapshot.path)}\nSHA256: ${snapshot.hash}\nLíneas ${from}-${to} de ${rows.length}; números solo referencia, no forman parte del código.\n` +
       rows.slice(from - 1, to).map((line, i) => `${String(from + i).padStart(5)} | ${line}`).join('\n');
   });
 
   def('propose', 'Sistema', 'propose <propuesta.json|JSON entre comillas>', 'Prepara cambio con hash; abre editor para revisar/aprobar', async (ctx) => {
-    if (ctx.args.length !== 1) throw new Error('uso: propose <propuesta.json|JSON entre comillas>');
-    if (editorOpen) throw new Error('cierra el editor actual antes de proponer otro cambio');
+    if (ctx.args.length !== 1) throw new Error(t('uso: propose <propuesta.json|JSON entre comillas>'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de proponer otro cambio'));
     const input = ctx.args[0].trim();
     const json = input.startsWith('{') ? input : (await editorSnapshot(input)).text;
     let value;
     try { value = JSON.parse(json); }
-    catch (e) { throw new Error(`JSON de propuesta no válido: ${e.message}`); }
+    catch (e) { throw new Error(t`JSON de propuesta no válido: ${e.message}`); }
     const proposal = await prepareProposal(value);
     ctx.openEditor(proposal);
-    return `Propuesta preparada: ${proposal.snapshot.path}. Archivo intacto; revisa el diff y confirma Aplicar.`;
+    return t`Propuesta preparada: ${proposal.snapshot.path}. Archivo intacto; revisa el diff y confirma Aplicar.`;
   });
 
   def('replace', 'Texto', 'replace <archivo> <old> <new> [--all] [--hash SHA256] [--dry-run]', 'Reemplazo literal con contador, diff y aprobación; nunca guarda directamente', async (ctx) => {
     const { pos, flags } = parseArgs(ctx.args, { all: 'b', hash: 'v', 'dry-run': 'b' });
-    if (pos.length !== 3) throw new Error('uso: replace <archivo> <old> <new> [--all] [--hash SHA256] [--dry-run]');
-    if (editorOpen) throw new Error('cierra el editor actual antes de proponer otro cambio');
+    if (pos.length !== 3) throw new Error(t('uso: replace <archivo> <old> <new> [--all] [--hash SHA256] [--dry-run]'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de proponer otro cambio'));
     const snapshot = await editorSnapshot(pos[0]);
     const hash = flags.hash === undefined ? snapshot.hash : flags.hash;
     let proposal, count;
     if (flags.all) {
-      if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('hash SHA256 completo en minúsculas requerido');
-      if (hash !== snapshot.hash) throw new Error('hash obsoleto; usa view para la versión actual');
+      if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error(t('hash SHA256 completo en minúsculas requerido'));
+      if (hash !== snapshot.hash) throw new Error(t('hash obsoleto; usa view para la versión actual'));
       const result = replaceEditorText(snapshot.text, pos[1], pos[2], true);
       validateEditorCandidate(snapshot, result.text);
       proposal = { snapshot, candidate: result.text };
@@ -1282,18 +3520,18 @@
       count = 1;
     }
     ctx.openEditor(proposal);
-    return `${count} sustitución(es) propuesta(s): ${snapshot.path}. Archivo intacto (dry-run); revisa el diff y confirma Aplicar.`;
+    return t`${count} sustitución(es) propuesta(s): ${snapshot.path}. Archivo intacto (dry-run); revisa el diff y confirma Aplicar.`;
   });
 
   let editorOpen = false;
   async function openCodeEditor(path, proposal = null) {
-    if (busy || editorOpen) { uiLog('Ya hay una operación o editor abierto.', 'err'); return false; }
+    if (busy || editorOpen) { uiLog(t('Ya hay una operación o editor abierto.'), 'err'); return false; }
     editorOpen = true;
     ui?.updateState?.();
     let release;
     try {
       let snapshot = await editorSnapshot(path);
-      if (proposal && snapshot.hash !== proposal.snapshot.hash) throw new Error('archivo cambió antes de abrir la propuesta; usa view de nuevo');
+      if (proposal && snapshot.hash !== proposal.snapshot.hash) throw new Error(t('archivo cambió antes de abrir la propuesta; usa view de nuevo'));
       if (proposal?.checkpointBeforeSave) snapshot.checkpointBeforeSave = true;
       if (proposal?.checkpointLabel) snapshot.checkpointLabel = proposal.checkpointLabel;
       const host = h('div', { id: 'dv-code-editor' });
@@ -1302,7 +3540,7 @@
       const status = h('div', { class: 'status', role: 'status' });
       const report = (text, error = false) => { status.textContent = text; status.style.color = error ? '#f87171' : '#93c5fd'; };
       const gutter = h('pre', { class: 'gutter', 'aria-hidden': 'true' });
-      const code = h('textarea', { class: 'code', spellcheck: 'false', wrap: 'off', 'aria-label': `Código de ${path}` });
+      const code = h('textarea', { class: 'code', spellcheck: 'false', wrap: 'off', 'aria-label': t`Código de ${path}` });
       const normalized = snapshot.text.replace(/\r\n?/g, '\n');
       const baseline = normalized;
       code.value = (proposal ? proposal.candidate : snapshot.text).replace(/\r\n?/g, '\n');
@@ -1311,33 +3549,33 @@
         code.value === baseline ? snapshot.text :
         snapshot.text.includes('\r\n') && !snapshot.text.replace(/\r\n/g, '').includes('\n')
           ? code.value.replace(/\n/g, '\r\n') : code.value;
-      const diff = h('pre', { class: 'diff', 'aria-label': 'Diferencias propuestas', style: 'display:none' });
-      const apply = h('button', { disabled: true }, 'Aplicar cambios');
+      const diff = h('pre', { class: 'diff', 'aria-label': t('Diferencias propuestas'), style: 'display:none' });
+      const apply = h('button', { disabled: true }, t('Aplicar cambios'));
       const sync = () => {
         gutter.textContent = Array.from({ length: code.value.split('\n').length }, (_, i) => i + 1).join('\n');
         approvedCandidate = null; apply.disabled = true; diff.style.display = 'none';
-        report('Borrador local · aún no guardado');
+        report(t('Borrador local · aún no guardado'));
       };
       code.addEventListener('input', sync);
       code.addEventListener('scroll', () => { gutter.scrollTop = code.scrollTop; });
-      const search = h('textarea', { class: 'query', rows: '2', 'aria-label': 'Buscar texto exacto', placeholder: 'Buscar texto o función (literal)' });
-      const replacement = h('textarea', { class: 'query', rows: '2', 'aria-label': 'Reemplazar por', placeholder: 'Código de reemplazo' });
+      const search = h('textarea', { class: 'query', rows: '2', 'aria-label': t('Buscar texto exacto'), placeholder: t('Buscar texto o función (literal)') });
+      const replacement = h('textarea', { class: 'query', rows: '2', 'aria-label': t('Reemplazar por'), placeholder: t('Código de reemplazo') });
       const find = h('button', { onclick: () => {
-        if (!search.value) { report('Escribe un texto para buscar.', true); return; }
+        if (!search.value) { report(t('Escribe un texto para buscar.'), true); return; }
         const from = code.selectionEnd;
         let index = code.value.indexOf(search.value, from);
         if (index < 0) index = code.value.indexOf(search.value);
-        if (index < 0) { report('Sin coincidencias.', true); return; }
+        if (index < 0) { report(t('Sin coincidencias.'), true); return; }
         code.focus(); code.setSelectionRange(index, index + search.value.length);
         const line = code.value.slice(0, index).split('\n').length;
         code.scrollTop = Math.max(0, (line - 3) * 20); gutter.scrollTop = code.scrollTop;
-        report(`Coincidencia en línea ${line}`);
-      } }, 'Buscar siguiente');
+        report(t`Coincidencia en línea ${line}`);
+      } }, t('Buscar siguiente'));
       const replace = (all) => {
         if (saving) return;
         try {
           const result = replaceEditorText(code.value, search.value, replacement.value, all);
-          code.value = result.text; sync(); report(`${result.count} reemplazo(s) en el borrador. Revisa el diff.`);
+          code.value = result.text; sync(); report(t`${result.count} reemplazo(s) en el borrador. Revisa el diff.`);
         } catch (e) { report(e.message, true); }
       };
       const preview = h('button', { onclick: async () => {
@@ -1347,30 +3585,30 @@
           validateEditorCandidate(snapshot, proposed);
           const engine = await getDiff();
           const patch = engine.createTwoFilesPatch(`a/${path}`, `b/${path}`, snapshot.text, proposed, '', '', { context: 3, timeout: 2000 });
-          if (patch === undefined) throw new Error('diff excedió el tiempo límite');
+          if (patch === undefined) throw new Error(t('diff excedió el tiempo límite'));
           diff.textContent = patch; diff.style.display = 'block';
           approvedCandidate = proposed;
           apply.disabled = candidate() !== proposed;
-          report('Revisa el diff completo; Aplicar comprueba la versión original.');
+          report(t('Revisa el diff completo; Aplicar comprueba la versión original.'));
         } catch (e) { approvedCandidate = null; apply.disabled = true; report(e.message, true); }
-      } }, 'Revisar diff');
+      } }, t('Revisar diff'));
       release = () => { host.remove(); editorOpen = false; ui?.updateState?.(); };
       const close = h('button', { onclick: () => {
         if (saving) return;
-        if (candidate() !== snapshot.text && !confirm('¿Descartar el borrador sin guardar?')) return;
+        if (candidate() !== snapshot.text && !confirm(t('¿Descartar el borrador sin guardar?'))) return;
         release();
-      } }, 'Cerrar');
+      } }, t('Cerrar'));
       apply.addEventListener('click', async () => {
         if (saving || busy || approvedCandidate === null || candidate() !== approvedCandidate) {
-          report('Revisa de nuevo el diff o espera a que termine la operación.', true); return;
+          report(t('Revisa de nuevo el diff o espera a que termine la operación.'), true); return;
         }
-        if (!confirm(`¿Aplicar el diff revisado a "${path}"? ${snapshot.checkpointBeforeSave ?
-          'Se creará y verificará un checkpoint previo; si falla, no se guarda.' :
-          'No crea backup automático.'} No crea commit.`)) return;
+        if (!confirm(t`¿Aplicar el diff revisado a "${path}"? ${snapshot.checkpointBeforeSave ?
+          t('Se creará y verificará un checkpoint previo; si falla, no se guarda.') :
+          t('No crea backup automático.')} No crea commit.`)) return;
         saving = true; setBusy(true); code.readOnly = true; apply.disabled = true;
         try {
           snapshot = await saveEditorCandidate(snapshot, approvedCandidate);
-          uiLog(`Editor: guardado y verificado ${path} (SHA256 ${snapshot.hash.slice(0, 8)}). Revisa git diff.`, 'info');
+          uiLog(t`Editor: guardado y verificado ${path} (SHA256 ${snapshot.hash.slice(0, 8)}). Revisa git diff.`, 'info');
           release();
         } catch (e) { report(e.message, true); }
         finally { saving = false; setBusy(false); code.readOnly = false; await ui?.refresh(); }
@@ -1383,28 +3621,28 @@
         .gutter{background:#252526;color:#858585;text-align:right;overflow:hidden;min-width:55px}.code{flex:1;min-width:0;background:#1e1e1e;color:#d4d4d4;border:0;resize:none;outline:none;white-space:pre}
         .diff{margin:0;padding:10px;background:#111;color:#b5cea8;overflow:auto;max-height:30vh;font:12px/18px monospace;white-space:pre}.status{font-size:12px;overflow-wrap:anywhere}
       `));
-      shadow.append(h('section', { class: 'editor', role: 'dialog', 'aria-label': `Editor de ${path}` },
-        h('div', { class: 'toolbar' }, h('strong', {}, `Editor local · ${path}`), preview, apply, close),
+      shadow.append(h('section', { class: 'editor', role: 'dialog', 'aria-label': t`Editor de ${path}` },
+        h('div', { class: 'toolbar' }, h('strong', {}, t`Editor local · ${path}`), preview, apply, close),
         h('div', { class: 'queries' }, search, replacement),
         h('div', { class: 'toolbar' }, find,
-          h('button', { onclick: () => replace(false) }, 'Reemplazar primero'),
-          h('button', { onclick: () => replace(true) }, 'Reemplazar todos')),
+          h('button', { onclick: () => replace(false) }, t('Reemplazar primero')),
+          h('button', { onclick: () => replace(true) }, t('Reemplazar todos'))),
         h('div', { class: 'source' }, gutter, code), diff, status));
       for (const type of ['keydown', 'keyup', 'keypress']) host.addEventListener(type, (e) => e.stopPropagation());
-      document.body.append(host); sync(); report(`SHA256 original: ${snapshot.hash} · UTF-8 · pega o edita funciones`);
+      document.body.append(host); sync(); report(t`SHA256 original: ${snapshot.hash} · UTF-8 · pega o edita funciones`);
       if (proposal) preview.click();
       return true;
     } catch (e) {
       if (release) release(); else editorOpen = false;
       ui?.updateState?.();
-      uiLog(`❌ Editor: ${e.message}`, 'err');
+      uiLog(t`❌ Editor: ${e.message}`, 'err');
       return false;
     }
   }
 
   async function deleteUserFiles(path = null) {
     if (busy) {
-      uiLog('⏳ Hay una operación en curso; no se ha borrado nada.', 'err');
+      uiLog(t('⏳ Hay una operación en curso; no se ha borrado nada.'), 'err');
       return;
     }
     setBusy(true);
@@ -1412,27 +3650,27 @@
     try {
       let paths;
       if (path !== null) {
-        if (isInternalPath(path)) throw new Error('no se pueden borrar metadatos internos');
+        if (isInternalPath(path)) throw new Error(t('no se pueden borrar metadatos internos'));
         await requireFile(path);
         paths = [splitPath(path).join('/')];
       } else {
         paths = (await listFiles()).filter((file) => !isInternalPath(file.path)).map((file) => file.path);
       }
-      if (!paths.length) { uiLog('No hay archivos de usuario para eliminar.', 'info'); return; }
-      const preview = paths.slice(0, 15).join('\n') + (paths.length > 15 ? `\n... y ${paths.length - 15} más` : '');
-      if (!confirm(`¿Eliminar ${paths.length} archivo(s) de usuario?\n${preview}\nSe conservan .git, .dv y .dv_tmp. No hay deshacer automático.`)) {
-        uiLog('Borrado cancelado; no se ha eliminado nada.', 'info');
+      if (!paths.length) { uiLog(t('No hay archivos de usuario para eliminar.'), 'info'); return; }
+      const preview = paths.slice(0, 15).join('\n') + (paths.length > 15 ? t`\n... y ${paths.length - 15} más` : '');
+      if (!confirm(t`¿Eliminar ${paths.length} archivo(s) de usuario?\n${preview}\nSe conservan .git, .dv y .dv_tmp. No hay deshacer automático.`)) {
+        uiLog(t('Borrado cancelado; no se ha eliminado nada.'), 'info');
         return;
       }
       for (const target of paths) {
         await requireFile(target);
         await removePath(target, false);
-        if (await getHandle(target)) throw new Error(`el archivo sigue existiendo: ${target}`);
+        if (await getHandle(target)) throw new Error(t`el archivo sigue existiendo: ${target}`);
         deleted++;
       }
-      uiLog(`Eliminados ${deleted} archivo(s). Git y journal conservados; revisa git status.`, 'info');
+      uiLog(t`Eliminados ${deleted} archivo(s). Git y journal conservados; revisa git status.`, 'info');
     } catch (e) {
-      uiLog(`❌ Borrado detenido tras ${deleted} archivo(s): ${e.message}. No se revierten los borrados anteriores.`, 'err');
+      uiLog(t`❌ Borrado detenido tras ${deleted} archivo(s): ${e.message}. No se revierten los borrados anteriores.`, 'err');
     } finally {
       setBusy(false);
       await ui?.refresh();
@@ -1447,7 +3685,7 @@
       el.removeAttribute('href');
       el.removeAttribute('action');
     });
-    const doc = document.implementation.createHTMLDocument('Vista previa estática');
+    const doc = document.implementation.createHTMLDocument(t('Vista previa estática'));
     const policy = doc.createElement('meta');
     policy.httpEquiv = 'Content-Security-Policy';
     policy.content = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'";
@@ -1488,84 +3726,105 @@
     } catch (e) {
       if (htmlPreviews.get(entry.path) !== entry || revision !== entry.revision) return;
       entry.channel.postMessage({ type: 'error', text: e.message });
-      uiLog(`Vista previa ${entry.path}: ${e.message}`, 'err');
+      uiLog(t`Vista previa ${entry.path}: ${e.message}`, 'err');
     }
+  }
+
+  function previewStrings() {
+    return {
+      refresh: t('Actualizar desde disco'), mode: t('HTML estático · sin scripts ni red'),
+      connecting: t('Conectando con el panel...'), frame: t('Vista previa HTML aislada'),
+      reading: t('Leyendo la versión guardada en OPFS...'),
+      offline: t('El panel no responde. Mantén DeepSeek abierto. Si lo recargaste, vuelve a pulsar Ejecutar allí.'),
+      updated: t('Actualizado: '),
+      saved: t(' · Solo cambios guardados. Actualización automática mientras el panel esté abierto.'),
+      error: t('No se pudo actualizar: '),
+      connectionError: t('No se pudo conectar la vista previa: ')
+    };
   }
 
   function htmlPreviewShell(path, channelName, nonce) {
     const encode = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
-    return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+    const text = previewStrings();
+    return `<!doctype html><html lang="${language}"><head><meta charset="utf-8">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; frame-src about:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-      <meta name="referrer" content="no-referrer"><title>DV · Vista previa HTML</title>
+      <meta name="referrer" content="no-referrer"><title>DV</title>
       <style>html,body{height:100%;margin:0;font:13px system-ui;background:#18181b;color:#f4f4f5}
       body{display:flex;flex-direction:column}header{padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
       button{padding:7px 12px;background:#2563eb;color:white;border:0;border-radius:5px;cursor:pointer}
       button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
       #status{padding:0 10px 8px;overflow-wrap:anywhere}iframe{flex:1;width:100%;border:0;background:white;min-height:0}</style></head>
-      <body><header><strong id="path"></strong><button id="refresh" type="button">Actualizar desde disco</button>
-      <span>HTML estático · sin scripts ni red</span></header><div id="status" role="status" aria-live="polite">Conectando con el panel...</div>
-      <iframe sandbox="" referrerpolicy="no-referrer" title="Vista previa HTML aislada"></iframe>
+      <body><header><strong id="path"></strong><button id="refresh" type="button">${t('Actualizar desde disco')}</button>
+      <span>${t('HTML estático · sin scripts ni red')}</span></header><div id="status" role="status" aria-live="polite">${t('Conectando con el panel...')}</div>
+      <iframe sandbox="" referrerpolicy="no-referrer" title="${t('Vista previa HTML aislada')}"></iframe>
       <script nonce="${nonce}">
       'use strict';
       const path = ${encode(path)}, name = ${encode(channelName)};
+      let text = ${encode(text)}, locale = ${encode(language)};
       document.title = 'DV · ' + path;
       document.getElementById('path').textContent = path;
       const status = document.getElementById('status'), frame = document.querySelector('iframe');
       let channel, timer;
       const request = () => {
         clearTimeout(timer);
-        status.textContent = 'Leyendo la versión guardada en OPFS...';
+        status.textContent = text.reading;
         channel.postMessage({type:'refresh'});
         timer = setTimeout(() => {
           frame.removeAttribute('srcdoc');
-          status.textContent = 'El panel no responde. Mantén DeepSeek abierto. Si lo recargaste, vuelve a pulsar Ejecutar allí.';
+          status.textContent = text.offline;
         }, 5000);
       };
       try {
         channel = new BroadcastChannel(name);
         channel.onmessage = ({data}) => {
           if (!data || typeof data !== 'object') return;
-          if (data.type === 'render' && typeof data.html === 'string' && /^[a-f0-9]{64}$/.test(data.hash)) {
+          if (data.type === 'language' && ['es','en','zh-CN'].includes(data.locale) && data.text &&
+              Object.keys(text).every(key => typeof data.text[key] === 'string')) {
+            locale = data.locale; text = data.text;
+            document.documentElement.lang = locale;
+            document.getElementById('refresh').textContent = text.refresh;
+            document.querySelector('header span').textContent = text.mode;
+            frame.title = text.frame;
+          } else if (data.type === 'render' && typeof data.html === 'string' && /^[a-f0-9]{64}$/.test(data.hash)) {
             clearTimeout(timer);
             frame.srcdoc = data.html;
-            status.textContent = 'Actualizado: ' + new Date().toLocaleTimeString() + ' · SHA256 ' + data.hash.slice(0, 8) +
-              ' · Solo cambios guardados. Actualización automática mientras el panel esté abierto.';
+            status.textContent = text.updated + new Date().toLocaleTimeString(locale) + ' · SHA256 ' + data.hash.slice(0, 8) + text.saved;
           } else if (data.type === 'error' && typeof data.text === 'string') {
             clearTimeout(timer); frame.removeAttribute('srcdoc');
-            status.textContent = 'No se pudo actualizar: ' + data.text;
+            status.textContent = text.error + data.text;
           }
         };
         document.getElementById('refresh').addEventListener('click', request);
         request();
         addEventListener('pagehide', () => { clearTimeout(timer); channel.close(); });
       } catch (error) {
-        status.textContent = 'No se pudo conectar la vista previa: ' + error.message;
+        status.textContent = text.connectionError + error.message;
       }
       </script></body></html>`;
   }
 
   async function openHTMLPreview(path) {
     path = splitPath(path).join('/');
-    if (!confirm(`¿Abrir "${path}" en una pestaña de vista previa HTML estática?\nSin scripts, red ni recursos externos. Se actualizará al guardar; requiere mantener DeepSeek abierto.`)) {
-      throw new Error('ejecución cancelada');
+    if (!confirm(t`¿Abrir "${path}" en una pestaña de vista previa HTML estática?\nSin scripts, red ni recursos externos. Se actualizará al guardar; requiere mantener DeepSeek abierto.`)) {
+      throw new Error(t('ejecución cancelada'));
     }
-    if (typeof BroadcastChannel !== 'function') throw new Error('el navegador no admite BroadcastChannel para conectar la vista previa');
+    if (typeof BroadcastChannel !== 'function') throw new Error(t('el navegador no admite BroadcastChannel para conectar la vista previa'));
     const previous = htmlPreviews.get(path);
     if (previous && !previous.tab.closed) {
       previous.tab.focus();
       await updateHTMLPreview(previous);
-      return `Vista previa HTML actualizada en su pestaña: ${path}.`;
+      return t`Vista previa HTML actualizada en su pestaña: ${path}.`;
     }
     if (previous) closeHTMLPreview(previous);
     let entry = null, channel = null, url = null, tab = null;
     try {
-      const channelName = 'dv-preview-' + crypto.randomUUID();
+      const channelName = t('dv-preview-') + crypto.randomUUID();
       channel = new BroadcastChannel(channelName);
       const nonce = crypto.randomUUID().replaceAll('-', '');
       url = URL.createObjectURL(new Blob([htmlPreviewShell(path, channelName, nonce)], { type: 'text/html;charset=utf-8' }));
       // Navigate in the initial trusted click; detaching opener first prevents later navigation.
       tab = window.open(url, '_blank');
-      if (!tab) throw new Error('el navegador bloqueó la pestaña; permite ventanas emergentes para DeepSeek y reintenta');
+      if (!tab) throw new Error(t('el navegador bloqueó la pestaña; permite ventanas emergentes para DeepSeek y reintenta'));
       tab.opener = null;
       entry = { path, tab, channel, url, revision: 0, timer: null, watch: null };
       htmlPreviews.set(path, entry);
@@ -1576,7 +3835,7 @@
       entry.watch = setInterval(() => {
         if (tab.closed) closeHTMLPreview(entry);
       }, 5000);
-      return `Vista previa HTML abierta en pestaña: ${path}. Actualización automática al guardar y botón Actualizar desde disco; F5 vuelve a leer OPFS mientras el panel siga abierto. Sin scripts, red ni recursos OPFS relativos.`;
+      return t`Vista previa HTML abierta en pestaña: ${path}. Actualización automática al guardar y botón Actualizar desde disco; F5 vuelve a leer OPFS mientras el panel siga abierto. Sin scripts, red ni recursos OPFS relativos.`;
     } catch (e) {
       if (entry) closeHTMLPreview(entry, { closeTab: true });
       else { channel?.close(); if (url) URL.revokeObjectURL(url); tab?.close(); }
@@ -1585,17 +3844,22 @@
   }
 
   function consoleRunnerDocument(source, token) {
+    const messages = {
+      unserializable: t('[valor no serializable]'), output: t('limite de salida excedido'),
+      startup: t('error de sintaxis o arranque del Worker'), timeout: t('tiempo limite de 3 segundos excedido')
+    };
+    const encode = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
     const workerSource = `
       const format = value => {
         if (typeof value === 'string') return value;
         try { return JSON.stringify(value) ?? String(value); }
-        catch { return '[valor no serializable]'; }
+        catch { return ${encode(messages.unserializable)}; }
       };
       let count = 0, chars = 0;
       for (const level of ['log','info','warn','error','debug']) {
         console[level] = (...args) => {
           const text = args.map(format).join(' ').slice(0, 4000);
-          if (++count > 100 || (chars += text.length) > 20000) throw new Error('limite de salida excedido');
+          if (++count > 100 || (chars += text.length) > 20000) throw new Error(${encode(messages.output)});
           postMessage({type:'log', text:'[' + level + '] ' + text});
         };
       }
@@ -1615,8 +3879,8 @@
         url = URL.createObjectURL(new Blob([${encoded}], {type:'text/javascript'}));
         worker = new Worker(url);
         worker.onmessage = event => { emit(event.data); if(event.data.type !== 'log') stop(); };
-        worker.onerror = event => { emit({type:'error',text:event.message || 'error de sintaxis o arranque del Worker'}); stop(); };
-        timer = setTimeout(() => { emit({type:'error',text:'tiempo limite de 3 segundos excedido'}); stop(); }, ${CFG.RUN_TIMEOUT_MS});
+        worker.onerror = event => { emit({type:'error',text:event.message || ${encode(messages.startup)}}); stop(); };
+        timer = setTimeout(() => { emit({type:'error',text:${encode(messages.timeout)}}); stop(); }, ${CFG.RUN_TIMEOUT_MS});
         addEventListener('pagehide', stop);
       } catch(error) { emit({type:'error',text:String(error.message)}); stop(); }
       </script>`;
@@ -1624,18 +3888,18 @@
 
   async function runFile(args) {
     const { pos } = parseArgs(args, {});
-    if (pos.length !== 1) throw new Error('uso: run <archivo.html|archivo.js>');
+    if (pos.length !== 1) throw new Error(t('uso: run <archivo.html|archivo.js>'));
     const path = pos[0];
-    if (isInternalPath(path)) throw new Error('no se ejecutan metadatos internos');
-    if (!/\.(html?|js)$/i.test(path)) throw new Error('motor no disponible; run admite HTML estático y JavaScript de consola, no Node/Python/shell');
+    if (isInternalPath(path)) throw new Error(t('no se ejecutan metadatos internos'));
+    if (!/\.(html?|js)$/i.test(path)) throw new Error(t('motor no disponible; run admite HTML estático y JavaScript de consola, no Node/Python/shell'));
     if (/\.html?$/i.test(path)) return openHTMLPreview(path);
     const file = await (await requireFile(path)).getFile();
-    if (file.size > CFG.MAX_RUN_BYTES) throw new Error('archivo supera 256 KB para run');
+    if (file.size > CFG.MAX_RUN_BYTES) throw new Error(t('archivo supera 256 KB para run'));
     let source;
     try { source = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer()); }
-    catch (e) { if (e.name === 'TypeError') throw new Error('run requiere texto UTF-8 válido'); throw e; }
-    if (!confirm(`¿Abrir "${path}" (${fmtBytes(file.size)}) en modo ${/\.js$/i.test(path) ? 'JavaScript de consola aislado, máximo 3 segundos' : 'vista previa HTML sin scripts'}? Sin acceso al disco, sesión ni red.`)) {
-      throw new Error('ejecución cancelada');
+    catch (e) { if (e.name === 'TypeError') throw new Error(t('run requiere texto UTF-8 válido')); throw e; }
+    if (!confirm(t`¿Abrir "${path}" (${fmtBytes(file.size)}) en modo ${/\.js$/i.test(path) ? t('JavaScript de consola aislado, máximo 3 segundos') : t('vista previa HTML sin scripts')}? Sin acceso al disco, sesión ni red.`)) {
+      throw new Error(t('ejecución cancelada'));
     }
     const frame = document.createElement('iframe');
     frame.setAttribute('sandbox', /\.js$/i.test(path) ? 'allow-scripts' : '');
@@ -1650,20 +3914,20 @@
         window.removeEventListener('message', receive);
         frame.remove();
         if (error) reject(new Error(`${path}: ${error}\n${output.join('\n')}`));
-        else resolve(`Ejecutado: ${path}\n${output.join('\n') || '(sin salida)'}\n[fin]`);
+        else resolve(`Ejecutado: ${path}\n${output.join('\n') || t('(sin salida)')}\n[fin]`);
       };
       const receive = (event) => {
         if (event.source !== frame.contentWindow || event.data?.token !== token) return;
         const data = event.data;
         if (data.type === 'log' && typeof data.text === 'string') {
-          if (++count > 100 || (chars += data.text.length) > 21000) { finish('limite de salida excedido'); return; }
+          if (++count > 100 || (chars += data.text.length) > 21000) { finish(t('limite de salida excedido')); return; }
           const text = data.text.slice(0, 4100);
           output.push(text);
           uiLog(text);
         } else if (data.type === 'error') finish(String(data.text).slice(0, 4000));
         else if (data.type === 'done') finish();
       };
-      const timer = setTimeout(() => finish('no respondió el entorno aislado dentro del límite'), CFG.RUN_TIMEOUT_MS + 1500);
+      const timer = setTimeout(() => finish(t('no respondió el entorno aislado dentro del límite')), CFG.RUN_TIMEOUT_MS + 1500);
       window.addEventListener('message', receive);
       frame.srcdoc = consoleRunnerDocument(source, token);
       document.body.append(frame);
@@ -1675,9 +3939,9 @@
   // Ficheros & Transacciones
   def('ls', 'Ficheros', 'ls [-R] [ruta]', 'Lista archivos', async (ctx) => {
     const { flags, pos } = parseArgs(ctx.args, { R: 'b' });
-    if (pos.length > 1) throw new Error('uso: ls [-R] [ruta]');
+    if (pos.length > 1) throw new Error(t('uso: ls [-R] [ruta]'));
     const h = pos[0] ? await getHandle(pos[0]) : rootDir;
-    if (!h) throw new Error(`no existe: ${pos[0]}`);
+    if (!h) throw new Error(t`no existe: ${pos[0]}`);
     if (h.kind === 'file') return `${pos[0]} (${fmtBytes((await h.getFile()).size)})`;
     const rows = [];
     if (flags.R) {
@@ -1690,41 +3954,41 @@
       }
       rows.sort((a, b) => a.localeCompare(b));
     }
-    return rows.join('\n') || '(carpeta vacía)';
+    return rows.join('\n') || t('(carpeta vacía)');
   });
 
   def('rm', 'Ficheros', 'rm [-r] <ruta>', 'Elimina una ruta tras confirmación (sin deshacer)', async (ctx) => {
     const { flags, pos } = parseArgs(ctx.args, { r: 'b' });
-    if (pos.length !== 1) throw new Error('uso: rm [-r] <ruta>');
+    if (pos.length !== 1) throw new Error(t('uso: rm [-r] <ruta>'));
     const parts = splitPath(pos[0]);
-    if (!parts.length) throw new Error('no se puede borrar la raíz');
-    if (['.git', '.dv', '.dv_tmp'].includes(parts[0])) throw new Error('no se pueden borrar metadatos internos con rm');
+    if (!parts.length) throw new Error(t('no se puede borrar la raíz'));
+    if (['.git', '.dv', '.dv_tmp'].includes(parts[0])) throw new Error(t('no se pueden borrar metadatos internos con rm'));
     const path = parts.join('/');
     const handle = await getHandle(path);
-    if (!handle) throw new Error(`no existe: ${path}`);
-    if (handle.kind === 'directory' && !flags.r) throw new Error('para borrar una carpeta usa rm -r');
-    if (!confirm(`¿Eliminar "${path}"${handle.kind === 'directory' ? ' y todo su contenido' : ''}? Esta operación no tiene deshacer automático.`)) {
-      throw new Error('borrado cancelado; no se ha eliminado nada');
+    if (!handle) throw new Error(t`no existe: ${path}`);
+    if (handle.kind === 'directory' && !flags.r) throw new Error(t('para borrar una carpeta usa rm -r'));
+    if (!confirm(t`¿Eliminar "${path}"${handle.kind === 'directory' ? ' y todo su contenido' : ''}? Esta operación no tiene deshacer automático.`)) {
+      throw new Error(t('borrado cancelado; no se ha eliminado nada'));
     }
     await removePath(path, !!flags.r);
-    if (await getHandle(path)) throw new Error(`no se pudo verificar el borrado: ${path}`);
-    return `Eliminado: ${path}`;
+    if (await getHandle(path)) throw new Error(t`no se pudo verificar el borrado: ${path}`);
+    return t`Eliminado: ${path}`;
   });
 
   def('cp', 'Ficheros', 'cp <origen> <destino>', 'Copia archivo y verifica SHA256; confirma reemplazo', (ctx) => copyOrMove(ctx.args, false));
   def('mv', 'Ficheros', 'mv <origen> <destino>', 'Copia verificada + borrado confirmado del origen', (ctx) => copyOrMove(ctx.args, true));
 
   def('write', 'Ficheros', 'write <file> <texto...>', 'Escritura atómica segura (Capa 2)', async (ctx) => {
-    if (ctx.args.length < 2) throw new Error('uso: write <file> <texto...>');
+    if (ctx.args.length < 2) throw new Error(t('uso: write <file> <texto...>'));
     const res = await atomicWrite(ctx.args[0], ctx.args.slice(1).join(' '));
     return `[Tx OK] ${ctx.args[0]} (${fmtBytes(res.bytes)}, SHA256: ${res.hash.slice(0, 8)}...)`;
   });
 
   def('save', 'Ficheros', 'save <file>', 'Guarda último resultado atómicamente', async (ctx) => {
-    if (!ctx.args[0]) throw new Error('uso: save <file>');
-    if (!lastResult) throw new Error('no hay resultado previo');
+    if (!ctx.args[0]) throw new Error(t('uso: save <file>'));
+    if (!lastResult) throw new Error(t('no hay resultado previo'));
     const res = await atomicWrite(ctx.args[0], lastResult);
-    return `[Tx OK] Guardado ${ctx.args[0]} (${fmtBytes(res.bytes)})`;
+    return t`[Tx OK] Guardado ${ctx.args[0]} (${fmtBytes(res.bytes)})`;
   });
 
   def('cat', 'Texto', 'cat [file...]', 'Muestra contenido', async function* (ctx) {
@@ -1742,7 +4006,7 @@
 
   def('grep', 'Texto', 'grep [-i] [-n] [-F] <patrón> [archivo]', 'Busca regex o texto literal por líneas; acepta pipes', async function* (ctx) {
     const { flags, pos } = parseArgs(ctx.args, { i: 'b', n: 'b', F: 'b' });
-    if (pos.length < 1 || pos.length > 2) throw new Error('uso: grep [-i] [-n] [-F] <patrón> [archivo]');
+    if (pos.length < 1 || pos.length > 2) throw new Error(t('uso: grep [-i] [-n] [-F] <patrón> [archivo]'));
     const re = makeRegex(pos[0], { ignoreCase: !!flags.i, fixed: !!flags.F });
     let line = 0;
     for await (const text of source(ctx, pos[1])) {
@@ -1761,25 +4025,25 @@
         const j = JSON.parse(l);
         return `[${j.timestamp.slice(11, 19)}] ${j.type} -> ${j.path} (${j.bytes || 0} B, hash:${(j.newHash || '').slice(0, 7)})`;
       }).join('\n');
-    } catch { return '(registro de auditoría vacío)'; }
+    } catch { return t('(registro de auditoría vacío)'); }
   });
 
   // Git Local
   def('git', 'Git', 'git <init|status|add|commit|log|diff|show|branch|checkout> [args]', 'Control de versiones local (sin remoto)', async (ctx) => {
-    if (!ctx.args.length) throw new Error('uso: git <init|status|add|commit|log|diff|show|branch|checkout>');
+    if (!ctx.args.length) throw new Error(t('uso: git <init|status|add|commit|log|diff|show|branch|checkout>'));
     const sub = ctx.args[0].toLowerCase();
     const subArgs = ctx.args.slice(1);
     const { git, fs } = await getGit();
     if (['status', 'add', 'commit', 'log', 'diff', 'show', 'branch', 'checkout'].includes(sub)) {
       const repository = await getHandle('.git');
-      if (!repository) throw new Error('no hay repositorio Git. Usa: git init');
-      if (repository.kind !== 'directory') throw new Error('.git no es una carpeta; revisa el repositorio');
+      if (!repository) throw new Error(t('no hay repositorio Git. Usa: git init'));
+      if (repository.kind !== 'directory') throw new Error(t('.git no es una carpeta; revisa el repositorio'));
     }
 
     switch (sub) {
       case 'init':
         await git.init({ fs, dir: '.', defaultBranch: 'main' });
-        return 'Repositorio Git local inicializado (rama: main).';
+        return t('Repositorio Git local inicializado (rama: main).');
       case 'status': {
         const matrix = await git.statusMatrix({ fs, dir: '.' });
         const rows = [];
@@ -1787,50 +4051,50 @@
           if (isInternalPath(filepath) || (head === workdir && workdir === stage)) continue;
           rows.push(`${gitChangeDescription(head, workdir, stage).padEnd(18)} ${filepath}`);
         }
-        return rows.length ? rows.join('\n') : 'Working tree limpio. Nada pendiente de confirmar.';
+        return rows.length ? rows.join('\n') : t('Working tree limpio. Nada pendiente de confirmar.');
       }
       case 'add':
-        if (!subArgs[0]) throw new Error('uso: git add <ruta|--all>');
+        if (!subArgs[0]) throw new Error(t('uso: git add <ruta|--all>'));
         if (subArgs[0] === '--all' || subArgs[0] === '.') {
           const c = await stageAllGitFiles(git, fs);
-          return `${c} archivos añadidos al staging area.`;
+          return t`${c} archivos añadidos al staging area.`;
         }
-        if (isInternalPath(subArgs[0])) throw new Error('no se pueden versionar metadatos internos');
+        if (isInternalPath(subArgs[0])) throw new Error(t('no se pueden versionar metadatos internos'));
         await git.add({ fs, dir: '.', filepath: splitPath(subArgs[0]).join('/') });
-        return `Añadido al staging: ${subArgs[0]}`;
+        return t`Añadido al staging: ${subArgs[0]}`;
       case 'commit': {
         const { flags } = parseArgs(subArgs, { m: 'v' });
-        if (!flags.m) throw new Error('uso: git commit -m "mensaje"');
+        if (!flags.m) throw new Error(t('uso: git commit -m "mensaje"'));
         const matrix = await git.statusMatrix({ fs, dir: '.' });
         if (!matrix.some(([path, head, , stage]) => !isInternalPath(path) && head !== stage)) {
-          throw new Error('nada nuevo en staging. Usa: git add <archivo> o git add --all');
+          throw new Error(t('nada nuevo en staging. Usa: git add <archivo> o git add --all'));
         }
         const oid = await git.commit({
           fs, dir: '.', message: flags.m,
           author: { name: 'DV User', email: 'user@local.lan' }
         });
         const branch = await git.currentBranch({ fs, dir: '.' });
-        return `[${branch || 'detached HEAD'} ${oid.slice(0, 7)}] ${flags.m}`;
+        return `[${branch || t('detached HEAD')} ${oid.slice(0, 7)}] ${flags.m}`;
       }
       case 'branch': {
-        if (subArgs.length > 1 || subArgs[0]?.startsWith('-')) throw new Error('uso: git branch [nombre] (sin borrar, renombrar ni --force)');
+        if (subArgs.length > 1 || subArgs[0]?.startsWith('-')) throw new Error(t('uso: git branch [nombre] (sin borrar, renombrar ni --force)'));
         if (!subArgs.length) {
           const current = await git.currentBranch({ fs, dir: '.' });
           const branches = await git.listBranches({ fs, dir: '.' });
           const rows = branches.map(name => `${name === current ? '*' : ' '} ${name}`);
-          if (current && !branches.includes(current)) rows.unshift(`* ${current} (sin commits)`);
-          return rows.join('\n') || '(sin ramas locales; HEAD separado)';
+          if (current && !branches.includes(current)) rows.unshift(t`* ${current} (sin commits)`);
+          return rows.join('\n') || t('(sin ramas locales; HEAD separado)');
         }
-        if (!await gitHeadOid(git, fs)) throw new Error('crea el primer commit antes de crear otra rama');
+        if (!await gitHeadOid(git, fs)) throw new Error(t('crea el primer commit antes de crear otra rama'));
         await git.branch({ fs, dir: '.', ref: subArgs[0] });
-        return `Rama creada: ${subArgs[0]}. No se cambió de rama; usa git checkout ${JSON.stringify(subArgs[0])}.`;
+        return t`Rama creada: ${subArgs[0]}. No se cambió de rama; usa git checkout ${JSON.stringify(subArgs[0])}.`;
       }
       case 'checkout':
-        if (subArgs.length !== 1 || subArgs[0].startsWith('-')) throw new Error('uso: git checkout <rama-local> (sin --force ni checkout de archivos/commits)');
-        if (editorOpen) throw new Error('cierra el editor antes de cambiar de rama');
+        if (subArgs.length !== 1 || subArgs[0].startsWith('-')) throw new Error(t('uso: git checkout <rama-local> (sin --force ni checkout de archivos/commits)'));
+        if (editorOpen) throw new Error(t('cierra el editor antes de cambiar de rama'));
         return checkoutBranch(git, fs, subArgs[0]);
       case 'log': {
-        if (!await gitHeadOid(git, fs)) return 'Sin commits aún en esta rama.';
+        if (!await gitHeadOid(git, fs)) return t('Sin commits aún en esta rama.');
         const commits = await git.log({ fs, dir: '.', depth: 10 });
         return commits.map(c => `${c.oid.slice(0, 7)} - ${c.commit.message.trim()} (${formatGitDate(c.commit.author?.timestamp)})`).join('\n');
       }
@@ -1839,88 +4103,88 @@
       case 'show':
         return gitShow(git, fs, subArgs);
       default:
-        throw new Error(`subcomando no implementado: ${sub}`);
+        throw new Error(t`subcomando no implementado: ${sub}`);
     }
   });
 
   def('help', 'Sistema', 'help', 'Muestra ayuda de comandos', async () => {
     const groups = ['Ficheros', 'Git', 'Texto', 'Auditoría', 'Sistema'];
     const p = settings.prefix;
-    const out = ['COMANDOS DISCO VIRTUAL (100% Local por defecto):'];
+    const out = [t('COMANDOS DISCO VIRTUAL (100% Local por defecto):')];
     for (const g of groups) {
-      out.push('', `[${g.toUpperCase()}]`);
+      out.push('', `[${t(g).toUpperCase()}]`);
       for (const c of REG.values()) {
         if (c.group === g) out.push(`  ${(p + c.usage).padEnd(36)} ${c.desc}`);
       }
     }
     out.push('',
-      'PIPES Y REDIRECCIONES:',
+      t('PIPES Y REDIRECCIONES:'),
       '  cat entrada.txt | head -n 10 > salida.txt',
-      '  > reemplaza; >> añade; .gz se comprime (sin >>).',
-      '  rm pide confirmación y no ofrece deshacer automático.',
-      '  Explorador: Eliminar por archivo o Eliminar todos (conserva Git/journal).',
-      '  Editar: código numerado, buscar/reemplazar literal y diff antes de Aplicar.',
-      '  Ejecutar junto a Editar: mismo run local con confirmación, HTML estático o consola JS.',
-      '  Primeros pasos prepara ejemplos sin ejecutarlos; Ampliar/Reducir conserva el comando escrito.',
-      '  Descargar por archivo: bytes originales a la PC (también binarios/gzip), sin chat ni staging.',
-      '  El navegador decide guardar/preguntar; descarga solicitada no confirma guardado en la PC.',
-      '  checkpoint archivo [etiqueta]: copia bytes/hash hasta 256 KB; checkpoint --list muestra IDs.',
-      '  restore ID: ruta original; texto existente en editor/diff, binario o ausente con confirmación.',
-      '  Restore conserva checkpoint previo si sobrescribe; no hace staging/commit ni elimina copias.',
-      '  checkpoint --list [--file ruta] [--tag texto]: recientes primero; tag busca literal en etiqueta.',
-      '  checkpoint show ID [--content] / diff ID1 ID2: consulta sin restaurar; contenido/diff solo UTF-8.',
-      '  checkpoint delete ID / prune --keep N / prune --older-than 7d: borrado confirmado.',
-      '  Limpieza protege más reciente por archivo y empates; --keep N cuenta globalmente, conserva además esas copias.',
-      '  Editor UTF-8 hasta 256 KB; sin corrector automático ni commit automático.',
-      '  view archivo --from 1 --to 40: líneas + hash; --share requiere confirmación.',
-      '  propose propuesta.json o propose JSON entre comillas: candidato, diff y aprobación.',
-      '  replace archivo "old" "new": bloque literal único; --all reemplaza todas las coincidencias no solapadas.',
-      '  replace siempre prepara sin guardar (también --dry-run); --hash SHA256 exige esa versión.',
-      '  Para bloques multilínea o propuestas IA usa propose con hash y JSON.',
-      '  Chat: bloque dv con JSON puro o !propose inline; Revisar parche en DV abre diff, nunca ejecuta otros comandos.',
-      '  Aprobar parche del chat crea checkpoint previo y valida hash; no envía nada ni hace commit.',
-      '  Compartir archivo incluye SHA256 y protocolo dv; no comparte archivos automáticamente.',
-      '  grep [-i] [-n] [-F] patrón [archivo]: regex/literal, números de línea y pipes.',
-      '  POSIBLE FUGA: solo correlaciona un intento manual reciente (5 s) con el comando exacto en el DOM.',
-      '  Ignora carga automática sin intento; no verifica tráfico ni recepción del servidor.',
-      '  JSON: path, hash completo, operation, old (bloque único), new (texto exacto).',
-      '  operation: replace, insert-before, insert-after, append (sin old).',
-      '  Saltos dentro del JSON: \\n o \\r\\n; no se añaden saltos automáticamente.',
-      '  Explorar / Importar: elige archivos del equipo; guarda bytes en la raíz OPFS.',
-      '  Importación local, máximo 512 MB por archivo; confirma reemplazos, sin staging.',
-      '  cp/mv: solo archivos, destino completo; preservan bytes (también .gz).',
-      '  cp confirma reemplazos; mv siempre confirma. Máximo verificable: 512 MB.',
-      '  mv no es rename atómico: copia y verifica antes de borrar el origen.',
-      '  run: HTML estático (sin scripts/recursos relativos); JS de consola aislado.',
-      '  HTML abre pestaña conectada: autoactualiza al guardar, Actualizar desde disco y F5; mantén DeepSeek abierto.',
-      '  JS: máximo 3 segundos, 100 mensajes/20 KB; usa await para trabajo asíncrono.',
-      '  Sin DOM, Node, dependencias, red ni OPFS; salida disponible para save/--share.',
-      '  git diff: staging vs archivos; git diff --staged: HEAD vs staging.',
-      '  git diff [--staged] <ref>: referencia vs archivos o staging.',
-      '  Diff unificado UTF-8; binarios solo informan cambio; sin seguimiento: git status.',
-      '  git show [ref]: datos del commit (HEAD por defecto), no su diff.',
-      '  git show ref:archivo: texto histórico UTF-8 hasta 256 KB; sin checkout ni restauración.',
-      '  Referencias de commit: HEAD, nombre de rama o SHA completo; sin HEAD~N ni SHA abreviado.',
-      '  El log resume 800 caracteres; git show HEAD:archivo | head -n 20 permite ver un fragmento.',
-      '  Redirigir show guarda texto, no exporta bytes exactos (saltos/BOM pueden cambiar).',
-      '  Git remoto todavía no está implementado.',
-      '  Guardar cambios en Git: revisa lista y mensaje; confirma add --all + commit local, incluidos borrados.',
-      '  El botón usa los archivos actuales, reemplaza staging anterior y excluye metadatos; no elimina comandos.',
-      '  Ver cambios muestra estado, diff sin staging y diff staged; sin revertir automático.',
-      '  git branch [nombre]: lista/crea ramas locales; * indica activa; crear no cambia de rama.',
-      '  git checkout rama: confirma cambio; bloquea staging/cambios/archivos ignorados o sin seguimiento.',
-      '  Sin --force, borrado de ramas, HEAD separado ni restauración Git de archivos.',
+      t('  > reemplaza; >> añade; .gz se comprime (sin >>).'),
+      t('  rm pide confirmación y no ofrece deshacer automático.'),
+      t('  Explorador: Eliminar por archivo o Eliminar todos (conserva Git/journal).'),
+      t('  Editar: código numerado, buscar/reemplazar literal y diff antes de Aplicar.'),
+      t('  Ejecutar junto a Editar: mismo run local con confirmación, HTML estático o consola JS.'),
+      t('  Primeros pasos prepara ejemplos sin ejecutarlos; Ampliar/Reducir conserva el comando escrito.'),
+      t('  Descargar por archivo: bytes originales a la PC (también binarios/gzip), sin chat ni staging.'),
+      t('  El navegador decide guardar/preguntar; descarga solicitada no confirma guardado en la PC.'),
+      t('  checkpoint archivo [etiqueta]: copia bytes/hash hasta 256 KB; checkpoint --list muestra IDs.'),
+      t('  restore ID: ruta original; texto existente en editor/diff, binario o ausente con confirmación.'),
+      t('  Restore conserva checkpoint previo si sobrescribe; no hace staging/commit ni elimina copias.'),
+      t('  checkpoint --list [--file ruta] [--tag texto]: recientes primero; tag busca literal en etiqueta.'),
+      t('  checkpoint show ID [--content] / diff ID1 ID2: consulta sin restaurar; contenido/diff solo UTF-8.'),
+      t('  checkpoint delete ID / prune --keep N / prune --older-than 7d: borrado confirmado.'),
+      t('  Limpieza protege más reciente por archivo y empates; --keep N cuenta globalmente, conserva además esas copias.'),
+      t('  Editor UTF-8 hasta 256 KB; sin corrector automático ni commit automático.'),
+      t('  view archivo --from 1 --to 40: líneas + hash; --share requiere confirmación.'),
+      t('  propose propuesta.json o propose JSON entre comillas: candidato, diff y aprobación.'),
+      t('  replace archivo "old" "new": bloque literal único; --all reemplaza todas las coincidencias no solapadas.'),
+      t('  replace siempre prepara sin guardar (también --dry-run); --hash SHA256 exige esa versión.'),
+      t('  Para bloques multilínea o propuestas IA usa propose con hash y JSON.'),
+      t('  Chat: bloque dv con JSON puro o !propose inline; Revisar parche en DV abre diff, nunca ejecuta otros comandos.'),
+      t('  Aprobar parche del chat crea checkpoint previo y valida hash; no envía nada ni hace commit.'),
+      t('  Compartir archivo incluye SHA256 y protocolo dv; no comparte archivos automáticamente.'),
+      t('  grep [-i] [-n] [-F] patrón [archivo]: regex/literal, números de línea y pipes.'),
+      t('  POSIBLE FUGA: solo correlaciona un intento manual reciente (5 s) con el comando exacto en el DOM.'),
+      t('  Ignora carga automática sin intento; no verifica tráfico ni recepción del servidor.'),
+      t('  JSON: path, hash completo, operation, old (bloque único), new (texto exacto).'),
+      t('  operation: replace, insert-before, insert-after, append (sin old).'),
+      t('  Saltos dentro del JSON: \\n o \\r\\n; no se añaden saltos automáticamente.'),
+      t('  Explorar / Importar: elige archivos del equipo; guarda bytes en la raíz OPFS.'),
+      t('  Importación local, máximo 512 MB por archivo; confirma reemplazos, sin staging.'),
+      t('  cp/mv: solo archivos, destino completo; preservan bytes (también .gz).'),
+      t('  cp confirma reemplazos; mv siempre confirma. Máximo verificable: 512 MB.'),
+      t('  mv no es rename atómico: copia y verifica antes de borrar el origen.'),
+      t('  run: HTML estático (sin scripts/recursos relativos); JS de consola aislado.'),
+      t('  HTML abre pestaña conectada: autoactualiza al guardar, Actualizar desde disco y F5; mantén DeepSeek abierto.'),
+      t('  JS: máximo 3 segundos, 100 mensajes/20 KB; usa await para trabajo asíncrono.'),
+      t('  Sin DOM, Node, dependencias, red ni OPFS; salida disponible para save/--share.'),
+      t('  git diff: staging vs archivos; git diff --staged: HEAD vs staging.'),
+      t('  git diff [--staged] <ref>: referencia vs archivos o staging.'),
+      t('  Diff unificado UTF-8; binarios solo informan cambio; sin seguimiento: git status.'),
+      t('  git show [ref]: datos del commit (HEAD por defecto), no su diff.'),
+      t('  git show ref:archivo: texto histórico UTF-8 hasta 256 KB; sin checkout ni restauración.'),
+      t('  Referencias de commit: HEAD, nombre de rama o SHA completo; sin HEAD~N ni SHA abreviado.'),
+      t('  El log resume 800 caracteres; git show HEAD:archivo | head -n 20 permite ver un fragmento.'),
+      t('  Redirigir show guarda texto, no exporta bytes exactos (saltos/BOM pueden cambiar).'),
+      t('  Git remoto todavía no está implementado.'),
+      t('  Guardar cambios en Git: revisa lista y mensaje; confirma add --all + commit local, incluidos borrados.'),
+      t('  El botón usa los archivos actuales, reemplaza staging anterior y excluye metadatos; no elimina comandos.'),
+      t('  Ver cambios muestra estado, diff sin staging y diff staged; sin revertir automático.'),
+      t('  git branch [nombre]: lista/crea ramas locales; * indica activa; crear no cambia de rama.'),
+      t('  git checkout rama: confirma cambio; bloquea staging/cambios/archivos ignorados o sin seguimiento.'),
+      t('  Sin --force, borrado de ramas, HEAD separado ni restauración Git de archivos.'),
       '',
-      'CANALES DE USO:',
-      '  1. Panel Soberano: Entrada robusta y privada (0 tokens consumidos).',
-      '  2. Atajo en Chat: Escribe !cmd directamente (se ejecuta local y no va al chat).',
-      '  3. Compartir con IA:',
-      `     - Añade --share para enviar el resumen del comando al chat.`,
-      `     - Añade --share-file <ruta> para transferir el archivo completo tras confirmación.`,
-      '     - Vista previa y confirmación antes de enviar; no se reemplazan borradores.',
-      '     - Archivos UTF-8 sin NUL, máximo 64 KB; metadatos internos excluidos.',
-      '     - "--share" entre comillas es texto literal; -- termina las opciones.',
-      '     - Usa los botones correspondientes en el panel.');
+      t('CANALES DE USO:'),
+      t('  1. Panel Soberano: Entrada robusta y privada (0 tokens consumidos).'),
+      t('  2. Atajo en Chat: Escribe !cmd directamente (se ejecuta local y no va al chat).'),
+      t('  3. Compartir con IA:'),
+      t`     - Añade --share para enviar el resumen del comando al chat.`,
+      t`     - Añade --share-file <ruta> para transferir el archivo completo tras confirmación.`,
+      t('     - Vista previa y confirmación antes de enviar; no se reemplazan borradores.'),
+      t('     - Archivos UTF-8 sin NUL, máximo 64 KB; metadatos internos excluidos.'),
+      t('     - "--share" entre comillas es texto literal; -- termina las opciones.'),
+      t('     - Usa los botones correspondientes en el panel.'));
     return out.join('\n');
   });
 
@@ -1931,24 +4195,24 @@
     try {
       const segs = parsePipeline(Array.isArray(raw) ? raw : tokenize(raw.trim()));
       if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && seg.argv[1]?.toLowerCase() === 'checkout') &&
-          (segs.length !== 1 || segs[0].redirect)) throw new Error('git checkout no admite pipes ni redirecciones');
+          (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
       const editorCommand = segs.find((seg) => ['propose', 'replace', 'checkpoint', 'restore'].includes(seg.argv[0].toLowerCase()));
       if (editorCommand && (segs.length !== 1 || segs[0].redirect)) {
-        throw new Error(`${editorCommand.argv[0]} no admite pipes ni redirecciones`);
+        throw new Error(t`${editorCommand.argv[0]} no admite pipes ni redirecciones`);
       }
       let editorRequest = null;
       for (const seg of segs) {
-        if (!REG.has(seg.argv[0].toLowerCase())) throw new Error(`comando no reconocido: ${seg.argv[0]}`);
+        if (!REG.has(seg.argv[0].toLowerCase())) throw new Error(t`comando no reconocido: ${seg.argv[0]}`);
       }
       const redirect = segs[segs.length - 1].redirect;
       if (redirect) {
-        if (!splitPath(redirect.file).length || isInternalPath(redirect.file)) throw new Error('destino de redirección no permitido');
-        if (redirect.mode === '>>' && /\.gz$/i.test(redirect.file)) throw new Error('no se puede añadir (>>) a un .gz');
+        if (!splitPath(redirect.file).length || isInternalPath(redirect.file)) throw new Error(t('destino de redirección no permitido'));
+        if (redirect.mode === '>>' && /\.gz$/i.test(redirect.file)) throw new Error(t('no se puede añadir (>>) a un .gz'));
       }
       let stream = null;
       for (const seg of segs) {
         const cmd = REG.get(seg.argv[0].toLowerCase());
-        if (!cmd) throw new Error(`comando no reconocido: ${seg.argv[0]}`);
+        if (!cmd) throw new Error(t`comando no reconocido: ${seg.argv[0]}`);
         const ctx = { args: seg.argv.slice(1), stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
           openEditor: (proposal) => { editorRequest = proposal; } };
         stream = normalize(await cmd.run(ctx));
@@ -1959,7 +4223,7 @@
         try {
           for await (const l of stream) await writer.write(l + '\n');
           const bytes = await writer.close();
-          text = `Guardado: ${redirect.file} (${fmtBytes(bytes)} de texto)`;
+          text = t`Guardado: ${redirect.file} (${fmtBytes(bytes)} de texto)`;
         } catch (e) {
           await writer.abort();
           throw e;
@@ -1969,7 +4233,7 @@
         let chars = 0;
         for await (const l of stream) {
           chars += l.length + (parts.length ? 1 : 0);
-          if (chars > CFG.MAX_COLLECT_CHARS) throw new Error('salida demasiado grande; usa head o redirige a un archivo');
+          if (chars > CFG.MAX_COLLECT_CHARS) throw new Error(t('salida demasiado grande; usa head o redirige a un archivo'));
           parts.push(l);
         }
         text = parts.join('\n');
@@ -2022,31 +4286,31 @@
       return null;
     },
     async sendToChat(text) {
-      if (chatSending) throw new Error('hay otro envío al chat en curso');
+      if (chatSending) throw new Error(t('hay otro envío al chat en curso'));
       // Textarea values normalize CRLF/CR to LF, including files created on Windows.
       text = normalizeChatText(text);
       const el = this.getInput();
-      if (!el || !visible(el)) throw new Error('no se encontró una entrada de chat visible');
+      if (!el || !visible(el)) throw new Error(t('no se encontró una entrada de chat visible'));
       const previous = this.getText(el);
-      if (previous !== '') throw new Error('hay un borrador en el chat; consérvalo o vacía la entrada antes de compartir');
+      if (previous !== '') throw new Error(t('hay un borrador en el chat; consérvalo o vacía la entrada antes de compartir'));
       chatSending = true;
       try {
         this.setText(el, text);
         await sleep(150);
         const btn = await waitFor(() => {
           if (!el.isConnected || this.getInput() !== el || this.getText(el) !== text) {
-            throw new Error('la entrada del chat cambió; envío cancelado');
+            throw new Error(t('la entrada del chat cambió; envío cancelado'));
           }
           const b = this.findSend(el);
           return b && isEnabled(b) ? b : null;
         }, CFG.SEND_TIMEOUT_MS);
-        if (!btn) throw new Error('no se encontró un botón de envío habilitado; no se envió el mensaje');
+        if (!btn) throw new Error(t('no se encontró un botón de envío habilitado; no se envió el mensaje'));
         if (!el.isConnected || this.getInput() !== el || this.getText(el) !== text || !isEnabled(btn)) {
-          throw new Error('la entrada o el botón del chat cambió; envío cancelado');
+          throw new Error(t('la entrada o el botón del chat cambió; envío cancelado'));
         }
         btn.click();
         const cleared = await waitFor(() => this.getInput() && this.getText(this.getInput()) === '', CFG.SEND_TIMEOUT_MS);
-        if (!cleared) throw new Error('no se pudo verificar el envío; comprueba el chat antes de reintentar');
+        if (!cleared) throw new Error(t('no se pudo verificar el envío; comprueba el chat antes de reintentar'));
       } catch (e) {
         if (el.isConnected && this.getText(el) === text) this.setText(el, previous);
         throw e;
@@ -2059,42 +4323,42 @@
   let chatSending = false;
 
   async function fileShareMessage(path) {
-    if (!splitPath(path).length || isInternalPath(path)) throw new Error('archivo a compartir no permitido');
+    if (!splitPath(path).length || isInternalPath(path)) throw new Error(t('archivo a compartir no permitido'));
     const file = await (await requireFile(path)).getFile();
-    if (file.size > CFG.MAX_SHARE_FILE_BYTES) throw new Error('archivo supera 64 KB; comparte un resumen con head');
+    if (file.size > CFG.MAX_SHARE_FILE_BYTES) throw new Error(t('archivo supera 64 KB; comparte un resumen con head'));
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (bytes.includes(0)) throw new Error('no se comparten archivos binarios; usa un resumen de texto');
+    if (bytes.includes(0)) throw new Error(t('no se comparten archivos binarios; usa un resumen de texto'));
     let content;
     try { content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
     catch (e) {
-      if (e.name === 'TypeError') throw new Error('el archivo no es texto UTF-8 válido');
+      if (e.name === 'TypeError') throw new Error(t('el archivo no es texto UTF-8 válido'));
       throw e;
     }
     const fence = safeFence(content);
     const hash = await computeSha256(bytes);
-    return `[Archivo OPFS: ${JSON.stringify(path)}; ${fmtBytes(file.size)}]\nSHA256: ${hash}\n${fence}\n${content}\n${fence}\n` +
-      'Analiza este archivo. Si propones una corrección, devuelve un bloque Markdown con lenguaje dv y un único objeto JSON puro, sin comandos ni comillas de shell.\n' +
-      `Usa path=${JSON.stringify(path)} y hash="${hash}" exactamente; no inventes ni recalcules el hash.\n` +
-      'Campos: path, hash, operation, old, new. operation: replace, insert-before, insert-after o append (sin old).\n' +
-      'old debe ser texto exacto y coincidir una sola vez; new es texto exacto, no un diff ni código con puntos suspensivos. ' +
-      'Escapa saltos como \\n (o \\r\\n si el original los usa). Una propuesta por bloque y archivo. ' +
-      'Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.';
+    return t`[Archivo OPFS: ${JSON.stringify(path)}; ${fmtBytes(file.size)}]\nSHA256: ${hash}\n${fence}\n${content}\n${fence}\n` +
+      t('Analiza este archivo. Si propones una corrección, devuelve un bloque Markdown con lenguaje dv y un único objeto JSON puro, sin comandos ni comillas de shell.\n') +
+      t`Usa path=${JSON.stringify(path)} y hash="${hash}" exactamente; no inventes ni recalcules el hash.\n` +
+      t('Campos: path, hash, operation, old, new. operation: replace, insert-before, insert-after o append (sin old).\n') +
+      t('old debe ser texto exacto y coincidir una sola vez; new es texto exacto, no un diff ni código con puntos suspensivos. ') +
+      t('Escapa saltos como \\n (o \\r\\n si el original los usa). Una propuesta por bloque y archivo. ') +
+      t('Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.');
   }
 
   async function sendWithPreview(message, { confirmSend = true } = {}) {
     message = normalizeChatText(message);
     const input = adapter.getInput();
-    if (!input || !visible(input)) throw new Error('no se encontró una entrada de chat visible');
-    if (adapter.getText(input) !== '') throw new Error('hay un borrador en el chat; no se ha reemplazado');
-    if (confirmSend && !confirm(`¿Compartir con DeepSeek (${message.length} caracteres)?\nVista previa:\n${truncate(message, CFG.ATTACH_PREVIEW_CHARS)}`)) {
-      throw new Error('envío cancelado; no se ha compartido nada');
+    if (!input || !visible(input)) throw new Error(t('no se encontró una entrada de chat visible'));
+    if (adapter.getText(input) !== '') throw new Error(t('hay un borrador en el chat; no se ha reemplazado'));
+    if (confirmSend && !confirm(t`¿Compartir con DeepSeek (${message.length} caracteres)?\nVista previa:\n${truncate(message, CFG.ATTACH_PREVIEW_CHARS)}`)) {
+      throw new Error(t('envío cancelado; no se ha compartido nada'));
     }
     await adapter.sendToChat(message);
-    uiLog('📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta de DeepSeek.', 'info');
+    uiLog(t('📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta de DeepSeek.'), 'info');
   }
 
   async function shareFile(path) {
-    if (busy) { uiLog('⏳ Hay una operación en curso; reintenta al terminar.', 'err'); return; }
+    if (busy) { uiLog(t('⏳ Hay una operación en curso; reintenta al terminar.'), 'err'); return; }
     setBusy(true);
     try { await sendWithPreview(await fileShareMessage(path), { confirmSend: false }); }
     catch (e) { uiLog(`❌ ${e.message}`, 'err'); }
@@ -2112,14 +4376,14 @@
 
   async function handleExecution(rawCommand, options = { forceShare: false, origin: 'panel' }) {
     if (busy) {
-      uiLog('⏳ Hay una operación en curso...', 'err');
+      uiLog(t('⏳ Hay una operación en curso...'), 'err');
       return;
     }
 
     let cmd = rawCommand.trim();
     if (cmd.startsWith(settings.prefix)) cmd = cmd.slice(settings.prefix.length).trim();
     if (!cmd.length) {
-      uiLog('⚠ Comando vacío', 'err');
+      uiLog(t('⚠ Comando vacío'), 'err');
       return;
     }
 
@@ -2135,22 +4399,22 @@
       const cleanCmd = parsed.command;
 
       if (options.origin === 'chat') {
-        uiLog(`$ ${cleanCmd}  [ejecutado localmente, no enviado al chat]`, 'cmd');
+        uiLog(t`$ ${cleanCmd}  [ejecutado localmente, no enviado al chat]`, 'cmd');
       } else {
         uiLog(`$ ${cleanCmd}`, 'cmd');
       }
 
       const res = await execute(parsed.tokens);
       editorRequest = res.editor || null;
-      uiLog(truncate(res.text || '(sin salida)', 800), res.ok ? '' : 'err');
+      uiLog(truncate(res.text || t('(sin salida)'), 800), res.ok ? '' : 'err');
 
       const messages = [];
       if (parsed.share || options.forceShare) {
         const summary = truncate(res.text, 1200), fence = safeFence(summary);
-        messages.push(`[Diagnóstico DV: ${cleanCmd}]\n${fence}\n${summary}\n${fence}\nAnaliza este resultado.`);
+        messages.push(t`[Diagnóstico DV: ${cleanCmd}]\n${fence}\n${summary}\n${fence}\nAnaliza este resultado.`);
       }
       if (parsed.file) {
-        if (!res.ok) throw new Error('el comando falló; no se compartió el archivo');
+        if (!res.ok) throw new Error(t('el comando falló; no se compartió el archivo'));
         messages.push(await fileShareMessage(parsed.file));
       }
       if (messages.length) {
@@ -2159,7 +4423,7 @@
         await sendWithPreview(messages.join('\n\n'), { confirmSend: !directSummary });
       }
     } catch (e) {
-      uiLog(`❌ Error: ${e.message}`, 'err');
+      uiLog(t`❌ Error: ${e.message}`, 'err');
     } finally {
       setBusy(false);
       ui?.refresh();
@@ -2178,29 +4442,39 @@
 
   function parseChatProposal(text) {
     text = text.trim();
-    if (text.length > CFG.MAX_RUN_BYTES * 12) throw new Error('bloque de propuesta demasiado grande');
+    if (text.length > CFG.MAX_RUN_BYTES * 12) throw new Error(t('bloque de propuesta demasiado grande'));
     let json = text;
     if (!text.startsWith('{')) {
       const prefixes = [...new Set([settings.prefix, '!'])];
       const prefix = prefixes.find((p) => text.startsWith(p + 'propose'));
-      if (!prefix) throw new Error('solo se admite JSON dv o !propose con JSON inline');
+      if (!prefix) throw new Error(t('solo se admite JSON dv o !propose con JSON inline'));
       const segs = parsePipeline(tokenize(text.slice(prefix.length)));
       const seg = segs[0];
       if (segs.length !== 1 || seg.redirect || seg.argv.length !== 2 || seg.argv[0] !== 'propose' ||
-          !seg.argv[1].trim().startsWith('{')) throw new Error('chat: solo propose con un JSON inline, sin pipes, archivos ni opciones');
+          !seg.argv[1].trim().startsWith('{')) throw new Error(t('chat: solo propose con un JSON inline, sin pipes, archivos ni opciones'));
       json = seg.argv[1];
     }
     let value;
     try { value = JSON.parse(json); }
-    catch (e) { throw new Error(`JSON de propuesta no válido: ${e.message}`); }
+    catch (e) { throw new Error(t`JSON de propuesta no válido: ${e.message}`); }
     return validateProposalValue(value);
   }
 
   async function prepareChatProposal(text) {
-    if (busy || editorOpen) throw new Error('cierra el editor o espera a que termine la operación antes de revisar otro parche');
+    if (busy || editorOpen) throw new Error(t('cierra el editor o espera a que termine la operación antes de revisar otro parche'));
     const proposal = await prepareProposal(parseChatProposal(text));
-    if (busy || editorOpen) throw new Error('se abrió otra operación durante la preparación; reintenta al terminar');
-    return { ...proposal, checkpointBeforeSave: true, checkpointLabel: 'Antes de parche desde chat' };
+    if (busy || editorOpen) throw new Error(t('se abrió otra operación durante la preparación; reintenta al terminar'));
+    return { ...proposal, checkpointBeforeSave: true, checkpointLabel: t('Antes de parche desde chat') };
+  }
+
+  function chatCodeLanguage(pre, code) {
+    for (const el of [code, pre]) {
+      const cls = String(el.className || '').split(/\s+/).find((c) => c.startsWith('language-'));
+      if (cls) return cls.slice(9).toLowerCase();
+      if (el.getAttribute('data-language')) return el.getAttribute('data-language').toLowerCase();
+    }
+    const label = pre.closest('.md-code-block')?.querySelector('.md-code-block-banner span');
+    return label ? label.textContent.trim().toLowerCase() : '';
   }
 
   function installChatCodeActions() {
@@ -2211,14 +4485,13 @@
           action.bar.remove(); actions.delete(pre);
         }
       }
-      for (const code of document.querySelectorAll('pre code')) {
-        const pre = code.closest('pre');
-        if (!pre || isInsidePanel(code)) continue;
+      for (const pre of document.querySelectorAll('pre')) {
+        if (isInsidePanel(pre)) continue;
+        const code = pre.querySelector('code') || pre;
         const text = code.textContent.trim();
         const userMessage = code.closest('[data-message-role="user"], [data-role="user"]');
         const assistantMessage = code.closest('[data-message-role="assistant"], [data-role="assistant"], .ds-markdown');
-        const marked = code.classList.contains('language-dv') || pre.classList.contains('language-dv') ||
-          code.getAttribute('data-language') === 'dv' || pre.getAttribute('data-language') === 'dv';
+        const marked = chatCodeLanguage(pre, code) === 'dv';
         const command = [settings.prefix, '!'].some((prefix) => text.startsWith(prefix + 'propose'));
         const eligible = !userMessage && assistantMessage && (marked || command);
         let action = actions.get(pre);
@@ -2234,12 +4507,12 @@
           bar.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;font:12px system-ui;flex-wrap:wrap';
           const button = document.createElement('button');
           button.type = 'button';
-          button.textContent = 'Revisar parche en DV';
+          button.textContent = t('Revisar parche en DV');
           button.style.cssText = 'padding:6px 10px;background:#047857;color:white;border:1px solid #065f46;border-radius:5px;cursor:pointer';
           const status = document.createElement('span');
           status.setAttribute('role', 'status');
           bar.append(button, status);
-          pre.before(bar);
+          (pre.closest('.md-code-block') || pre).before(bar);
           action = { bar, button, status, code, text: null, pending: false };
           actions.set(pre, action);
           button.addEventListener('click', async (e) => {
@@ -2247,33 +4520,34 @@
             if (action.pending) return;
             action.pending = true; button.disabled = true;
             try {
-              if (!code.isConnected) throw new Error('el bloque ya no está en el chat');
+              if (!code.isConnected) throw new Error(t('el bloque ya no está en el chat'));
               const proposal = await prepareChatProposal(code.textContent);
-              status.textContent = `Propuesta: ${proposal.snapshot.path}. Revisa el diff; aún no guardada.`;
-              uiLog(`Parche desde chat: ${proposal.snapshot.path}. Archivo intacto; aprobación y checkpoint requeridos.`, 'info');
+              status.textContent = t`Propuesta: ${proposal.snapshot.path}. Revisa el diff; aún no guardada.`;
+              uiLog(t`Parche desde chat: ${proposal.snapshot.path}. Archivo intacto; aprobación y checkpoint requeridos.`, 'info');
               if (!(await openCodeEditor(proposal.snapshot.path, proposal))) {
-                throw new Error('no se pudo abrir el editor; consulta el error en el panel. Archivo intacto.');
+                throw new Error(t('no se pudo abrir el editor; consulta el error en el panel. Archivo intacto.'));
               }
             } catch (error) {
-              status.textContent = `No se preparó: ${error.message}`;
-              uiLog(`Parche desde chat: ${error.message}`, 'err');
+              status.textContent = t`No se preparó: ${error.message}`;
+              uiLog(t`Parche desde chat: ${error.message}`, 'err');
             } finally {
               action.pending = false; action.text = null; scan();
             }
           });
         }
+        action.button.textContent = t('Revisar parche en DV');
         if (action.pending || action.text === text) continue;
         const changed = action.text !== null;
         action.text = text;
         try {
           parseChatProposal(text);
           action.button.disabled = false;
-          action.button.title = 'Abrir diff local; al aprobar se crea checkpoint. No ejecuta código ni envía mensajes.';
-          if (changed || !action.status.textContent) action.status.textContent = 'Revisión local con hash y checkpoint.';
+          action.button.title = t('Abrir diff local; al aprobar se crea checkpoint. No ejecuta código ni envía mensajes.');
+          if (changed || !action.status.textContent) action.status.textContent = t('Revisión local con hash y checkpoint.');
         } catch (e) {
           action.button.disabled = true;
           action.button.title = e.message;
-          action.status.textContent = `Propuesta incompleta o inválida: ${e.message}`;
+          action.status.textContent = t`Propuesta incompleta o inválida: ${e.message}`;
         }
       }
     };
@@ -2282,9 +4556,9 @@
       const relevant = mutations.some((m) => {
         const target = m.target.nodeType === Node.ELEMENT_NODE ? m.target : m.target.parentElement;
         if (!target || isInsidePanel(target) || target.closest('.dv-chat-patch-actions')) return false;
-        return target.closest('pre') || (m.type === 'attributes' && target.querySelector('pre code')) ||
+        return target.closest('pre') || (m.type === 'attributes' && target.querySelector('pre')) ||
           [...(m.addedNodes || []), ...(m.removedNodes || [])].some((n) =>
-            n.nodeType === Node.ELEMENT_NODE && (n.matches('pre, code') || n.querySelector('pre code')));
+            n.nodeType === Node.ELEMENT_NODE && (n.matches('pre, code') || n.querySelector('pre')));
       });
       if (!relevant || scheduled) return;
       scheduled = true;
@@ -2292,11 +4566,15 @@
     });
     observer.observe(document.body, { childList: true, characterData: true, subtree: true,
       attributes: true, attributeFilter: ['class', 'data-language', 'data-role', 'data-message-role'] });
+    refreshChatCodeActions = () => {
+      for (const action of actions.values()) { action.text = null; action.status.textContent = ''; }
+      scan();
+    };
     scan();
   }
 
   function installInterceptors() {
-    if (!document.body) throw new Error('no hay document.body; no se pueden instalar interceptores ni detector');
+    if (!document.body) throw new Error(t('no hay document.body; no se pueden instalar interceptores ni detector'));
     let attempted = null;
     const rememberAttempt = (input) => {
       const text = normalizeChatText(adapter.getText(input)).trim();
@@ -2308,7 +4586,7 @@
       const body = txt.slice(settings.prefix.length).trim();
 
       if (busy) {
-        uiLog('⏳ Hay una operación en curso... El comando permanece en la entrada.', 'err');
+        uiLog(t('⏳ Hay una operación en curso... El comando permanece en la entrada.'), 'err');
         return true;
       }
 
@@ -2372,8 +4650,8 @@
               const text = attempted.text;
               attempted = null;
               uiLog(
-                `⚠ POSIBLE FUGA: Tras intentar enviar, apareció el comando exacto (${text.slice(0, 15)}...) fuera del panel. ` +
-                `Comprueba el chat; el DOM no confirma un envío al servidor.`,
+                t`⚠ POSIBLE FUGA: Tras intentar enviar, apareció el comando exacto (${text.slice(0, 15)}...) fuera del panel. ` +
+                t`Comprueba el chat; el DOM no confirma un envío al servidor.`,
                 'err'
               );
               return;
@@ -2467,126 +4745,165 @@
     .git-modal ul { max-height:25vh;overflow:auto;padding-left:20px;overflow-wrap:anywhere; }
     .git-badge { font-size:11px;overflow-wrap:anywhere; }
     .git-save { max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .language-select { background:#18181b;color:#f4f4f5;border:1px solid #52525b;border-radius:5px;padding:4px;font:12px system-ui; }
+    .about-btn { background:transparent;color:#a1a1aa;border:1px solid #3f3f46;border-radius:50%;width:22px;height:22px;padding:0;cursor:pointer;font-size:12px;line-height:1; }
+    .about-btn:hover { color:#f4f4f5;border-color:#71717a; }
+    .about-dialog { font-size:12px;line-height:1.5; }
+    .about-dialog blockquote { margin:8px 0;padding-left:8px;border-left:3px solid #8b5cf6;color:#d4d4d8;font-style:italic; }
+    .about-dialog p { margin:6px 0; }
+    .about-dialog a { color:#93c5fd; }
   `;
 
-  function buildPanel() {
+  function buildPanel(previous = {}) {
     const host = document.createElement('div');
     host.id = CFG.HOST_ID;
+    host.lang = language;
     const shadow = host.attachShadow({ mode: 'closed' });
     shadow.append(h('style', {}, PANEL_CSS));
 
     const logEl = h('div', { id: 'log' });
+    if (previous.logs) logEl.append(...previous.logs);
     const filesEl = h('ul', { id: 'files' });
     const localFileInput = h('input', {
       type: 'file', multiple: true, hidden: true,
-      'aria-label': 'Seleccionar archivos para importar al disco virtual',
+      'aria-label': t('Seleccionar archivos para importar al disco virtual'),
       onchange: async () => {
         const files = [...localFileInput.files];
         localFileInput.value = '';
         if (files.length) await importLocalFiles(files);
       }
     });
-    const btnImport = h('button', { class: 'btn btn-secondary', title: 'Elegir archivos de la PC y copiarlos al disco local; no se comparten', onclick: () => {
-      if (busy) { uiLog('⏳ Hay una operación en curso; espera antes de importar.', 'err'); return; }
+    const btnImport = h('button', { class: 'btn btn-secondary', title: t('Elegir archivos de la PC y copiarlos al disco local; no se comparten'), onclick: () => {
+      if (busy) { uiLog(t('⏳ Hay una operación en curso; espera antes de importar.'), 'err'); return; }
       localFileInput.click();
-    } }, 'Explorar / Importar archivos…');
+    } }, t('Explorar / Importar archivos…'));
     const cmdInput = h('textarea', {
       class: 'input-cmd',
-      'aria-label': 'Comando local',
-      placeholder: 'Comandos locales... (Enter ejecuta, Shift+Enter nueva línea)\nEj: !git status · !ls · !write f.txt "hola"'
+      'aria-label': t('Comando local'),
+      placeholder: t('Comandos locales... (Enter ejecuta, Shift+Enter nueva línea)\nEj: !git status · !ls · !write f.txt "hola"')
     });
-    const stateEl = h('span', { class: 'badge-local', role: 'status', 'aria-live': 'polite' }, 'Listo · local');
+    cmdInput.value = previous.draft || '';
+    const languageSelect = h('select', {
+      class: 'language-select',
+      'aria-label': t('Idioma'), title: t('Idioma'),
+      onchange: () => {
+        const next = languageSelect.value;
+        if (busy || editorOpen || gitLoading || gitOverlay.style.display === 'flex') {
+          languageSelect.value = language; return;
+        }
+        try { setLanguage(next); }
+        catch (e) {
+          languageSelect.value = language;
+          uiLog(t`No se pudo guardar el idioma: ${e.message}`, 'err'); return;
+        }
+        const state = { draft: cmdInput.value, logs: [...logEl.childNodes], histIdx, collapsed, expanded,
+          panelStyle: panel.style.cssText };
+        host.remove();
+        ui = buildPanel(state);
+        refreshChatCodeActions();
+        for (const entry of htmlPreviews.values()) {
+          if (entry.tab.closed) { closeHTMLPreview(entry); continue; }
+          entry.channel.postMessage({ type: 'language', locale: language, text: previewStrings() });
+          updateHTMLPreview(entry);
+        }
+      }
+    }, h('option', { value: 'es' }, 'Español'),
+    h('option', { value: 'en' }, 'English'),
+    h('option', { value: 'zh-CN' }, '简体中文'));
+    languageSelect.value = language;
+    const stateEl = h('span', { class: 'badge-local', role: 'status', 'aria-live': 'polite' }, t('Listo · local'));
     let gitState = null, gitReview = null, gitLoading = false, refreshGeneration = 0;
-    const gitBadge = h('span', { class: 'git-badge', role: 'status', 'aria-live': 'polite' }, 'Git: consultando...');
+    const gitBadge = h('span', { class: 'git-badge', role: 'status', 'aria-live': 'polite' }, t('Git: consultando...'));
     const gitNotice = h('p', { role: 'status', 'aria-live': 'polite' });
-    const gitPaths = h('ul', { 'aria-label': 'Archivos incluidos en el commit' });
-    const gitDiffText = h('pre', { 'aria-label': 'Estado y diferencias Git', style: 'display:none' });
-    const gitMessage = h('input', { id: 'dv-git-message', type: 'text', 'aria-label': 'Mensaje del commit' });
+    const gitPaths = h('ul', { 'aria-label': t('Archivos incluidos en el commit') });
+    const gitDiffText = h('pre', { 'aria-label': t('Estado y diferencias Git'), style: 'display:none' });
+    const gitMessage = h('input', { id: 'dv-git-message', type: 'text', 'aria-label': t('Mensaje del commit') });
     const closeGit = () => {
       if (busy || gitLoading) return;
       gitOverlay.style.display = 'none'; panel.inert = false; gitReview = null; btnGitSave.focus();
+      updateState();
     };
     const loadGitReview = async () => {
       if (busy || editorOpen || gitLoading) {
-        uiLog('Cierra el editor o espera antes de revisar Git.', 'err'); return;
+        uiLog(t('Cierra el editor o espera antes de revisar Git.'), 'err'); return;
       }
       gitLoading = true; gitReview = null; updateState();
       gitOverlay.style.display = 'flex';
       panel.inert = true;
-      gitNotice.textContent = 'Verificando archivos y staging...';
+      gitNotice.textContent = t('Verificando archivos y staging...');
       gitPaths.replaceChildren(); gitDiffText.style.display = 'none';
       setBusy(true);
       try {
         const review = await getGitStatus({ capture: true });
-        if (!review.initialized) throw new Error('Git no está inicializado; cierra y pulsa Inicializar Git local');
+        if (!review.initialized) throw new Error(t('Git no está inicializado; cierra y pulsa Inicializar Git local'));
         gitReview = review;
         for (const change of review.changes) gitPaths.append(h('li', {}, `${change.path} — ${change.description}`));
-        gitNotice.textContent = `Rama: ${review.branch}. ${review.changes.length} archivo(s). ` +
-          'Se guardan las versiones actuales y los borrados de esta lista. El staging anterior se reemplaza por esos archivos actuales. ' +
-          'Los archivos ignorados sin seguimiento y metadatos internos se excluyen. No sube nada a un servidor.';
+        gitNotice.textContent = t`Rama: ${review.branch}. ${review.changes.length} archivo(s). ` +
+          t('Se guardan las versiones actuales y los borrados de esta lista. El staging anterior se reemplaza por esos archivos actuales. ') +
+          t('Los archivos ignorados sin seguimiento y metadatos internos se excluyen. No sube nada a un servidor.');
         if (!gitMessage.value.trim()) gitMessage.value = review.changes.length === 1 ?
-          `${review.changes[0].path}: cambios` : `Guardar ${review.changes.length} archivos`;
+          t`${review.changes[0].path}: cambios` : t`Guardar ${review.changes.length} archivos`;
       } catch (e) {
-        gitNotice.textContent = `No se pudo preparar: ${e.message}`;
-        uiLog(`Git: ${e.message}`, 'err');
+        gitNotice.textContent = t`No se pudo preparar: ${e.message}`;
+        uiLog(t`Git: ${e.message}`, 'err');
       } finally {
         gitLoading = false; setBusy(false); updateState();
         if (gitReview) gitMessage.focus(); else btnGitClose.focus();
       }
     };
     const btnGitSave = h('button', { class: 'btn git-save', disabled: true,
-      title: 'Revisar todos los cambios y confirmar un commit Git local; no sube archivos ni elimina comandos',
+      title: t('Revisar todos los cambios y confirmar un commit Git local; no sube archivos ni elimina comandos'),
       onclick: async () => {
-        if (busy || editorOpen || gitLoading) { uiLog('Espera o cierra el editor antes de versionar.', 'err'); return; }
+        if (busy || editorOpen || gitLoading) { uiLog(t('Espera o cierra el editor antes de versionar.'), 'err'); return; }
         if (gitState && !gitState.initialized) {
           setBusy(true);
           try {
             const result = await execute('git init');
             if (!result.ok) throw new Error(result.text);
             uiLog(result.text, 'info');
-          } catch (e) { uiLog(`Git: ${e.message}`, 'err'); return; }
+          } catch (e) { uiLog(t`Git: ${e.message}`, 'err'); return; }
           finally { setBusy(false); await refresh(); }
         }
         gitMessage.value = '';
         await loadGitReview();
       }
-    }, 'Guardar cambios en Git');
+    }, t('Guardar cambios en Git'));
     const btnGitDiff = h('button', { class: 'btn btn-secondary', disabled: true, onclick: async () => {
       await loadGitReview();
       if (gitReview) await showGitDiff();
-    } }, 'Ver cambios');
+    } }, t('Ver cambios'));
     const confirmGit = h('button', { class: 'btn', disabled: true, onclick: async () => {
       try {
         const oid = await saveGitChanges(gitReview, gitMessage.value);
-        gitNotice.textContent = `Commit local verificado: ${oid.slice(0, 7)}.`;
+        gitNotice.textContent = t`Commit local verificado: ${oid.slice(0, 7)}.`;
         gitReview = null; gitOverlay.style.display = 'none'; panel.inert = false; btnGitSave.focus();
       } catch (e) {
-        gitNotice.textContent = `No se completó el guardado: ${e.message}`;
-        uiLog(`Git: ${e.message}`, 'err');
+        gitNotice.textContent = t`No se completó el guardado: ${e.message}`;
+        uiLog(t`Git: ${e.message}`, 'err');
         gitReview = null;
       } finally { updateState(); }
-    } }, 'Confirmar commit local');
+    } }, t('Confirmar commit local'));
     gitMessage.addEventListener('input', () => updateState());
-    const btnGitRefresh = h('button', { class: 'btn btn-secondary', onclick: loadGitReview }, 'Actualizar lista');
-    const btnGitReviewDiff = h('button', { class: 'btn btn-secondary', onclick: () => showGitDiff() }, 'Ver diferencias');
-    const btnGitClose = h('button', { class: 'btn btn-secondary', onclick: closeGit }, 'Cancelar');
+    const btnGitRefresh = h('button', { class: 'btn btn-secondary', onclick: loadGitReview }, t('Actualizar lista'));
+    const btnGitReviewDiff = h('button', { class: 'btn btn-secondary', onclick: () => showGitDiff() }, t('Ver diferencias'));
+    const btnGitClose = h('button', { class: 'btn btn-secondary', onclick: closeGit }, t('Cancelar'));
     async function showGitDiff() {
       if (busy || gitLoading || !gitReview) return;
       gitLoading = true; setBusy(true);
       try {
         const { git, fs } = await getGit();
-        gitDiffText.textContent = 'Archivos nuevos sin seguimiento: consulta la lista (no aparecen en git diff).\n\n' +
+        gitDiffText.textContent = t('Archivos nuevos sin seguimiento: consulta la lista (no aparecen en git diff).\n\n') +
           'WORKING TREE vs STAGING:\n' + await gitDiff(git, fs, []) +
           '\n\nSTAGING vs HEAD:\n' + await gitDiff(git, fs, ['--staged']);
         gitDiffText.style.display = 'block';
-      } catch (e) { gitNotice.textContent = `No se pudo mostrar el diff: ${e.message}`; uiLog(`Git diff: ${e.message}`, 'err'); }
+      } catch (e) { gitNotice.textContent = t`No se pudo mostrar el diff: ${e.message}`; uiLog(t`Git diff: ${e.message}`, 'err'); }
       finally { gitLoading = false; setBusy(false); }
     }
     const gitOverlay = h('div', { class: 'git-overlay' },
-      h('section', { class: 'git-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Guardar cambios en Git local' },
-        h('h2', {}, 'Guardar cambios en Git local'),
+      h('section', { class: 'git-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('Guardar cambios en Git local') },
+        h('h2', {}, t('Guardar cambios en Git local')),
         gitNotice, gitPaths, gitDiffText,
-        h('label', { for: 'dv-git-message' }, 'Mensaje del commit'), gitMessage,
+        h('label', { for: 'dv-git-message' }, t('Mensaje del commit')), gitMessage,
         h('div', { class: 'row' }, btnGitRefresh, btnGitReviewDiff, confirmGit, btnGitClose)));
     gitOverlay.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -2599,23 +4916,23 @@
       }
     });
     for (const type of ['keyup', 'keypress']) gitOverlay.addEventListener(type, (e) => e.stopPropagation());
-    const toggleEl = h('button', { class: 'btn btn-secondary', 'aria-label': 'Contraer panel', 'aria-expanded': 'true' }, 'Contraer');
-    const expandEl = h('button', { class: 'btn btn-secondary', 'aria-label': 'Ampliar panel', 'aria-pressed': 'false' }, 'Ampliar');
+    const toggleEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Contraer panel'), 'aria-expanded': 'true' }, t('Contraer'));
+    const expandEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Ampliar panel'), 'aria-pressed': 'false' }, t('Ampliar'));
     const headerEl = h('div', { id: 'header' },
       h('div', {},
         h('span', {}, `💾 DV v${CFG.VERSION} `),
-        h('span', { class: 'badge-local' }, 'Panel Soberano')
+        h('span', { class: 'badge-local' }, t('Panel Soberano'))
       ),
-      h('div', { class: 'row' }, stateEl, expandEl, toggleEl),
+      h('div', { class: 'row' }, stateEl, languageSelect, expandEl, toggleEl),
       h('div', { class: 'row', style: 'width:100%;cursor:default' }, gitBadge, btnGitSave, btnGitDiff)
     );
 
-    let histIdx = -1;
+    let histIdx = previous.histIdx ?? -1;
     const submitPanel = (forceShare = false) => {
       const val = cmdInput.value.trim();
       if (!val) return;
       if (busy) {
-        uiLog('⏳ Hay una operación en curso... El comando permanece en la entrada.', 'err');
+        uiLog(t('⏳ Hay una operación en curso... El comando permanece en la entrada.'), 'err');
         return;
       }
       cmdInput.value = '';
@@ -2642,28 +4959,28 @@
       }
     });
 
-    const btnExec = h('button', { class: 'btn', title: 'Ejecutar el comando en el navegador sin enviarlo a la IA', onclick: () => submitPanel() }, 'Ejecutar');
+    const btnExec = h('button', { class: 'btn', title: t('Ejecutar el comando en el navegador sin enviarlo a la IA'), onclick: () => submitPanel() }, t('Ejecutar'));
 
-    const btnShare = h('button', { class: 'btn btn-share', title: 'Ejecutar y enviar directamente el resumen a DeepSeek, sin vista previa; no reemplaza borradores del chat', onclick: () => submitPanel(true) }, 'Ejecutar + Compartir');
+    const btnShare = h('button', { class: 'btn btn-share', title: t('Ejecutar y enviar directamente el resumen a DeepSeek, sin vista previa; no reemplaza borradores del chat'), onclick: () => submitPanel(true) }, t('Ejecutar + Compartir'));
 
     // DIÁLOGO INTEGRADO PARA COMPARTIR ARCHIVO
-    const fileSelect = h('select', { 'aria-label': 'Archivo a compartir' });
+    const fileSelect = h('select', { 'aria-label': t('Archivo a compartir') });
     const shareNotice = h('div', { style: 'font-size:11px; margin:6px 0;' },
-      'Máximo 64 KB por archivo; solo texto UTF-8. Los archivos mayores se muestran deshabilitados.');
-    const confirmFileShare = h('button', { class: 'btn btn-share', title: 'Enviar directamente el archivo seleccionado a DeepSeek, sin confirmación adicional; no reemplaza borradores del chat', onclick: async () => {
+      t('Máximo 64 KB por archivo; solo texto UTF-8. Los archivos mayores se muestran deshabilitados.'));
+    const confirmFileShare = h('button', { class: 'btn btn-share', title: t('Enviar directamente el archivo seleccionado a DeepSeek, sin confirmación adicional; no reemplaza borradores del chat'), onclick: async () => {
       const path = fileSelect.value;
       if (!path || fileSelect.selectedOptions[0]?.disabled) {
-        uiLog('Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.', 'err');
+        uiLog(t('Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.'), 'err');
         return;
       }
       fileDialog.style.display = 'none';
       await shareFile(path);
-    } }, 'Enviar archivo a DeepSeek');
+    } }, t('Enviar archivo a DeepSeek'));
     const fileDialog = h('div', { class: 'file-dialog' },
-      h('div', { style: 'font-size:11px; margin-bottom:4px;' }, 'Selecciona archivo a compartir:'),
+      h('div', { style: 'font-size:11px; margin-bottom:4px;' }, t('Selecciona archivo a compartir:')),
       fileSelect, shareNotice,
       h('div', { style: 'display:flex; justify-content:flex-end; gap:6px;' },
-        h('button', { class: 'btn btn-secondary', onclick: () => { fileDialog.style.display = 'none'; } }, 'Cancelar'),
+        h('button', { class: 'btn btn-secondary', onclick: () => { fileDialog.style.display = 'none'; } }, t('Cancelar')),
         confirmFileShare
       )
     );
@@ -2673,21 +4990,21 @@
         fileSelect.replaceChildren();
         if (!files.length) {
           fileDialog.style.display = 'none';
-          uiLog('No hay archivos de usuario para compartir.', 'err');
+          uiLog(t('No hay archivos de usuario para compartir.'), 'err');
           return;
         }
         for (const f of files) {
           const oversized = f.size > CFG.MAX_SHARE_FILE_BYTES;
           fileSelect.append(h('option', { value: f.path, disabled: oversized },
-            `${f.path} (${fmtBytes(f.size)}, ${f.size} B)${oversized ? ' — supera 64 KB; comparte un resumen' : ''}`));
+            `${f.path} (${fmtBytes(f.size)}, ${f.size} B)${oversized ? t(' — supera 64 KB; comparte un resumen') : ''}`));
         }
         const available = files.find((f) => f.path === previous && f.size <= CFG.MAX_SHARE_FILE_BYTES) ||
           files.find((f) => f.size <= CFG.MAX_SHARE_FILE_BYTES);
         fileSelect.value = available?.path || '';
         confirmFileShare.disabled = !available;
         shareNotice.textContent = available
-          ? 'Enviar archivo a DeepSeek comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 "archivo" --share.'
-          : 'Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 "archivo" --share.';
+          ? t('Enviar archivo a DeepSeek comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 "archivo" --share.')
+          : t('Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 "archivo" --share.');
         fileDialog.style.display = 'block';
     }
 
@@ -2695,60 +5012,77 @@
       try {
         populateShareFiles((await listFiles()).filter((f) => !isInternalPath(f.path)));
       } catch (e) {
-        uiLog(`❌ No se pudieron listar archivos: ${e.message}`, 'err');
+        uiLog(t`❌ No se pudieron listar archivos: ${e.message}`, 'err');
       }
-    } }, 'Compartir archivo...');
+    } }, t('Compartir archivo...'));
 
     const helpText = h('pre', { style: 'white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; font:11px monospace;' });
     const helpDialog = h('div', {
-      class: 'file-dialog', role: 'region', 'aria-label': 'Ayuda de comandos'
+      class: 'file-dialog', role: 'region', 'aria-label': t('Ayuda de comandos')
     },
-      h('div', {}, 'Comandos disponibles (ejecución local por defecto)'),
+      h('div', {}, t('Comandos disponibles (ejecución local por defecto)')),
       helpText,
-      h('button', { class: 'btn btn-secondary', onclick: () => { helpDialog.style.display = 'none'; } }, 'Cerrar ayuda')
+      h('button', { class: 'btn btn-secondary', onclick: () => { helpDialog.style.display = 'none'; } }, t('Cerrar ayuda'))
     );
     const btnHelp = h('button', { class: 'btn btn-secondary', onclick: async () => {
       try {
         helpText.textContent = await REG.get('help').run();
         helpDialog.style.display = 'block';
         helpDialog.scrollIntoView({ block: 'nearest' });
-      } catch (e) { uiLog(`❌ No se pudo mostrar ayuda: ${e.message}`, 'err'); }
-    } }, 'Ayuda');
+      } catch (e) { uiLog(t`❌ No se pudo mostrar ayuda: ${e.message}`, 'err'); }
+    } }, t('Ayuda'));
 
     const prepareExample = (command) => {
-      if (cmdInput.value && !confirm('¿Reemplazar el comando que estás preparando?')) return;
+      if (cmdInput.value && !confirm(t('¿Reemplazar el comando que estás preparando?'))) return;
       cmdInput.value = command;
       histIdx = -1;
       cmdInput.focus();
     };
     const welcome = h('section', {
-      class: 'file-dialog', role: 'region', 'aria-label': 'Primeros pasos'
+      class: 'file-dialog', role: 'region', 'aria-label': t('Primeros pasos')
     },
-      h('strong', {}, 'Bienvenido a loopwork'),
-      h('p', {}, 'Importa un archivo o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.'),
+      h('strong', {}, t('Bienvenido a loopwork')),
+      h('p', {}, t('Importa un archivo o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.')),
       h('div', { class: 'row' },
-        h('button', { class: 'btn btn-secondary', title: 'Preparar !ls para listar archivos; luego pulsa Ejecutar', onclick: () => prepareExample('!ls') }, 'Ver archivos: !ls'),
-        h('button', { class: 'btn btn-secondary', title: 'Preparar consulta del estado Git; requiere git init previo', onclick: () => prepareExample('!git status') }, 'Estado: !git status'),
-        h('button', { class: 'btn btn-secondary', title: 'Preparar el comando de ayuda, sin ejecutarlo', onclick: () => prepareExample('!help') }, 'Comandos: !help')),
-      h('p', {}, 'Editar → revisar diff → aprobar. Descarga copias importantes: borrar datos del sitio también elimina el disco y Git.'),
+        h('button', { class: 'btn btn-secondary', title: t('Preparar !ls para listar archivos; luego pulsa Ejecutar'), onclick: () => prepareExample('!ls') }, t('Ver archivos: !ls')),
+        h('button', { class: 'btn btn-secondary', title: t('Preparar consulta del estado Git; requiere git init previo'), onclick: () => prepareExample('!git status') }, t('Estado: !git status')),
+        h('button', { class: 'btn btn-secondary', title: t('Preparar el comando de ayuda, sin ejecutarlo'), onclick: () => prepareExample('!help') }, t('Comandos: !help'))),
+      h('p', {}, t('Editar → revisar diff → aprobar. Descarga copias importantes: borrar datos del sitio también elimina el disco y Git.')),
       h('button', { class: 'btn', onclick: () => {
         welcome.style.display = 'none';
         try { localStorage.setItem(CFG.WELCOME_KEY, 'seen'); }
-        catch (e) { uiLog(`No se pudo guardar la preferencia de bienvenida: ${e.message}`, 'err'); }
-      } }, 'Entendido')
+        catch (e) { uiLog(t`No se pudo guardar la preferencia de bienvenida: ${e.message}`, 'err'); }
+      } }, t('Entendido'))
     );
     const showWelcome = () => {
       welcome.style.display = 'block';
       welcome.scrollIntoView({ block: 'nearest' });
     };
-    const btnWelcome = h('button', { class: 'btn btn-secondary', onclick: showWelcome }, 'Primeros pasos');
-    helpDialog.append(h('button', { class: 'btn btn-secondary', onclick: showWelcome }, 'Ver introducción'));
+    const btnWelcome = h('button', { class: 'btn btn-secondary', onclick: showWelcome }, t('Primeros pasos'));
+    helpDialog.append(h('button', { class: 'btn btn-secondary', onclick: showWelcome }, t('Ver introducción')));
+
+    const btnAboutClose = h('button', { class: 'btn btn-secondary', onclick: () => {
+      aboutDialog.style.display = 'none'; btnAbout.setAttribute('aria-expanded', 'false'); btnAbout.focus();
+    } }, t('Cerrar'));
+    const aboutDialog = h('section', { class: 'file-dialog about-dialog', role: 'region', 'aria-label': t('Acerca de este proyecto') },
+      h('strong', {}, t('Un proyecto de Geeknome · División de Informática')),
+      h('blockquote', {}, t('“La IA propone, el usuario ejecuta, ambos observan en vivo.”')),
+      h('p', {}, h('a', { href: CFG.ABOUT_URL, target: '_blank', rel: 'noopener noreferrer',
+        title: t('Visitar Geeknome (se abre en una pestaña nueva)') }, 'geeknome.com')),
+      h('p', {}, t`Autor: ${'Germán Peña'}`, ' · © 2026 Geeknome'),
+      h('div', { style: 'display:flex;justify-content:flex-end;' }, btnAboutClose));
+    const btnAbout = h('button', { class: 'about-btn', 'aria-label': t('Acerca de'), 'aria-expanded': 'false', onclick: () => {
+      const open = aboutDialog.style.display !== 'block';
+      aboutDialog.style.display = open ? 'block' : 'none';
+      btnAbout.setAttribute('aria-expanded', String(open));
+      if (open) { aboutDialog.scrollIntoView({ block: 'nearest' }); btnAboutClose.focus(); }
+    } }, 'ⓘ');
 
     const bodyEl = h('div', { id: 'body' },
       h('div', { style: 'display:flex; justify-content:space-between; margin-bottom:4px;' },
-        h('span', { style: 'color:#a1a1aa; font-size:11px;' }, 'Explorador OPFS'),
-        h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => deleteUserFiles() }, 'Eliminar todos'),
-        h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, 'Limpiar log')
+        h('span', { style: 'color:#a1a1aa; font-size:11px;' }, t('Explorador OPFS')),
+        h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => deleteUserFiles() }, t('Eliminar todos')),
+        h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, t('Limpiar log'))
       ),
       h('div', { class: 'row' }, btnImport, btnHelp, btnWelcome, localFileInput),
       welcome,
@@ -2757,19 +5091,22 @@
       logEl,
       cmdInput,
       h('div', { class: 'row' }, btnExec, btnShare, btnOpenShareDialog),
-      fileDialog
+      fileDialog,
+      aboutDialog,
+      h('div', { style: 'display:flex;justify-content:flex-end;margin-top:6px;' }, btnAbout)
     );
 
     const panel = h('div', { id: 'panel' }, headerEl, bodyEl);
+    if (previous.panelStyle) panel.style.cssText = previous.panelStyle;
 
-    let collapsed = false;
+    let collapsed = !!previous.collapsed;
     let expanded = false;
     const showBody = () => {
       bodyEl.style.display = collapsed ? 'none' : 'block';
-      toggleEl.textContent = collapsed ? 'Abrir' : 'Contraer';
-      toggleEl.setAttribute('aria-label', collapsed ? 'Abrir panel' : 'Contraer panel');
+      toggleEl.textContent = collapsed ? t('Abrir') : t('Contraer');
+      toggleEl.setAttribute('aria-label', collapsed ? t('Abrir panel') : t('Contraer panel'));
       toggleEl.setAttribute('aria-expanded', String(!collapsed));
-      toggleEl.title = collapsed ? 'Mostrar el contenido del panel' : 'Ocultar el contenido sin borrar borradores';
+      toggleEl.title = collapsed ? t('Mostrar el contenido del panel') : t('Ocultar el contenido sin borrar borradores');
     };
     toggleEl.addEventListener('click', () => {
       collapsed = !collapsed;
@@ -2778,12 +5115,14 @@
     expandEl.addEventListener('click', () => {
       expanded = !expanded;
       panel.classList.toggle('expanded', expanded);
-      expandEl.textContent = expanded ? 'Reducir' : 'Ampliar';
-      expandEl.setAttribute('aria-label', expanded ? 'Reducir panel' : 'Ampliar panel');
+      expandEl.textContent = expanded ? t('Reducir') : t('Ampliar');
+      expandEl.setAttribute('aria-label', expanded ? t('Reducir panel') : t('Ampliar panel'));
       expandEl.setAttribute('aria-pressed', String(expanded));
-      expandEl.title = expanded ? 'Volver al tamaño y posición anteriores' : 'Ampliar el panel dentro de la ventana';
+      expandEl.title = expanded ? t('Volver al tamaño y posición anteriores') : t('Ampliar el panel dentro de la ventana');
       if (expanded) { collapsed = false; showBody(); }
     });
+    if (previous.expanded) expandEl.click();
+    showBody();
 
     let drag = null;
     headerEl.addEventListener('pointerdown', (e) => {
@@ -2820,57 +5159,57 @@
       try {
         const files = (await listFiles()).filter((file) => !isInternalPath(file.path));
         if (fileDialog.style.display === 'block') populateShareFiles(files);
-        if (!files.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, 'Tu disco está vacío. Usa Explorar / Importar archivos para empezar.'));
+        if (!files.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, t('Tu disco está vacío. Usa Explorar / Importar archivos para empezar.')));
         for (const f of files.slice(0, 50)) {
           filesEl.append(h('li', {},
             h('span', { title: f.path, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, f.path),
             h('span', { style: 'color:#a1a1aa' }, fmtBytes(f.size)),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Editar ${f.path}`, title: 'Editar localmente y revisar el diff antes de guardar',
+              class: 'btn btn-secondary', 'aria-label': t`Editar ${f.path}`, title: t('Editar localmente y revisar el diff antes de guardar'),
               style: 'padding:2px 6px; font-size:10px;',
               onclick: () => openCodeEditor(f.path)
-            }, 'Editar'),
+            }, t('Editar')),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Ejecutar ${f.path}`, title: 'HTML en pestaña con actualización al guardar; JS en consola aislada. Requiere confirmación',
+              class: 'btn btn-secondary', 'aria-label': t`Ejecutar ${f.path}`, title: t('HTML en pestaña con actualización al guardar; JS en consola aislada. Requiere confirmación'),
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
               onclick: () => runFromExplorer(f.path)
-            }, 'Ejecutar'),
+            }, t('Ejecutar')),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Descargar ${f.path}`, title: 'Guardar los bytes originales en la PC, sin enviarlos al chat',
+              class: 'btn btn-secondary', 'aria-label': t`Descargar ${f.path}`, title: t('Guardar los bytes originales en la PC, sin enviarlos al chat'),
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
               onclick: () => downloadUserFile(f.path)
-            }, 'Descargar'),
+            }, t('Descargar')),
             h('button', {
               class: 'btn btn-secondary',
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
-              'aria-label': `Eliminar ${f.path}`, title: 'Borrar este archivo tras confirmar; sin deshacer automático',
+              'aria-label': t`Eliminar ${f.path}`, title: t('Borrar este archivo tras confirmar; sin deshacer automático'),
               onclick: () => deleteUserFiles(f.path)
-            }, 'Eliminar')
+            }, t('Eliminar'))
           ));
         }
-        if (files.length > 50) filesEl.append(h('li', {}, `Mostrando 50 de ${files.length}; Eliminar todos incluye la lista completa.`));
+        if (files.length > 50) filesEl.append(h('li', {}, t`Mostrando 50 de ${files.length}; Eliminar todos incluye la lista completa.`));
       } catch (e) { panelLog(`❌ ${e.message}`, 'err'); }
       try {
         const state = await getGitStatus();
         if (generation !== refreshGeneration) return;
         gitState = state;
-        gitBadge.textContent = !state.initialized ? 'Git local: sin inicializar' :
-          `${state.branch || 'HEAD separado'} · ${state.changes.length ? `${state.changes.length} cambios pendientes` : 'Working tree limpio'}`;
+        gitBadge.textContent = !state.initialized ? t('Git local: sin inicializar') :
+          `${state.branch || 'HEAD separado'} · ${state.changes.length ? t`${state.changes.length} cambios pendientes` : t('Working tree limpio')}`;
         gitBadge.style.color = state.changes.length ? '#facc15' : '#6ee7b7';
-        btnGitSave.textContent = !state.initialized ? 'Inicializar Git local' :
-          state.changes.length === 0 ? 'Todo guardado en Git' :
-          state.changes.length === 1 ? `Guardar ${state.changes[0].path} en Git` : `Guardar ${state.changes.length} cambios en Git`;
+        btnGitSave.textContent = !state.initialized ? t('Inicializar Git local') :
+          state.changes.length === 0 ? t('Todo guardado en Git') :
+          state.changes.length === 1 ? t`Guardar ${state.changes[0].path} en Git` : t`Guardar ${state.changes.length} cambios en Git`;
         updateState();
       } catch (e) {
         if (generation !== refreshGeneration) return;
-        gitState = null; gitBadge.textContent = 'Git: error de consulta'; gitBadge.style.color = '#f87171';
-        btnGitSave.textContent = 'Revisar Git';
-        panelLog(`Git: ${e.message}`, 'err'); updateState();
+        gitState = null; gitBadge.textContent = t('Git: error de consulta'); gitBadge.style.color = '#f87171';
+        btnGitSave.textContent = t('Revisar Git');
+        panelLog(t`Git: ${e.message}`, 'err'); updateState();
       }
     }
 
     const updateState = () => {
-      stateEl.textContent = busy ? 'Operación en curso' : editorOpen ? 'Editor abierto' : 'Listo · local';
+      stateEl.textContent = busy ? t('Operación en curso') : editorOpen ? 'Editor abierto' : t('Listo · local');
       panel.setAttribute('aria-busy', String(busy));
       for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog]) button.disabled = busy;
       btnGitSave.disabled = busy || editorOpen || gitLoading || gitState?.initialized && !gitState.changes.length;
@@ -2880,15 +5219,16 @@
       btnGitReviewDiff.disabled = busy || editorOpen || gitLoading || !gitReview;
       btnGitClose.disabled = busy || gitLoading;
       gitMessage.disabled = busy || gitLoading;
+      languageSelect.disabled = busy || editorOpen || gitLoading || gitOverlay.style.display === 'flex';
     };
     updateState();
     try { if (localStorage.getItem(CFG.WELCOME_KEY) !== 'seen') welcome.style.display = 'block'; }
     catch (e) {
       welcome.style.display = 'block';
-      panelLog(`No se pudo leer la preferencia de bienvenida: ${e.message}`, 'err');
+      panelLog(t`No se pudo leer la preferencia de bienvenida: ${e.message}`, 'err');
     }
     refresh();
-    panelLog(`Panel Soberano v${CFG.VERSION} activo. 100% local por defecto.`, 'info');
+    panelLog(t`Panel Soberano v${CFG.VERSION} activo. 100% local por defecto.`, 'info');
     return { log: panelLog, refresh, updateState };
   }
 
@@ -2900,19 +5240,19 @@
       if (document.getElementById(CFG.HOST_ID)) return;
       window.addEventListener('pagehide', () => {
         for (const entry of htmlPreviews.values()) {
-          entry.channel.postMessage({ type: 'error', text: 'DeepSeek se cerró o recargó; vuelve a abrir la vista previa desde Ejecutar.' });
+          entry.channel.postMessage({ type: 'error', text: t('DeepSeek se cerró o recargó; vuelve a abrir la vista previa desde Ejecutar.') });
           closeHTMLPreview(entry);
         }
       });
       loadSettings();
-      if (!(await initOPFS())) throw new Error('OPFS no está disponible; no se puede montar el panel');
+      if (!(await initOPFS())) throw new Error(t('OPFS no está disponible; no se puede montar el panel'));
       const body = await waitFor(() => document.body, 20000, 200);
-      if (!body) throw new Error('no se encontró document.body; no se puede montar el panel');
+      if (!body) throw new Error(t('no se encontró document.body; no se puede montar el panel'));
       ui = buildPanel();
       installInterceptors();
       installChatCodeActions();
     } catch (e) {
-      console.error('[DV] Error de arranque:', e);
+      console.error(t('[DV] Error de arranque:'), e);
     }
   })();
 })();

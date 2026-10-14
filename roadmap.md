@@ -93,7 +93,7 @@ Las pruebas de index.html NO se integran automaticamente en el userscript.
 Su test E2E contiene siete pasos, pero releer archivos no equivale a cerrar
 y reabrir el navegador. No dar ese criterio por certificado.
 
-## Avance verificado - userscript 1.5.22
+## Avance verificado - userscript 1.5.26
 
 Checklist tachado = implementacion y evidencia indicada abajo.
 No significa que una fase completa este cerrada.
@@ -181,7 +181,7 @@ Evidencia reproducible:
 
 - `npm install` instala dependencias de desarrollo fijadas de Git y diff;
   package-lock.json registra la resolucion. El userscript no requiere npm.
-- `npm test`: 77 pruebas Node con OPFS simulado en memoria y la libreria
+- `npm test`: 81 pruebas Node con OPFS simulado en memoria y la libreria
   Git real. Cubren commits, cambios, borrados staged, filtros, limites,
   cancelacion de rm, abort de redireccion, gzip y diff. Los parches generados
   se aplican en memoria y se verifica que reconstruyen exactamente el texto
@@ -211,6 +211,58 @@ Evidencia reproducible:
   rechazo de hash viejo/bloque ambiguo/esquema invalido/sin cambios y limites.
   Navegador localhost OPFS: propose -> editor con candidato/diff automatico,
   archivo intacto antes de confirmar -> Aplicar -> contenido y hash nuevos.
+
+## Compartir archivo sin confirmacion adicional (1.5.26)
+
+- [x] A peticion del usuario, Enviar archivo a DeepSeek en el selector envia
+      directamente el archivo elegido. Abrir selector no envia. Texto visible
+      y tooltip explican el envio sin segunda confirmacion.
+- [x] Limite 64 KB, UTF-8/no binarios, rutas internas, busy y borradores siguen
+      protegidos. --share-file en comandos conserva vista previa/confirmacion.
+- Regresion Node: envio directo, borrador intacto, rechazo de archivo grande,
+  binario, ruta interna y busy. Pruebas con chat simulado, sin envio a DeepSeek.
+
+## Compartir resumen con un clic (1.5.25)
+
+- [x] A peticion del usuario, Ejecutar + Compartir autoriza envio directo del
+      resumen (limite 1200 caracteres) sin segunda confirmacion. Tooltip avisa.
+- [x] Se conservan proteccion de borradores, controles de envio y errores
+      explicitos. --share y archivos mantienen vista previa/confirmacion,
+      incluso --share-file combinado con el boton. No cambia confirmaciones
+      de operaciones locales.
+- Regresiones Node: envio directo y preservacion de borrador; archivo y origen
+  chat no pueden saltar su confirmacion. No se envio nada a DeepSeek en pruebas.
+
+## Alineacion del explorador (1.5.24)
+
+- [x] Nombre, bytes y cuatro botones permanecen en una fila sin salto.
+      Nombre flexible con elipsis y tooltip de ruta completa; controles y bytes
+      no se comprimen. Desplazamiento horizontal en ventanas muy estrechas.
+- Evidencia: reglas CSS comprobadas en navegador aislado a 440 y 320 px,
+  nombre largo y cuatro botones alineados; scroll horizontal solo a 320 px.
+  Sintaxis valida y 78 pruebas Node pasan.
+
+## Usabilidad inicial (1.5.23)
+
+- [x] Bienvenida integrada primera vez, recordada por origen en localStorage.
+      Tres ejemplos ls/status/help preparan entrada sin ejecutar; confirma si
+      reemplazan borrador. Error de preferencias visible, no silencio.
+- [x] Primeros pasos y Ver introduccion en Ayuda reabren la guia.
+- [x] Tooltips de botones, type=button, foco visible, etiquetas accesibles.
+- [x] Header con estado textual Listo/local, Operacion en curso, Editor abierto.
+      Actualizacion sincronica con busy; controles principales bloqueados,
+      borrador conservado. No implica exito del ultimo comando ni estado Git.
+- [x] Ampliar/Reducir dentro de ventana; conserva posicion normal y comando.
+      Drag bloqueado al ampliar; Contraer/Abrir accesible sin borrar borradores.
+      Alineacion de filas revisada en 1.5.24 (ver arriba).
+- [ ] Editor integrado con navegacion Volver y estados borrador/aprobacion.
+      Modal existente se conserva para no arriesgar guardias hash/diff.
+- [ ] Seleccion de archivo y acciones contextuales adicionales.
+- Evidencia: 78 pruebas Node (incluye actualizacion busy durante espera/error);
+  navegador localhost OPFS: bienvenida inicial, ejemplo sin ejecutar, recordar
+  y reabrir tras reload, ampliar/reducir conserva entrada, busy deshabilita
+  ejecutar, abrir/cerrar editor actualiza estado, botones con title.
+  No se enviaron datos; pendiente comprobar ergonomia en DeepSeek.
 
 ## Consulta y limpieza de checkpoints (1.5.22)
 
@@ -1014,7 +1066,7 @@ de cada experimento, no solo el grafo.
 
 ## FASE 11 - Git remoto opcional
 
-No implementado en 1.5.22. Primero estabilizar Git local.
+No implementado en 1.5.23. Primero estabilizar Git local.
 Los nombres/emails de commits no autentican contra ningun servidor.
 
 - [ ] !git remote add origin <url>
