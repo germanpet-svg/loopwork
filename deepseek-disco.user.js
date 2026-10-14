@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DeepSeek Disco Virtual (Dual-Channel OPFS + Git)
 // @namespace    local.disk
-// @version      1.5.22
+// @version      1.5.27
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @match        https://chat.deepseek.com/*
 // @grant        none
@@ -17,7 +17,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.5.22',
+    VERSION: '1.5.27',
     MAX_RUN_BYTES: 256 * 1024,
     RUN_TIMEOUT_MS: 3000,
     MAX_SHARE_FILE_BYTES: 64 * 1024,
@@ -32,6 +32,7 @@
     WASM_TIMEOUT_MS: 10 * 60 * 1000,
     HISTORY_MAX: 200,
     SETTINGS_KEY: 'dv.settings.v4',
+    WELCOME_KEY: 'dv.welcome.v1',
     HOST_ID: 'dv-host',
   };
 
@@ -261,7 +262,7 @@
 
   async function importLocalFiles(files) {
     if (busy) { uiLog('⏳ Hay una operación en curso; vuelve a seleccionar los archivos al terminar.', 'err'); return; }
-    busy = true;
+    setBusy(true);
     let imported = 0, skipped = 0;
     try {
       for (const file of files) {
@@ -285,7 +286,7 @@
     } catch (e) {
       uiLog(`❌ Importación detenida: ${e.message}. ${imported} archivo(s) importados y ${skipped} omitidos; los anteriores se conservan.`, 'err');
     } finally {
-      busy = false;
+      setBusy(false);
       await ui?.refresh();
     }
   }
@@ -339,10 +340,10 @@
       const w = await openWriter('.dv/journal.jsonl', { append: true });
       await w.write(line);
       await w.close();
-    } catch { /* auditoría no bloqueante */ }
+    } catch (e) { uiLog(`Auditoría no guardada: ${e.message}`, 'err'); }
   }
 
-  async function atomicWrite(targetPath, newContent) {
+  async function atomicWrite(targetPath, newContent, { expectedHash = null } = {}) {
     const enc = new TextEncoder();
     const candidateBytes = typeof newContent === 'string' ? enc.encode(newContent) : newContent;
     const candidateHash = await computeSha256(candidateBytes);
@@ -366,6 +367,10 @@
       throw new Error('Integridad de temporal comprometida.');
     }
 
+    if (expectedHash !== null && (await editorSnapshot(targetPath)).hash !== expectedHash) {
+      await removePath(tmpPath, false);
+      throw new Error('archivo cambió durante la preparación; no se sobrescribió');
+    }
     await writeBytes(targetPath, candidateBytes);
     await removePath(tmpPath, false);
 
@@ -735,7 +740,7 @@
 
   async function downloadUserFile(path) {
     if (busy) { uiLog('⏳ Hay una operación en curso; reintenta la descarga al terminar.', 'err'); return; }
-    busy = true;
+    setBusy(true);
     let url = null, link = null;
     try {
       const parts = splitPath(path);
@@ -757,7 +762,7 @@
     } finally {
       link?.remove();
       if (url) URL.revokeObjectURL(url);
-      busy = false;
+      setBusy(false);
     }
   }
 
@@ -1077,15 +1082,15 @@
     const current = await editorSnapshot(snapshot.path);
     if (current.hash !== snapshot.hash) throw new Error('el archivo cambió desde que abriste el editor; no se sobrescribió. Conserva tu borrador y vuelve a abrirlo');
     if (snapshot.checkpointBeforeSave) {
-      const backup = await createCheckpoint(snapshot.path, 'Antes de restore desde editor');
+      const backup = await createCheckpoint(snapshot.path, snapshot.checkpointLabel || 'Antes de restore desde editor');
       uiLog(`Checkpoint previo: ${backup.id}`, 'info');
       if (backup.hash !== snapshot.hash || (await editorSnapshot(snapshot.path)).hash !== snapshot.hash) throw new Error('archivo cambió; checkpoint previo conservado, no se sobrescribió');
     }
-    await atomicWrite(snapshot.path, candidate);
+    await atomicWrite(snapshot.path, candidate, { expectedHash: snapshot.hash });
     return editorSnapshot(snapshot.path);
   }
 
-  async function prepareProposal(value) {
+  function validateProposalValue(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('propuesta debe ser un objeto JSON');
     const allowed = ['path', 'hash', 'operation', 'old', 'new'];
     if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error('campos desconocidos en propuesta');
@@ -1094,6 +1099,16 @@
     }
     if (!['replace', 'insert-before', 'insert-after', 'append'].includes(value.operation) ||
         typeof value.new !== 'string' || value.new.includes('\0')) throw new Error('operation/new no válidos');
+    const parts = splitPath(value.path);
+    if (!parts.length || isInternalPath(value.path)) throw new Error('ruta de propuesta no permitida');
+    if (value.operation === 'append') {
+      if ('old' in value) throw new Error('append no admite old');
+    } else if (typeof value.old !== 'string' || !value.old) throw new Error('old debe ser un bloque exacto no vacío');
+    return value;
+  }
+
+  async function prepareProposal(value) {
+    validateProposalValue(value);
     const snapshot = await editorSnapshot(value.path);
     if (snapshot.hash !== value.hash) throw new Error('hash obsoleto; usa view y solicita una propuesta para la versión actual');
     let candidate;
@@ -1161,13 +1176,15 @@
 
   let editorOpen = false;
   async function openCodeEditor(path, proposal = null) {
-    if (busy || editorOpen) { uiLog('Ya hay una operación o editor abierto.', 'err'); return; }
+    if (busy || editorOpen) { uiLog('Ya hay una operación o editor abierto.', 'err'); return false; }
     editorOpen = true;
+    ui?.updateState?.();
     let release;
     try {
       let snapshot = await editorSnapshot(path);
       if (proposal && snapshot.hash !== proposal.snapshot.hash) throw new Error('archivo cambió antes de abrir la propuesta; usa view de nuevo');
       if (proposal?.checkpointBeforeSave) snapshot.checkpointBeforeSave = true;
+      if (proposal?.checkpointLabel) snapshot.checkpointLabel = proposal.checkpointLabel;
       const host = h('div', { id: 'dv-code-editor' });
       const shadow = host.attachShadow({ mode: 'closed' });
       let saving = false, approvedCandidate = null;
@@ -1226,7 +1243,7 @@
           report('Revisa el diff completo; Aplicar comprueba la versión original.');
         } catch (e) { approvedCandidate = null; apply.disabled = true; report(e.message, true); }
       } }, 'Revisar diff');
-      release = () => { host.remove(); editorOpen = false; };
+      release = () => { host.remove(); editorOpen = false; ui?.updateState?.(); };
       const close = h('button', { onclick: () => {
         if (saving) return;
         if (candidate() !== snapshot.text && !confirm('¿Descartar el borrador sin guardar?')) return;
@@ -1236,14 +1253,16 @@
         if (saving || busy || approvedCandidate === null || candidate() !== approvedCandidate) {
           report('Revisa de nuevo el diff o espera a que termine la operación.', true); return;
         }
-        if (!confirm(`¿Aplicar el diff revisado a "${path}"? No crea commit ni backup automático.`)) return;
-        saving = true; busy = true; code.readOnly = true; apply.disabled = true;
+        if (!confirm(`¿Aplicar el diff revisado a "${path}"? ${snapshot.checkpointBeforeSave ?
+          'Se creará y verificará un checkpoint previo; si falla, no se guarda.' :
+          'No crea backup automático.'} No crea commit.`)) return;
+        saving = true; setBusy(true); code.readOnly = true; apply.disabled = true;
         try {
           snapshot = await saveEditorCandidate(snapshot, approvedCandidate);
           uiLog(`Editor: guardado y verificado ${path} (SHA256 ${snapshot.hash.slice(0, 8)}). Revisa git diff.`, 'info');
           release();
         } catch (e) { report(e.message, true); }
-        finally { saving = false; busy = false; code.readOnly = false; await ui?.refresh(); }
+        finally { saving = false; setBusy(false); code.readOnly = false; await ui?.refresh(); }
       });
       shadow.append(h('style', {}, `
         :host{all:initial} .editor{position:fixed;inset:4%;z-index:1000001;background:#1e1e1e;color:#ddd;border:1px solid #555;border-radius:10px;box-shadow:0 15px 60px #0009;display:flex;flex-direction:column;padding:16px;gap:10px;font:13px system-ui}
@@ -1263,9 +1282,12 @@
       for (const type of ['keydown', 'keyup', 'keypress']) host.addEventListener(type, (e) => e.stopPropagation());
       document.body.append(host); sync(); report(`SHA256 original: ${snapshot.hash} · UTF-8 · pega o edita funciones`);
       if (proposal) preview.click();
+      return true;
     } catch (e) {
       if (release) release(); else editorOpen = false;
+      ui?.updateState?.();
       uiLog(`❌ Editor: ${e.message}`, 'err');
+      return false;
     }
   }
 
@@ -1274,7 +1296,7 @@
       uiLog('⏳ Hay una operación en curso; no se ha borrado nada.', 'err');
       return;
     }
-    busy = true;
+    setBusy(true);
     let deleted = 0;
     try {
       let paths;
@@ -1301,7 +1323,7 @@
     } catch (e) {
       uiLog(`❌ Borrado detenido tras ${deleted} archivo(s): ${e.message}. No se revierten los borrados anteriores.`, 'err');
     } finally {
-      busy = false;
+      setBusy(false);
       await ui?.refresh();
     }
   }
@@ -1490,6 +1512,17 @@
     for await (const l of source(ctx, pos[0])) { yield l; if (++c >= n) return; }
   });
 
+  def('grep', 'Texto', 'grep [-i] [-n] [-F] <patrón> [archivo]', 'Busca regex o texto literal por líneas; acepta pipes', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { i: 'b', n: 'b', F: 'b' });
+    if (pos.length < 1 || pos.length > 2) throw new Error('uso: grep [-i] [-n] [-F] <patrón> [archivo]');
+    const re = makeRegex(pos[0], { ignoreCase: !!flags.i, fixed: !!flags.F });
+    let line = 0;
+    for await (const text of source(ctx, pos[1])) {
+      line++;
+      if (re.test(text)) yield flags.n ? `${line}: ${text}` : text;
+    }
+  });
+
   def('journal', 'Auditoría', 'journal [-n N]', 'Ver registro de transacciones (.dv/journal)', async (ctx) => {
     const { flags } = parseArgs(ctx.args, { n: 'v' });
     const n = toInt(flags.n, 10, '-n');
@@ -1613,6 +1646,7 @@
       '  Explorador: Eliminar por archivo o Eliminar todos (conserva Git/journal).',
       '  Editar: código numerado, buscar/reemplazar literal y diff antes de Aplicar.',
       '  Ejecutar junto a Editar: mismo run local con confirmación, HTML estático o consola JS.',
+      '  Primeros pasos prepara ejemplos sin ejecutarlos; Ampliar/Reducir conserva el comando escrito.',
       '  Descargar por archivo: bytes originales a la PC (también binarios/gzip), sin chat ni staging.',
       '  El navegador decide guardar/preguntar; descarga solicitada no confirma guardado en la PC.',
       '  checkpoint archivo [etiqueta]: copia bytes/hash hasta 256 KB; checkpoint --list muestra IDs.',
@@ -1628,6 +1662,10 @@
       '  replace archivo "old" "new": bloque literal único; --all reemplaza todas las coincidencias no solapadas.',
       '  replace siempre prepara sin guardar (también --dry-run); --hash SHA256 exige esa versión.',
       '  Para bloques multilínea o propuestas IA usa propose con hash y JSON.',
+      '  Chat: bloque dv con JSON puro o !propose inline; Revisar parche en DV abre diff, nunca ejecuta otros comandos.',
+      '  Aprobar parche del chat crea checkpoint previo y valida hash; no envía nada ni hace commit.',
+      '  Compartir archivo incluye SHA256 y protocolo dv; no comparte archivos automáticamente.',
+      '  grep [-i] [-n] [-F] patrón [archivo]: regex/literal, números de línea y pipes.',
       '  POSIBLE FUGA: solo correlaciona un intento manual reciente (5 s) con el comando exacto en el DOM.',
       '  Ignora carga automática sin intento; no verifica tráfico ni recepción del servidor.',
       '  JSON: path, hash completo, operation, old (bloque único), new (texto exacto).',
@@ -1808,21 +1846,28 @@
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (bytes.includes(0)) throw new Error('no se comparten archivos binarios; usa un resumen de texto');
     let content;
-    try { content = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+    try { content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
     catch (e) {
       if (e.name === 'TypeError') throw new Error('el archivo no es texto UTF-8 válido');
       throw e;
     }
     const fence = safeFence(content);
-    return `[Archivo OPFS: ${JSON.stringify(path)}; ${fmtBytes(file.size)}]\n${fence}\n${content}\n${fence}\nAnaliza este archivo.`;
+    const hash = await computeSha256(bytes);
+    return `[Archivo OPFS: ${JSON.stringify(path)}; ${fmtBytes(file.size)}]\nSHA256: ${hash}\n${fence}\n${content}\n${fence}\n` +
+      'Analiza este archivo. Si propones una corrección, devuelve un bloque Markdown con lenguaje dv y un único objeto JSON puro, sin comandos ni comillas de shell.\n' +
+      `Usa path=${JSON.stringify(path)} y hash="${hash}" exactamente; no inventes ni recalcules el hash.\n` +
+      'Campos: path, hash, operation, old, new. operation: replace, insert-before, insert-after o append (sin old).\n' +
+      'old debe ser texto exacto y coincidir una sola vez; new es texto exacto, no un diff ni código con puntos suspensivos. ' +
+      'Escapa saltos como \\n (o \\r\\n si el original los usa). Una propuesta por bloque y archivo. ' +
+      'Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.';
   }
 
-  async function sendWithPreview(message) {
+  async function sendWithPreview(message, { confirmSend = true } = {}) {
     message = normalizeChatText(message);
     const input = adapter.getInput();
     if (!input || !visible(input)) throw new Error('no se encontró una entrada de chat visible');
     if (adapter.getText(input) !== '') throw new Error('hay un borrador en el chat; no se ha reemplazado');
-    if (!confirm(`¿Compartir con DeepSeek (${message.length} caracteres)?\nVista previa:\n${truncate(message, CFG.ATTACH_PREVIEW_CHARS)}`)) {
+    if (confirmSend && !confirm(`¿Compartir con DeepSeek (${message.length} caracteres)?\nVista previa:\n${truncate(message, CFG.ATTACH_PREVIEW_CHARS)}`)) {
       throw new Error('envío cancelado; no se ha compartido nada');
     }
     await adapter.sendToChat(message);
@@ -1831,16 +1876,20 @@
 
   async function shareFile(path) {
     if (busy) { uiLog('⏳ Hay una operación en curso; reintenta al terminar.', 'err'); return; }
-    busy = true;
-    try { await sendWithPreview(await fileShareMessage(path)); }
+    setBusy(true);
+    try { await sendWithPreview(await fileShareMessage(path), { confirmSend: false }); }
     catch (e) { uiLog(`❌ ${e.message}`, 'err'); }
-    finally { busy = false; }
+    finally { setBusy(false); }
   }
 
   // ============================================================
   // EJECUCIÓN CONTROLADA (CANAL DUAL)
   // ============================================================
   let busy = false;
+  function setBusy(value) {
+    busy = value;
+    ui?.updateState?.();
+  }
 
   async function handleExecution(rawCommand, options = { forceShare: false, origin: 'panel' }) {
     if (busy) {
@@ -1861,7 +1910,7 @@
     if (hist.length > CFG.HISTORY_MAX) hist.shift();
 
     let editorRequest = null;
-    busy = true;
+    setBusy(true);
     try {
       const parsed = parseSharing(cmd);
       const cleanCmd = parsed.command;
@@ -1885,11 +1934,15 @@
         if (!res.ok) throw new Error('el comando falló; no se compartió el archivo');
         messages.push(await fileShareMessage(parsed.file));
       }
-      if (messages.length) await sendWithPreview(messages.join('\n\n'));
+      if (messages.length) {
+        const directSummary = options.origin === 'panel' && options.forceShare === true &&
+          options.directShare === true && !parsed.file;
+        await sendWithPreview(messages.join('\n\n'), { confirmSend: !directSummary });
+      }
     } catch (e) {
       uiLog(`❌ Error: ${e.message}`, 'err');
     } finally {
-      busy = false;
+      setBusy(false);
       ui?.refresh();
       if (editorRequest) await openCodeEditor(editorRequest.snapshot.path, editorRequest);
     }
@@ -1902,6 +1955,125 @@
       if (current.id === CFG.HOST_ID || current.id === 'dv-code-editor') return true;
     }
     return false;
+  }
+
+  function parseChatProposal(text) {
+    text = text.trim();
+    if (text.length > CFG.MAX_RUN_BYTES * 12) throw new Error('bloque de propuesta demasiado grande');
+    let json = text;
+    if (!text.startsWith('{')) {
+      const prefixes = [...new Set([settings.prefix, '!'])];
+      const prefix = prefixes.find((p) => text.startsWith(p + 'propose'));
+      if (!prefix) throw new Error('solo se admite JSON dv o !propose con JSON inline');
+      const segs = parsePipeline(tokenize(text.slice(prefix.length)));
+      const seg = segs[0];
+      if (segs.length !== 1 || seg.redirect || seg.argv.length !== 2 || seg.argv[0] !== 'propose' ||
+          !seg.argv[1].trim().startsWith('{')) throw new Error('chat: solo propose con un JSON inline, sin pipes, archivos ni opciones');
+      json = seg.argv[1];
+    }
+    let value;
+    try { value = JSON.parse(json); }
+    catch (e) { throw new Error(`JSON de propuesta no válido: ${e.message}`); }
+    return validateProposalValue(value);
+  }
+
+  async function prepareChatProposal(text) {
+    if (busy || editorOpen) throw new Error('cierra el editor o espera a que termine la operación antes de revisar otro parche');
+    const proposal = await prepareProposal(parseChatProposal(text));
+    if (busy || editorOpen) throw new Error('se abrió otra operación durante la preparación; reintenta al terminar');
+    return { ...proposal, checkpointBeforeSave: true, checkpointLabel: 'Antes de parche desde chat' };
+  }
+
+  function installChatCodeActions() {
+    const actions = new Map();
+    const scan = () => {
+      for (const [pre, action] of actions) {
+        if (!pre.isConnected || !action.code.isConnected || isInsidePanel(pre)) {
+          action.bar.remove(); actions.delete(pre);
+        }
+      }
+      for (const code of document.querySelectorAll('pre code')) {
+        const pre = code.closest('pre');
+        if (!pre || isInsidePanel(code)) continue;
+        const text = code.textContent.trim();
+        const userMessage = code.closest('[data-message-role="user"], [data-role="user"]');
+        const assistantMessage = code.closest('[data-message-role="assistant"], [data-role="assistant"], .ds-markdown');
+        const marked = code.classList.contains('language-dv') || pre.classList.contains('language-dv') ||
+          code.getAttribute('data-language') === 'dv' || pre.getAttribute('data-language') === 'dv';
+        const command = [settings.prefix, '!'].some((prefix) => text.startsWith(prefix + 'propose'));
+        const eligible = !userMessage && assistantMessage && (marked || command);
+        let action = actions.get(pre);
+        if (action && (action.code !== code || !action.bar.isConnected)) {
+          action.bar.remove(); actions.delete(pre); action = null;
+        }
+        if (!eligible) {
+          action?.bar.remove(); actions.delete(pre); continue;
+        }
+        if (!action) {
+          const bar = document.createElement('div');
+          bar.className = 'dv-chat-patch-actions';
+          bar.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;font:12px system-ui;flex-wrap:wrap';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = 'Revisar parche en DV';
+          button.style.cssText = 'padding:6px 10px;background:#047857;color:white;border:1px solid #065f46;border-radius:5px;cursor:pointer';
+          const status = document.createElement('span');
+          status.setAttribute('role', 'status');
+          bar.append(button, status);
+          pre.before(bar);
+          action = { bar, button, status, code, text: null, pending: false };
+          actions.set(pre, action);
+          button.addEventListener('click', async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (action.pending) return;
+            action.pending = true; button.disabled = true;
+            try {
+              if (!code.isConnected) throw new Error('el bloque ya no está en el chat');
+              const proposal = await prepareChatProposal(code.textContent);
+              status.textContent = `Propuesta: ${proposal.snapshot.path}. Revisa el diff; aún no guardada.`;
+              uiLog(`Parche desde chat: ${proposal.snapshot.path}. Archivo intacto; aprobación y checkpoint requeridos.`, 'info');
+              if (!(await openCodeEditor(proposal.snapshot.path, proposal))) {
+                throw new Error('no se pudo abrir el editor; consulta el error en el panel. Archivo intacto.');
+              }
+            } catch (error) {
+              status.textContent = `No se preparó: ${error.message}`;
+              uiLog(`Parche desde chat: ${error.message}`, 'err');
+            } finally {
+              action.pending = false; action.text = null; scan();
+            }
+          });
+        }
+        if (action.pending || action.text === text) continue;
+        const changed = action.text !== null;
+        action.text = text;
+        try {
+          parseChatProposal(text);
+          action.button.disabled = false;
+          action.button.title = 'Abrir diff local; al aprobar se crea checkpoint. No ejecuta código ni envía mensajes.';
+          if (changed || !action.status.textContent) action.status.textContent = 'Revisión local con hash y checkpoint.';
+        } catch (e) {
+          action.button.disabled = true;
+          action.button.title = e.message;
+          action.status.textContent = `Propuesta incompleta o inválida: ${e.message}`;
+        }
+      }
+    };
+    let scheduled = false;
+    const observer = new MutationObserver((mutations) => {
+      const relevant = mutations.some((m) => {
+        const target = m.target.nodeType === Node.ELEMENT_NODE ? m.target : m.target.parentElement;
+        if (!target || isInsidePanel(target) || target.closest('.dv-chat-patch-actions')) return false;
+        return target.closest('pre') || (m.type === 'attributes' && target.querySelector('pre code')) ||
+          [...(m.addedNodes || []), ...(m.removedNodes || [])].some((n) =>
+            n.nodeType === Node.ELEMENT_NODE && (n.matches('pre, code') || n.querySelector('pre code')));
+      });
+      if (!relevant || scheduled) return;
+      scheduled = true;
+      setTimeout(() => { scheduled = false; scan(); }, 150);
+    });
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true,
+      attributes: true, attributeFilter: ['class', 'data-language', 'data-role', 'data-message-role'] });
+    scan();
   }
 
   function installInterceptors() {
@@ -2008,6 +2180,10 @@
       else if (v !== false && v != null) el.setAttribute(k, String(v));
     }
     for (const kid of kids.flat()) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+    if (tag === 'button') {
+      if (!el.hasAttribute('type')) el.type = 'button';
+      if (!el.hasAttribute('title')) el.title = props['aria-label'] || el.textContent;
+    }
     return el;
   }
 
@@ -2021,12 +2197,18 @@
     }
     #header {
       background: #27272a; padding: 10px 12px; cursor: move; user-select: none;
-      display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+      display: flex;flex-wrap:wrap;gap:6px; justify-content: space-between; align-items: center; font-weight: 600;
       border-bottom: 1px solid #3f3f46;
     }
-    #body { padding: 12px; max-height: 600px; overflow-y: auto; }
-    #files { list-style: none; padding: 0; margin: 6px 0; max-height: 90px; overflow-y: auto; }
-    #files li { padding: 3px 6px; border-radius: 4px; display: flex; justify-content: space-between; font-size: 11px; }
+    #body { padding: 12px; max-height: min(600px, calc(100dvh - 150px)); overflow-y: auto; }
+    #panel.expanded { inset:16px!important;width:auto;max-width:none; }
+    #panel.expanded #body { max-height:calc(100dvh - 100px); }
+    #panel.expanded #files { max-height:30vh; }
+    #panel.expanded #log { max-height:30vh; }
+    #files { list-style: none; padding: 0; margin: 6px 0; max-height: 170px; overflow-y: auto; }
+    #files li { padding: 6px; border-radius: 4px; display: flex; flex-wrap:nowrap;gap:4px;align-items:center;font-size: 11px; }
+    #files li > span:first-child { flex:1 1 0;min-width:40px; }
+    #files li > span:nth-child(2), #files li > button { flex-shrink:0;white-space:nowrap; }
     #files li:hover { background: #27272a; }
     #log {
       background: #09090b; color: #4ade80; font: 11px monospace; padding: 8px; border-radius: 6px;
@@ -2035,11 +2217,13 @@
     #log .err { color: #f87171; } #log .info { color: #38bdf8; } #log .cmd { color: #facc15; }
     .btn { background: #3b82f6; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500; }
     .btn:hover { background: #2563eb; }
+    .btn:disabled { opacity:.5;cursor:wait; }
+    button:focus-visible { outline:2px solid #93c5fd;outline-offset:2px; }
     .btn-secondary { background: #3f3f46; color: #e4e4e7; }
     .btn-secondary:hover { background: #52525b; }
     .btn-share { background: #8b5cf6; }
     .btn-share:hover { background: #7c3aed; }
-    .row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+    .row { display: flex;flex-wrap:wrap; gap: 6px; align-items: center; margin-top: 8px; }
     
     /* CAMPO DE COMANDOS COMPLETO Y MÁS ALTO */
     .input-cmd {
@@ -2076,21 +2260,24 @@
         if (files.length) await importLocalFiles(files);
       }
     });
-    const btnImport = h('button', { class: 'btn btn-secondary', onclick: () => {
+    const btnImport = h('button', { class: 'btn btn-secondary', title: 'Elegir archivos de la PC y copiarlos al disco local; no se comparten', onclick: () => {
       if (busy) { uiLog('⏳ Hay una operación en curso; espera antes de importar.', 'err'); return; }
       localFileInput.click();
     } }, 'Explorar / Importar archivos…');
     const cmdInput = h('textarea', {
       class: 'input-cmd',
+      'aria-label': 'Comando local',
       placeholder: 'Comandos locales... (Enter ejecuta, Shift+Enter nueva línea)\nEj: !git status · !ls · !write f.txt "hola"'
     });
-    const toggleEl = h('span', { style: 'cursor:pointer' }, '▼');
+    const stateEl = h('span', { class: 'badge-local', role: 'status', 'aria-live': 'polite' }, 'Listo · local');
+    const toggleEl = h('button', { class: 'btn btn-secondary', 'aria-label': 'Contraer panel', 'aria-expanded': 'true' }, 'Contraer');
+    const expandEl = h('button', { class: 'btn btn-secondary', 'aria-label': 'Ampliar panel', 'aria-pressed': 'false' }, 'Ampliar');
     const headerEl = h('div', { id: 'header' },
       h('div', {},
         h('span', {}, `💾 DV v${CFG.VERSION} `),
         h('span', { class: 'badge-local' }, 'Panel Soberano')
       ),
-      toggleEl
+      h('div', { class: 'row' }, stateEl, expandEl, toggleEl)
     );
 
     let histIdx = -1;
@@ -2103,7 +2290,7 @@
       }
       cmdInput.value = '';
       histIdx = -1;
-      handleExecution(val, { forceShare, origin: 'panel' });
+      handleExecution(val, { forceShare, directShare: forceShare, origin: 'panel' });
     };
     cmdInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -2125,15 +2312,15 @@
       }
     });
 
-    const btnExec = h('button', { class: 'btn', onclick: () => submitPanel() }, 'Ejecutar');
+    const btnExec = h('button', { class: 'btn', title: 'Ejecutar el comando en el navegador sin enviarlo a la IA', onclick: () => submitPanel() }, 'Ejecutar');
 
-    const btnShare = h('button', { class: 'btn btn-share', onclick: () => submitPanel(true) }, 'Ejecutar + Compartir');
+    const btnShare = h('button', { class: 'btn btn-share', title: 'Ejecutar y enviar directamente el resumen a DeepSeek, sin vista previa; no reemplaza borradores del chat', onclick: () => submitPanel(true) }, 'Ejecutar + Compartir');
 
     // DIÁLOGO INTEGRADO PARA COMPARTIR ARCHIVO
     const fileSelect = h('select', { 'aria-label': 'Archivo a compartir' });
     const shareNotice = h('div', { style: 'font-size:11px; margin:6px 0;' },
       'Máximo 64 KB por archivo; solo texto UTF-8. Los archivos mayores se muestran deshabilitados.');
-    const confirmFileShare = h('button', { class: 'btn btn-share', onclick: async () => {
+    const confirmFileShare = h('button', { class: 'btn btn-share', title: 'Enviar directamente el archivo seleccionado a DeepSeek, sin confirmación adicional; no reemplaza borradores del chat', onclick: async () => {
       const path = fileSelect.value;
       if (!path || fileSelect.selectedOptions[0]?.disabled) {
         uiLog('Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.', 'err');
@@ -2141,7 +2328,7 @@
       }
       fileDialog.style.display = 'none';
       await shareFile(path);
-    } }, 'Confirmar Envío');
+    } }, 'Enviar archivo a DeepSeek');
     const fileDialog = h('div', { class: 'file-dialog' },
       h('div', { style: 'font-size:11px; margin-bottom:4px;' }, 'Selecciona archivo a compartir:'),
       fileSelect, shareNotice,
@@ -2169,7 +2356,7 @@
         fileSelect.value = available?.path || '';
         confirmFileShare.disabled = !available;
         shareNotice.textContent = available
-          ? 'Máximo 64 KB por archivo; solo texto UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 "archivo" --share.'
+          ? 'Enviar archivo a DeepSeek comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 "archivo" --share.'
           : 'Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 "archivo" --share.';
         fileDialog.style.display = 'block';
     }
@@ -2198,13 +2385,43 @@
       } catch (e) { uiLog(`❌ No se pudo mostrar ayuda: ${e.message}`, 'err'); }
     } }, 'Ayuda');
 
+    const prepareExample = (command) => {
+      if (cmdInput.value && !confirm('¿Reemplazar el comando que estás preparando?')) return;
+      cmdInput.value = command;
+      histIdx = -1;
+      cmdInput.focus();
+    };
+    const welcome = h('section', {
+      class: 'file-dialog', role: 'region', 'aria-label': 'Primeros pasos'
+    },
+      h('strong', {}, 'Bienvenido a loopwork'),
+      h('p', {}, 'Importa un archivo o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.'),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn btn-secondary', title: 'Preparar !ls para listar archivos; luego pulsa Ejecutar', onclick: () => prepareExample('!ls') }, 'Ver archivos: !ls'),
+        h('button', { class: 'btn btn-secondary', title: 'Preparar consulta del estado Git; requiere git init previo', onclick: () => prepareExample('!git status') }, 'Estado: !git status'),
+        h('button', { class: 'btn btn-secondary', title: 'Preparar el comando de ayuda, sin ejecutarlo', onclick: () => prepareExample('!help') }, 'Comandos: !help')),
+      h('p', {}, 'Editar → revisar diff → aprobar. Descarga copias importantes: borrar datos del sitio también elimina el disco y Git.'),
+      h('button', { class: 'btn', onclick: () => {
+        welcome.style.display = 'none';
+        try { localStorage.setItem(CFG.WELCOME_KEY, 'seen'); }
+        catch (e) { uiLog(`No se pudo guardar la preferencia de bienvenida: ${e.message}`, 'err'); }
+      } }, 'Entendido')
+    );
+    const showWelcome = () => {
+      welcome.style.display = 'block';
+      welcome.scrollIntoView({ block: 'nearest' });
+    };
+    const btnWelcome = h('button', { class: 'btn btn-secondary', onclick: showWelcome }, 'Primeros pasos');
+    helpDialog.append(h('button', { class: 'btn btn-secondary', onclick: showWelcome }, 'Ver introducción'));
+
     const bodyEl = h('div', { id: 'body' },
       h('div', { style: 'display:flex; justify-content:space-between; margin-bottom:4px;' },
         h('span', { style: 'color:#a1a1aa; font-size:11px;' }, 'Explorador OPFS'),
         h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => deleteUserFiles() }, 'Eliminar todos'),
         h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, 'Limpiar log')
       ),
-      h('div', { class: 'row' }, btnImport, btnHelp, localFileInput),
+      h('div', { class: 'row' }, btnImport, btnHelp, btnWelcome, localFileInput),
+      welcome,
       helpDialog,
       filesEl,
       logEl,
@@ -2216,15 +2433,31 @@
     const panel = h('div', { id: 'panel' }, headerEl, bodyEl);
 
     let collapsed = false;
+    let expanded = false;
+    const showBody = () => {
+      bodyEl.style.display = collapsed ? 'none' : 'block';
+      toggleEl.textContent = collapsed ? 'Abrir' : 'Contraer';
+      toggleEl.setAttribute('aria-label', collapsed ? 'Abrir panel' : 'Contraer panel');
+      toggleEl.setAttribute('aria-expanded', String(!collapsed));
+      toggleEl.title = collapsed ? 'Mostrar el contenido del panel' : 'Ocultar el contenido sin borrar borradores';
+    };
     toggleEl.addEventListener('click', () => {
       collapsed = !collapsed;
-      bodyEl.style.display = collapsed ? 'none' : 'block';
-      toggleEl.textContent = collapsed ? '▲' : '▼';
+      showBody();
+    });
+    expandEl.addEventListener('click', () => {
+      expanded = !expanded;
+      panel.classList.toggle('expanded', expanded);
+      expandEl.textContent = expanded ? 'Reducir' : 'Ampliar';
+      expandEl.setAttribute('aria-label', expanded ? 'Reducir panel' : 'Ampliar panel');
+      expandEl.setAttribute('aria-pressed', String(expanded));
+      expandEl.title = expanded ? 'Volver al tamaño y posición anteriores' : 'Ampliar el panel dentro de la ventana';
+      if (expanded) { collapsed = false; showBody(); }
     });
 
     let drag = null;
     headerEl.addEventListener('pointerdown', (e) => {
-      if (e.target === toggleEl) return;
+      if (expanded || e.target.closest('button')) return;
       const r = panel.getBoundingClientRect();
       drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
       headerEl.setPointerCapture(e.pointerId);
@@ -2256,30 +2489,30 @@
       try {
         const files = (await listFiles()).filter((file) => !isInternalPath(file.path));
         if (fileDialog.style.display === 'block') populateShareFiles(files);
-        if (!files.length) filesEl.append(h('li', { style: 'color:#71717a' }, '(sin archivos de usuario)'));
+        if (!files.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, 'Tu disco está vacío. Usa Explorar / Importar archivos para empezar.'));
         for (const f of files.slice(0, 50)) {
           filesEl.append(h('li', {},
-            h('span', { style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, f.path),
+            h('span', { title: f.path, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, f.path),
             h('span', { style: 'color:#a1a1aa' }, fmtBytes(f.size)),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Editar ${f.path}`,
-              style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
+              class: 'btn btn-secondary', 'aria-label': `Editar ${f.path}`, title: 'Editar localmente y revisar el diff antes de guardar',
+              style: 'padding:2px 6px; font-size:10px;',
               onclick: () => openCodeEditor(f.path)
             }, 'Editar'),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Ejecutar ${f.path}`,
+              class: 'btn btn-secondary', 'aria-label': `Ejecutar ${f.path}`, title: 'Abrir HTML estático o ejecutar consola JS aislada, con confirmación',
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
               onclick: () => runFromExplorer(f.path)
             }, 'Ejecutar'),
             h('button', {
-              class: 'btn btn-secondary', 'aria-label': `Descargar ${f.path}`,
+              class: 'btn btn-secondary', 'aria-label': `Descargar ${f.path}`, title: 'Guardar los bytes originales en la PC, sin enviarlos al chat',
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
               onclick: () => downloadUserFile(f.path)
             }, 'Descargar'),
             h('button', {
               class: 'btn btn-secondary',
               style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
-              'aria-label': `Eliminar ${f.path}`,
+              'aria-label': `Eliminar ${f.path}`, title: 'Borrar este archivo tras confirmar; sin deshacer automático',
               onclick: () => deleteUserFiles(f.path)
             }, 'Eliminar')
           ));
@@ -2288,9 +2521,20 @@
       } catch (e) { panelLog(`❌ ${e.message}`, 'err'); }
     }
 
+    const updateState = () => {
+      stateEl.textContent = busy ? 'Operación en curso' : editorOpen ? 'Editor abierto' : 'Listo · local';
+      panel.setAttribute('aria-busy', String(busy));
+      for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog]) button.disabled = busy;
+    };
+    updateState();
+    try { if (localStorage.getItem(CFG.WELCOME_KEY) !== 'seen') welcome.style.display = 'block'; }
+    catch (e) {
+      welcome.style.display = 'block';
+      panelLog(`No se pudo leer la preferencia de bienvenida: ${e.message}`, 'err');
+    }
     refresh();
     panelLog(`Panel Soberano v${CFG.VERSION} activo. 100% local por defecto.`, 'info');
-    return { log: panelLog, refresh };
+    return { log: panelLog, refresh, updateState };
   }
 
   // ============================================================
@@ -2305,6 +2549,7 @@
       if (!body) throw new Error('no se encontró document.body; no se puede montar el panel');
       ui = buildPanel();
       installInterceptors();
+      installChatCodeActions();
     } catch (e) {
       console.error('[DV] Error de arranque:', e);
     }
