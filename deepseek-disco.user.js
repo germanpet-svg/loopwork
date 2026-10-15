@@ -3,7 +3,7 @@
 // @name:en      DeepSeek Virtual Disk (Dual-Channel OPFS + Git)
 // @name:zh-CN   DeepSeek 虚拟磁盘（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.5.32
+// @version      1.5.35
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -21,7 +21,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.5.32',
+    VERSION: '1.5.35',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 256 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -1198,9 +1198,9 @@
       "Local version control (no remote)",
       "本地版本控制（无远程仓库）"
     ],
-    "uso: git <init|status|add|commit|log|diff|show|branch|checkout>": [
-      "usage: git <init|status|add|commit|log|diff|show|branch|checkout>",
-      "用法：git <init|status|add|commit|log|diff|show|branch|checkout>"
+    "uso: git <init|status|add|commit|log|diff|show|restore|branch|checkout>": [
+      "usage: git <init|status|add|commit|log|diff|show|restore|branch|checkout>",
+      "用法：git <init|status|add|commit|log|diff|show|restore|branch|checkout>"
     ],
     "no hay repositorio Git. Usa: git init": [
       "no Git repository. Use: git init",
@@ -2176,6 +2176,131 @@
     ]
   };
   const EXTRA_I18N = {
+    'expresión regular no válida: {0}': ['invalid regular expression: {0}', '无效的正则表达式：{0}'],
+    'Texto plano': ['Plain text', '纯文本'],
+    'Guardar': ['Save', '保存'],
+    'Cambios sin guardar': ['Unsaved changes', '未保存的更改'],
+    'Ln {0}, Col {1}': ['Ln {0}, Col {1}', '第 {0} 行，第 {1} 列'],
+    ' ({0} seleccionados)': [' ({0} selected)', ' (已选 {0})'],
+    '{0} líneas · {1} · {2} · {3} · UTF-8': ['{0} lines · {1} · {2} · {3} · UTF-8', '{0} 行 · {1} · {2} · {3} · UTF-8'],
+    'Buscar': ['Find', '查找'],
+    'Reemplazar': ['Replace', '替换'],
+    'regex no válida': ['invalid regex', '正则无效'],
+    '{0} resultados': ['{0} results', '{0} 个结果'],
+    'Sin resultados': ['No results', '无结果'],
+    '1 reemplazo en línea {0}. Revisa el diff.': ['1 replacement on line {0}. Review the diff.', '已在第 {0} 行替换 1 处。请检查差异。'],
+    'Coincidir mayúsculas y minúsculas': ['Match case', '区分大小写'],
+    'Usar expresión regular': ['Use regular expression', '使用正则表达式'],
+    'Coincidencia anterior (Shift+Enter)': ['Previous match (Shift+Enter)', '上一个匹配（Shift+Enter）'],
+    'Coincidencia siguiente (Enter)': ['Next match (Enter)', '下一个匹配（Enter）'],
+    'Cerrar búsqueda (Esc)': ['Close search (Esc)', '关闭搜索（Esc）'],
+    'Número de línea': ['Line number', '行号'],
+    'Ir a la línea': ['Go to line', '转到行'],
+    'Escribe un número de línea válido.': ['Type a valid line number.', '请输入有效的行号。'],
+    'Línea {0} de {1}': ['Line {0} of {1}', '第 {0} 行，共 {1} 行'],
+    'Ir': ['Go', '转到'],
+    'Ctrl+S: guardar (muestra el diff y confirma)': ['Ctrl+S: save (shows the diff and asks to confirm)', 'Ctrl+S：保存（显示差异并确认）'],
+    'Ctrl+F / Ctrl+H: buscar / reemplazar': ['Ctrl+F / Ctrl+H: find / replace', 'Ctrl+F / Ctrl+H：查找 / 替换'],
+    'Ctrl+G: ir a la línea': ['Ctrl+G: go to line', 'Ctrl+G：转到行'],
+    'Ctrl+/: comentar o descomentar': ['Ctrl+/: toggle comment', 'Ctrl+/：注释或取消注释'],
+    'Alt+↑/↓: mover línea · Shift+Alt+↑/↓: duplicar': ['Alt+↑/↓: move line · Shift+Alt+↑/↓: duplicate', 'Alt+↑/↓：移动行 · Shift+Alt+↑/↓：复制行'],
+    'Ctrl+Shift+K: borrar línea · Tab / Shift+Tab: sangrar': ['Ctrl+Shift+K: delete line · Tab / Shift+Tab: indent', 'Ctrl+Shift+K：删除行 · Tab / Shift+Tab：缩进'],
+    'Shift+Alt+F: formatear JSON · Esc: cerrar': ['Shift+Alt+F: format JSON · Esc: close', 'Shift+Alt+F：格式化 JSON · Esc：关闭'],
+    'Atajos de teclado': ['Keyboard shortcuts', '键盘快捷键'],
+    'Vista previa en vivo del borrador · sin scripts ni red': ['Live preview of the draft · no scripts or network', '草稿实时预览 · 无脚本、无网络'],
+    'Vista previa en vivo': ['Live preview', '实时预览'],
+    'Vista previa': ['Preview', '预览'],
+    'Abrir el archivo guardado en una pestaña que se actualiza al guardar': ['Open the saved file in a tab that refreshes on save', '在标签页中打开已保存的文件，保存时自动刷新'],
+    'Pestaña': ['Tab', '标签页'],
+    'Guarda el archivo antes de abrirlo en una pestaña.': ['Save the file before opening it in a tab.', '请先保存文件再在标签页中打开。'],
+    'Formatear solo está disponible para JSON.': ['Formatting is only available for JSON.', '仅 JSON 支持格式化。'],
+    'JSON formateado. Revisa el diff.': ['JSON formatted. Review the diff.', 'JSON 已格式化。请检查差异。'],
+    'JSON no válido: {0}': ['Invalid JSON: {0}', '无效的 JSON：{0}'],
+    'Código copiado al portapapeles.': ['Code copied to the clipboard.', '代码已复制到剪贴板。'],
+    'El navegador bloqueó el portapapeles; el código quedó seleccionado, usa Ctrl+C.': ['The browser blocked the clipboard; the code is selected, use Ctrl+C.', '浏览器阻止了剪贴板；代码已选中，请使用 Ctrl+C。'],
+    'Pegado desde el portapapeles.': ['Pasted from the clipboard.', '已从剪贴板粘贴。'],
+    'El navegador bloqueó el portapapeles; usa Ctrl+V.': ['The browser blocked the clipboard; use Ctrl+V.', '浏览器阻止了剪贴板；请使用 Ctrl+V。'],
+    'Borrador descargado: {0}. El disco virtual no cambia.': ['Draft downloaded: {0}. The virtual disk is unchanged.', '草稿已下载：{0}。虚拟磁盘未更改。'],
+    'Tamaño de letra: {0}px': ['Font size: {0}px', '字号：{0}px'],
+    'Este tipo de archivo no admite comentarios.': ['This file type does not support comments.', '此文件类型不支持注释。'],
+    'Guardado y verificado · SHA256 {0} · puedes seguir editando': ['Saved and verified · SHA256 {0} · you can keep editing', '已保存并验证 · SHA256 {0} · 可以继续编辑'],
+    'Reducir tamaño de letra': ['Decrease font size', '减小字号'],
+    'Aumentar tamaño de letra': ['Increase font size', '增大字号'],
+    'Buscar y reemplazar (Ctrl+F)': ['Find and replace (Ctrl+F)', '查找和替换（Ctrl+F）'],
+    'Ir a la línea (Ctrl+G)': ['Go to line (Ctrl+G)', '转到行（Ctrl+G）'],
+    'Ir a línea': ['Go to line', '转到行'],
+    'Copiar': ['Copy', '复制'],
+    'Pegar': ['Paste', '粘贴'],
+    'Descargar el borrador sin guardarlo en el disco virtual': ['Download the draft without saving it to the virtual disk', '下载草稿，不保存到虚拟磁盘'],
+    'Formatear': ['Format', '格式化'],
+    'Editor abierto': ['Editor open', '编辑器已打开'],
+    'escribe un nombre de archivo': ['type a file name', '请输入文件名'],
+    'Abrir editor': ['Open editor', '打开编辑器'],
+    'ya existe: {0}; no se sobrescribió': ['already exists: {0}; not overwritten', '已存在：{0}；未覆盖'],
+    '{0} Copia verificada conservada para recuperación (transacción {1}).': ['{0} Verified copy kept for recovery (transaction {1}).', '{0} 已保留经过验证的副本以便恢复（事务 {1}）。'],
+    'entrada de registro no válida': ['invalid journal entry', '无效的日志条目'],
+    'Transacción {0} descartada: {1}': ['Transaction {0} discarded: {1}', '事务 {0} 已丢弃：{1}'],
+    'Transacción {0} pendiente: {1}': ['Transaction {0} still pending: {1}', '事务 {0} 仍待处理：{1}'],
+    'Completada: {0} ya tenía la versión nueva verificada.': ['Completed: {0} already had the verified new version.', '已完成：{0} 已是经过验证的新版本。'],
+    'Revertida: {0} conserva la versión anterior intacta.': ['Rolled back: {0} keeps its previous version intact.', '已回滚：{0} 保持原版本不变。'],
+    'Descartada: {0}; la copia temporal no era válida y el archivo no se tocó.': ['Discarded: {0}; the temporary copy was invalid and the file was not touched.', '已丢弃：{0}；临时副本无效，文件未被改动。'],
+    'recuperación: no se pudo verificar {0}; temporal conservado': ['recovery: could not verify {0}; temporary file kept', '恢复：无法验证 {0}；已保留临时文件'],
+    'Conflicto: {0} cambió por otra vía; no se sobrescribió. Versión aprobada guardada en {1}.': ['Conflict: {0} was changed by another route; not overwritten. Approved version saved to {1}.', '冲突：{0} 已通过其他方式更改；未覆盖。已批准的版本保存到 {1}。'],
+    'Temporales huérfanos eliminados: {0}.': ['Orphan temporary files removed: {0}.', '已删除孤立临时文件：{0}。'],
+    'Transacciones recientes en curso (otra pestaña): {0}; se revisarán más tarde.': ['Recent transactions in progress (another tab): {0}; they will be checked later.', '进行中的近期事务（其他标签页）：{0}；稍后再检查。'],
+    'Sin transacciones interrumpidas ni temporales huérfanos.': ['No interrupted transactions or orphan temporary files.', '没有中断的事务或孤立的临时文件。'],
+    'uso: recover': ['usage: recover', '用法：recover'],
+    'Revisa escrituras interrumpidas: completa, revierte o guarda copia; limpia temporales huérfanos': ['Checks interrupted writes: completes, rolls back or keeps a copy; removes orphan temporary files', '检查中断的写入：完成、回滚或保留副本；清理孤立临时文件'],
+    'Recuperación al iniciar:\n{0}': ['Startup recovery:\n{0}', '启动恢复：\n{0}'],
+    'Recuperación al iniciar no completada: {0}. Usa recover para reintentar.': ['Startup recovery not completed: {0}. Use recover to retry.', '启动恢复未完成：{0}。使用 recover 重试。'],
+    'uso: edit <archivo>': ['usage: edit <file>', '用法：edit <文件>'],
+    'Abre el editor; si el archivo no existe, empieza uno en blanco para pegar código': ['Opens the editor; if the file does not exist, starts a blank one to paste code', '打开编辑器；如果文件不存在，则新建空白文件以粘贴代码'],
+    'Archivo nuevo: {0}. Pega o escribe el código y pulsa Crear archivo; no existe hasta guardarlo.': ['New file: {0}. Paste or type the code and click Create file; it does not exist until saved.', '新文件：{0}。粘贴或输入代码后点击“创建文件”；保存前文件不存在。'],
+    'Editor abierto: {0}': ['Editor opened: {0}', '已打开编辑器：{0}'],
+    'ruta no permitida para el editor': ['path not allowed for the editor', '编辑器不允许此路径'],
+    'escribe o pega contenido antes de crear el archivo': ['type or paste content before creating the file', '创建文件前请输入或粘贴内容'],
+    'Crear archivo': ['Create file', '创建文件'],
+    'Archivo nuevo · aún no existe en el disco': ['New file · not on disk yet', '新文件 · 尚未保存到磁盘'],
+    'Editor: creado y verificado {0} (SHA256 {1}). Usa Ejecutar para verlo y Guardar en Git para versionarlo.': ['Editor: created and verified {0} (SHA256 {1}). Use Run to view it and Save to Git to version it.', '编辑器：已创建并验证 {0}（SHA256 {1}）。使用“运行”查看，使用“保存到 Git”进行版本管理。'],
+    'Nuevo archivo · {0}': ['New file · {0}', '新文件 · {0}'],
+    'Archivo nuevo {0} · pega o escribe el código · Ctrl+S crea · Tab sangra · Esc cierra': ['New file {0} · paste or type the code · Ctrl+S creates · Tab indents · Esc closes', '新文件 {0} · 粘贴或输入代码 · Ctrl+S 创建 · Tab 缩进 · Esc 关闭'],
+    'SHA256 original: {0} · UTF-8 · Ctrl+S guarda (muestra el diff y confirma) · Tab sangra · Esc cierra': ['Original SHA256: {0} · UTF-8 · Ctrl+S saves (shows the diff and asks to confirm) · Tab indents · Esc closes', '原始 SHA256：{0} · UTF-8 · Ctrl+S 保存（显示差异并确认）· Tab 缩进 · Esc 关闭'],
+    'Nombre del archivo (puede incluir carpeta, ej. web/index.html):': ['File name (may include a folder, e.g. web/index.html):', '文件名（可包含文件夹，例如 web/index.html）：'],
+    '{0} ya existe; se abre para editarlo.': ['{0} already exists; opening it for editing.', '{0} 已存在；将打开进行编辑。'],
+    'Crear un archivo en blanco y abrirlo en el editor para pegar código': ['Create a blank file and open it in the editor to paste code', '新建空白文件并在编辑器中打开以粘贴代码'],
+    'Nuevo archivo…': ['New file…', '新建文件…'],
+    'Tu disco está vacío. Usa Nuevo archivo… para escribir o pegar código, o Explorar / Importar archivos.': ['Your disk is empty. Use New file… to type or paste code, or Browse / Import files.', '磁盘为空。使用“新建文件…”输入或粘贴代码，或使用“浏览 / 导入文件”。'],
+    'Crea un archivo nuevo, importa uno o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.': ['Create a new file, import one or prepare an example. Opening this guide runs and shares nothing.', '新建文件、导入文件或准备示例。打开本指南不会运行或分享任何内容。'],
+    '  Nuevo archivo… o edit pagina.html: editor en blanco; pega el código y pulsa Crear archivo (nunca sobrescribe).': ['  New file… or edit page.html: blank editor; paste the code and click Create file (never overwrites).', '  “新建文件…”或 edit page.html：空白编辑器；粘贴代码后点击“创建文件”（绝不覆盖）。'],
+    '  Editor: Ctrl+S o 💾 Guardar muestran el diff y piden confirmación; Tab sangra (Shift+Tab sale); Esc cierra.': ['  Editor: Ctrl+S or 💾 Save shows the diff and asks to confirm; Tab indents (Shift+Tab leaves); Esc closes.', '  编辑器：Ctrl+S 或 💾 保存 会显示差异并请求确认；Tab 缩进（Shift+Tab 移出）；Esc 关闭。'],
+    '  Escrituras con registro PREPARED/COMMITTED; al abrir DeepSeek se recuperan las interrumpidas (también: recover).': ['  Writes are journaled PREPARED/COMMITTED; interrupted ones are recovered when DeepSeek opens (also: recover).', '  写入以 PREPARED/COMMITTED 记录；打开 DeepSeek 时恢复中断的写入（也可用 recover）。'],
+    'uso: git restore [--staged] [--source <ref>] <archivo>': ['usage: git restore [--staged] [--source <ref>] <file>', '用法：git restore [--staged] [--source <ref>] <文件>'],
+    'git restore: raíz y metadatos internos no permitidos': ['git restore: root and internal metadata are not allowed', 'git restore：不允许根目录和内部元数据'],
+    'git restore: {0} no está en staging ni en {1}': ['git restore: {0} is not in staging or in {1}', 'git restore：{0} 不在暂存区，也不在 {1} 中'],
+    'Staging restaurado: {0} desde {1}. Tu archivo no cambió.': ['Staging restored: {0} from {1}. Your file was not changed.', '暂存区已恢复：{0}，来源 {1}。你的文件未更改。'],
+    'git restore: {0} no existe en {1}; para archivos nuevos usa rm': ['git restore: {0} does not exist in {1}; use rm for new files', 'git restore：{0} 在 {1} 中不存在；新文件请使用 rm'],
+    'git restore: {0} no está en staging; usa --source HEAD o rm para archivos nuevos': ['git restore: {0} is not in staging; use --source HEAD, or rm for new files', 'git restore：{0} 不在暂存区；请使用 --source HEAD，新文件请使用 rm'],
+    'Sin cambios: {0} ya coincide con {1}.': ['No changes: {0} already matches {1}.', '无更改：{0} 已与 {1} 一致。'],
+    'Antes de git restore desde {0}': ['Before git restore from {0}', 'git restore（来源 {0}）之前'],
+    'Restauración Git preparada: {0} desde {1}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.':
+      ['Git restore prepared: {0} from {1}. Review the diff and confirm Apply; a checkpoint will be created before saving.', 'Git 恢复已准备：{0}，来源 {1}。请检查差异并确认“应用”；保存前将创建检查点。'],
+    '¿Restaurar "{0}" desde {1} ({2} B)?\n{3}\nSHA256: {4}': ['Restore "{0}" from {1} ({2} B)?\n{3}\nSHA256: {4}', '要从 {1} 恢复“{0}”（{2} B）吗？\n{3}\nSHA256：{4}'],
+    'git restore: verificación fallida{0}': ['git restore: verification failed{0}', 'git restore：验证失败{0}'],
+    '; checkpoint previo {0} conservado': ['; previous checkpoint {0} kept', '；已保留之前的检查点 {0}'],
+    'Restaurado desde {0} y verificado: {1}\nSHA256: {2}{3}\nNo se hizo commit.': ['Restored from {0} and verified: {1}\nSHA256: {2}{3}\nNo commit was made.', '已从 {0} 恢复并验证：{1}\nSHA256：{2}{3}\n未创建提交。'],
+    'Revertir': ['Revert', '还原'],
+    'Revertir…': ['Revert…', '还原…'],
+    'Revertir {0} a HEAD': ['Revert {0} to HEAD', '将 {0} 还原到 HEAD'],
+    'Volver a la versión del último commit: muestra el diff y crea checkpoint antes de escribir': ['Go back to the last commit version: shows the diff and creates a checkpoint before writing', '回到上次提交的版本：写入前显示差异并创建检查点'],
+    'Elige en la lista qué archivo volver a la versión del último commit': ['Choose from the list which file to return to the last commit version', '从列表中选择要回到上次提交版本的文件'],
+    'Pulsa Revertir junto al archivo que quieres volver a la versión del último commit. Verás el diff antes de escribir y se creará un checkpoint.':
+      ['Click Revert next to the file you want to return to the last commit version. You will see the diff before writing, and a checkpoint will be created.', '点击要回到上次提交版本的文件旁的“还原”。写入前会显示差异，并创建检查点。'],
+    '  git restore archivo: vuelve a la versión del staging; --source HEAD (o rama/SHA) usa un commit.':
+      ['  git restore file: returns to the staged version; --source HEAD (or branch/SHA) uses a commit.', '  git restore 文件：恢复到暂存区版本；--source HEAD（或分支/SHA）使用某次提交。'],
+    '  git restore muestra diff y crea checkpoint antes de escribir; --staged solo saca del staging.':
+      ['  git restore shows a diff and creates a checkpoint before writing; --staged only unstages.', '  git restore 写入前显示差异并创建检查点；--staged 仅取消暂存。'],
+    '  Botón Revertir…: elige un archivo y vuelve a la versión del último commit, sin escribir comandos.':
+      ['  Revert… button: pick a file and return it to the last commit version without typing commands.', '  “还原…”按钮：选择文件并回到上次提交的版本，无需输入命令。'],
     'Idioma': ['Language', '语言'],
     'Acerca de': ['About', '关于'],
     'Acerca de este proyecto': ['About this project', '关于本项目'],
@@ -2237,6 +2362,16 @@
     'Reducir': ['Reduce', '缩小'],
     'Contraer': ['Collapse', '收起'],
     'Reducir panel': ['Reduce panel', '缩小面板'],
+
+  // Editor: búsqueda, reemplazo y Ctrl+D
+  'Descargar': ['Download', '下载'],
+  'Reemplazar todos': ['Replace all', '全部替换'],
+  'Sin coincidencias.': ['No matches.', '没有匹配项。'],
+  'Coincidencia en línea {0}': ['Match on line {0}', '在第 {0} 行找到匹配项'],
+  'Siguiente coincidencia en línea {0}': ['Next occurrence on line {0}', '下一个匹配项在第 {0} 行'],
+  'No hay más coincidencias.': ['No more occurrences.', '没有更多匹配项。'],
+  'Mostrar u ocultar reemplazar (Ctrl+H)': ['Toggle replace (Ctrl+H)', '显示或隐藏替换（Ctrl+H）'],
+  'Ctrl+D: seleccionar la siguiente coincidencia': ['Ctrl+D: select next occurrence', 'Ctrl+D：选择下一个匹配项'],
   };
   const LANGUAGES = ['es', 'en', 'zh-CN'];
   let language = 'es';
@@ -2573,62 +2708,165 @@
     return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async function appendJournal(entry) {
+  async function appendJournal(entry, { required = false } = {}) {
     const line = JSON.stringify({ ...entry, timestamp: new Date().toISOString() }) + '\n';
     try {
       const w = await openWriter('.dv/journal.jsonl', { append: true });
       await w.write(line);
       await w.close();
-    } catch (e) { uiLog(t`Auditoría no guardada: ${e.message}`, 'err'); }
+      return true;
+    } catch (e) {
+      if (required) throw new Error(t`Auditoría no guardada: ${e.message}`);
+      uiLog(t`Auditoría no guardada: ${e.message}`, 'err');
+      return false;
+    }
   }
 
-  async function atomicWrite(targetPath, newContent, { expectedHash = null } = {}) {
-    const enc = new TextEncoder();
-    const candidateBytes = typeof newContent === 'string' ? enc.encode(newContent) : newContent;
+  // Other DeepSeek tabs share the same OPFS; Web Locks serialize their writes when available.
+  const TX_STALE_MS = 2 * 60 * 1000;
+  function withWriteLock(fn) {
+    const locks = globalThis.navigator?.locks;
+    return locks?.request ? locks.request('dv-atomic-write', () => fn()) : fn();
+  }
+
+  async function pathHash(path) {
+    const handle = await getHandle(path);
+    if (!handle) return null;
+    if (handle.kind !== 'file') return 'directory';
+    return computeSha256(new Uint8Array(await (await handle.getFile()).arrayBuffer()));
+  }
+
+  async function atomicWrite(targetPath, newContent, { expectedHash = null, mustNotExist = false } = {}) {
+    const path = splitPath(targetPath).join('/');
+    if (!path) throw new Error(t('ruta no válida'));
+    const candidateBytes = typeof newContent === 'string' ? new TextEncoder().encode(newContent) : newContent;
     const candidateHash = await computeSha256(candidateBytes);
+    return withWriteLock(async () => {
+      const checkTarget = async (prevHash) => {
+        const current = await pathHash(path);
+        if (current === 'directory') throw new Error(t`es una carpeta: ${path}`);
+        if (mustNotExist && current !== null) throw new Error(t`ya existe: ${path}; no se sobrescribió`);
+        if (expectedHash !== null && current !== expectedHash) throw new Error(t('archivo cambió durante la preparación; no se sobrescribió'));
+        if (prevHash !== undefined && current !== prevHash) throw new Error(t('archivo cambió durante la preparación; no se sobrescribió'));
+        return current;
+      };
+      const prevHash = await checkTarget();
+      const txId = crypto.randomUUID();
+      const tmpPath = `.dv_tmp/${txId}.tmp`;
+      const discardTmp = async () => { try { await removePath(tmpPath, false); } catch { /* */ } };
 
-    let prevHash = null;
-    try {
-      const h = await getHandle(targetPath);
-      if (h && h.kind === 'file') {
-        const file = await h.getFile();
-        prevHash = await computeSha256(await file.arrayBuffer());
+      try {
+        await writeBytes(tmpPath, candidateBytes);
+        if (await pathHash(tmpPath) !== candidateHash) throw new Error(t('Integridad de temporal comprometida.'));
+        await appendJournal({ type: 'atomic_write', txId, path, tmp: tmpPath, prevHash, newHash: candidateHash,
+          bytes: candidateBytes.length, status: 'PREPARED' }, { required: true });
+      } catch (e) { await discardTmp(); throw e; }
+
+      let touched = false;
+      try {
+        await checkTarget(prevHash);
+        touched = true;
+        await writeBytes(path, candidateBytes);
+        if (await pathHash(path) !== candidateHash) throw new Error(t('Verificación post-escritura fallida.'));
+      } catch (e) {
+        let current;
+        try { current = await pathHash(path); } catch { current = undefined; }
+        if (!touched || current === prevHash) {
+          await appendJournal({ type: 'atomic_write', txId, path, prevHash, newHash: candidateHash, status: 'ABORTED', error: e.message });
+          await discardTmp();
+          throw e;
+        }
+        throw new Error(t`${e.message} Copia verificada conservada para recuperación (transacción ${txId.slice(0, 8)}).`);
       }
-    } catch {}
 
-    const tmpPath = `.dv_tmp/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.tmp`;
-    await writeBytes(tmpPath, candidateBytes);
-
-    const writtenTmp = await (await requireFile(tmpPath)).getFile();
-    const writtenTmpHash = await computeSha256(await writtenTmp.arrayBuffer());
-    if (writtenTmpHash !== candidateHash) {
-      await removePath(tmpPath, false);
-      throw new Error(t('Integridad de temporal comprometida.'));
-    }
-
-    if (expectedHash !== null && (await editorSnapshot(targetPath)).hash !== expectedHash) {
-      await removePath(tmpPath, false);
-      throw new Error(t('archivo cambió durante la preparación; no se sobrescribió'));
-    }
-    await writeBytes(targetPath, candidateBytes);
-    await removePath(tmpPath, false);
-
-    const finalFile = await (await requireFile(targetPath)).getFile();
-    const finalHash = await computeSha256(await finalFile.arrayBuffer());
-    if (finalHash !== candidateHash) {
-      throw new Error(t('Verificación post-escritura fallida.'));
-    }
-
-    await appendJournal({
-      type: 'atomic_write',
-      path: targetPath,
-      prevHash,
-      newHash: finalHash,
-      bytes: candidateBytes.length,
-      status: 'COMMITTED',
+      if (await appendJournal({ type: 'atomic_write', txId, path, prevHash, newHash: candidateHash,
+        bytes: candidateBytes.length, status: 'COMMITTED' })) await discardTmp();
+      return { hash: candidateHash, bytes: candidateBytes.length, txId };
     });
+  }
 
-    return { hash: finalHash, bytes: candidateBytes.length };
+  async function readJournalEntries() {
+    const handle = await getHandle('.dv/journal.jsonl');
+    if (!handle || handle.kind !== 'file') return [];
+    const entries = [];
+    for (const line of (await (await handle.getFile()).text()).split('\n')) {
+      if (!line.trim()) continue;
+      try { entries.push(JSON.parse(line)); } catch { /* interrupted append */ }
+    }
+    return entries;
+  }
+
+  async function recoverTransactions({ now = Date.now(), staleMs = TX_STALE_MS } = {}) {
+    return withWriteLock(async () => {
+      const report = { completed: 0, aborted: 0, conflicts: 0, cleaned: 0, waiting: 0, messages: [] };
+      const pending = new Map();
+      for (const entry of await readJournalEntries()) {
+        if (entry?.type !== 'atomic_write' || typeof entry.txId !== 'string') continue;
+        if (entry.status === 'PREPARED') pending.set(entry.txId, entry); else pending.delete(entry.txId);
+      }
+      const young = new Set();
+      for (const tx of pending.values()) {
+        const age = now - Date.parse(tx.timestamp);
+        const tmpOk = typeof tx.tmp === 'string' && /^\.dv_tmp\/[\w-]+\.tmp$/.test(tx.tmp);
+        if (Number.isFinite(age) && age < staleMs) { if (tmpOk) young.add(tx.tmp); report.waiting++; continue; }
+        try { await recoverOne(tx, tmpOk); }
+        catch (e) {
+          if (tmpOk) young.add(tx.tmp);
+          report.messages.push(t`Transacción ${tx.txId.slice(0, 8)} pendiente: ${e.message}`);
+        }
+      }
+      async function recoverOne(tx, tmpOk) {
+        const close = (status, extra = {}) => appendJournal({ type: 'atomic_write', txId: tx.txId, path: tx.path,
+          prevHash: tx.prevHash, newHash: tx.newHash, status, recovered: true, ...extra }, { required: true });
+        let target;
+        try {
+          if (!tmpOk || isInternalPath(tx.path) || !splitPath(tx.path).length) throw new Error(t('entrada de registro no válida'));
+          target = await pathHash(tx.path);
+        } catch (e) {
+          await close('ABORTED', { error: e.message });
+          report.aborted++; report.messages.push(t`Transacción ${tx.txId.slice(0, 8)} descartada: ${e.message}`);
+          return;
+        }
+        const tmp = await pathHash(tx.tmp);
+        const removeTmp = async () => { if (tmp !== null) try { await removePath(tx.tmp, false); } catch { /* */ } };
+        if (target === tx.newHash) {
+          await close('COMMITTED'); await removeTmp();
+          report.completed++; report.messages.push(t`Completada: ${tx.path} ya tenía la versión nueva verificada.`);
+        } else if (target === tx.prevHash || tmp !== tx.newHash) {
+          await close('ABORTED'); await removeTmp();
+          report.aborted++;
+          report.messages.push(target === tx.prevHash ? t`Revertida: ${tx.path} conserva la versión anterior intacta.` :
+            t`Descartada: ${tx.path}; la copia temporal no era válida y el archivo no se tocó.`);
+        } else {
+          // The file differs from both versions; never overwrite it. Keep the approved bytes beside it.
+          let copy = `${tx.path}.recuperado-${tx.txId.slice(0, 8)}`;
+          if (await getHandle(copy)) copy = `${copy}-${now}`;
+          const bytes = new Uint8Array(await (await (await requireFile(tx.tmp)).getFile()).arrayBuffer());
+          await writeBytes(copy, bytes);
+          if (await pathHash(copy) !== tx.newHash) throw new Error(t`recuperación: no se pudo verificar ${copy}; temporal conservado`);
+          await close('CONFLICT', { recoveredPath: copy }); await removeTmp();
+          report.conflicts++;
+          report.messages.push(t`Conflicto: ${tx.path} cambió por otra vía; no se sobrescribió. Versión aprobada guardada en ${copy}.`);
+        }
+      }
+      const tmpDir = await getHandle('.dv_tmp');
+      if (tmpDir?.kind === 'directory') {
+        for await (const [name, handle] of tmpDir.entries()) {
+          if (handle.kind !== 'file' || young.has(`.dv_tmp/${name}`)) continue;
+          const file = await handle.getFile();
+          if (now - file.lastModified < staleMs) continue;
+          try { await tmpDir.removeEntry(name); report.cleaned++; } catch { /* */ }
+        }
+      }
+      return report;
+    });
+  }
+
+  function formatRecovery(report) {
+    const lines = [...report.messages];
+    if (report.cleaned) lines.push(t`Temporales huérfanos eliminados: ${report.cleaned}.`);
+    if (report.waiting) lines.push(t`Transacciones recientes en curso (otra pestaña): ${report.waiting}; se revisarán más tarde.`);
+    return lines.length ? lines.join('\n') : t('Sin transacciones interrumpidas ni temporales huérfanos.');
   }
 
   // ============================================================
@@ -2936,6 +3174,80 @@
     catch (e) { if (e.name === 'TypeError') throw new Error(t('git show requiere texto UTF-8 válido')); throw e; }
   }
 
+  async function gitRestore(git, fs, args, ctx) {
+    const { flags, pos } = parseArgs(args, { staged: 'b', source: 'v' });
+    if (pos.length !== 1) throw new Error(t('uso: git restore [--staged] [--source <ref>] <archivo>'));
+    const parts = splitPath(pos[0]);
+    if (!parts.length || isInternalPath(pos[0])) throw new Error(t('git restore: raíz y metadatos internos no permitidos'));
+    const path = parts.join('/');
+    if (flags.source !== undefined && (!flags.source || flags.source.startsWith('-'))) {
+      throw new Error(t('referencia Git no válida; usa HEAD, nombre de referencia o SHA completo'));
+    }
+    const staged = (await gitBlobOids(git, fs, git.STAGE())).find(([p]) => p === path);
+
+    if (flags.staged) {
+      const sourceOid = flags.source ? await git.resolveRef({ fs, dir: '.', ref: flags.source }) : await gitHeadOid(git, fs);
+      let inSource = false;
+      if (sourceOid) {
+        try { await git.readBlob({ fs, dir: '.', oid: sourceOid, filepath: path }); inSource = true; }
+        catch (e) { if (e.code !== 'NotFoundError') throw e; }
+      }
+      if (!staged && !inSource) throw new Error(t`git restore: ${path} no está en staging ni en ${flags.source || 'HEAD'}`);
+      if (sourceOid) await git.resetIndex({ fs, dir: '.', filepath: path, ref: sourceOid });
+      else await git.remove({ fs, dir: '.', filepath: path });
+      return t`Staging restaurado: ${path} desde ${flags.source || 'HEAD'}. Tu archivo no cambió.`;
+    }
+
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de restaurar'));
+    let bytes;
+    const label = flags.source || 'staging';
+    if (flags.source) {
+      const oid = await git.resolveRef({ fs, dir: '.', ref: flags.source });
+      try { ({ blob: bytes } = await git.readBlob({ fs, dir: '.', oid, filepath: path })); }
+      catch (e) {
+        if (e.code === 'NotFoundError') throw new Error(t`git restore: ${path} no existe en ${flags.source}; para archivos nuevos usa rm`);
+        throw e;
+      }
+    } else {
+      if (!staged) throw new Error(t`git restore: ${path} no está en staging; usa --source HEAD o rm para archivos nuevos`);
+      ({ blob: bytes } = await git.readBlob({ fs, dir: '.', oid: staged[1] }));
+    }
+    bytes = new Uint8Array(bytes);
+    if (bytes.length > CFG.MAX_RUN_BYTES) throw new Error(t('checkpoint/restore: máximo 256 KB por archivo'));
+    const hash = await computeSha256(bytes);
+    const target = await getHandle(path);
+    if (target?.kind === 'directory') throw new Error(t('restore: destino es una carpeta'));
+    const current = target ? await fileSnapshot(path) : null;
+    if (current?.hash === hash) return t`Sin cambios: ${path} ya coincide con ${label}.`;
+    let text = null, original = null;
+    if (!bytes.includes(0) && current && !current.bytes.includes(0)) {
+      try {
+        const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+        text = decoder.decode(bytes);
+        original = decoder.decode(current.bytes);
+      } catch (e) { if (e.name !== 'TypeError') throw e; }
+    }
+    if (text !== null && original !== null) {
+      ctx.openEditor({ snapshot: { path, text: original, hash: current.hash }, candidate: text,
+        checkpointBeforeSave: true, checkpointLabel: t`Antes de git restore desde ${label}` });
+      return t`Restauración Git preparada: ${path} desde ${label}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.`;
+    }
+    if (!confirm(t`¿Restaurar "${path}" desde ${label} (${bytes.length} B)?\n${current ? t('Binario/no UTF-8: sin diff de texto. Se guardará checkpoint de la versión actual.') : t('Archivo ausente: se creará con los bytes guardados.')}\nSHA256: ${hash}`)) {
+      throw new Error(t('restauración cancelada; archivo intacto'));
+    }
+    const fresh = await getHandle(path);
+    if (current ? !fresh || (await fileSnapshot(path)).hash !== current.hash : fresh !== null) throw new Error(t('restore: destino cambió; no se sobrescribió'));
+    let backup = null;
+    if (current) {
+      backup = await createCheckpoint(path, t`Antes de git restore desde ${label}`);
+      uiLog(t`Checkpoint previo: ${backup.id}`, 'info');
+      if (backup.hash !== current.hash || (await fileSnapshot(path)).hash !== current.hash) throw new Error(t('restore: archivo cambió; copia previa conservada'));
+    }
+    await writeBytes(path, bytes);
+    if ((await fileSnapshot(path)).hash !== hash) throw new Error(t`git restore: verificación fallida${backup ? t`; checkpoint previo ${backup.id} conservado` : ''}`);
+    return t`Restaurado desde ${label} y verificado: ${path}\nSHA256: ${hash}${backup ? t`\nCheckpoint previo: ${backup.id}` : ''}\nNo se hizo commit.`;
+  }
+
   async function gitDiff(git, fs, args) {
     const { flags, pos } = parseArgs(args, { staged: 'b' });
     if (pos.length > 1) throw new Error(t('uso: git diff [--staged] [ref]'));
@@ -3080,9 +3392,12 @@
     return out;
   }
 
+  function quoteCommandPath(path) {
+    return path.split("'").map((part) => `'${part}'`).join(`"'"`);
+  }
+
   function runFromExplorer(path) {
-    const quotedPath = path.split("'").map((part) => `'${part}'`).join(`"'"`);
-    return handleExecution(`run ${quotedPath}`, { origin: 'panel', forceShare: false });
+    return handleExecution(`run ${quoteCommandPath(path)}`, { origin: 'panel', forceShare: false });
   }
 
   async function downloadUserFile(path) {
@@ -3214,6 +3529,22 @@
     try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
     catch (e) { if (e.name === 'TypeError') throw new Error(t('el editor requiere UTF-8 válido')); throw e; }
     return { path, text, hash: await computeSha256(bytes) };
+  }
+
+  async function editorTarget(input) {
+    const parts = splitPath(String(input ?? '').trim() || '.');
+    if (!parts.length || isInternalPath(parts.join('/'))) throw new Error(t('ruta no permitida para el editor'));
+    const path = parts.join('/');
+    const handle = await getHandle(path);
+    if (handle?.kind === 'directory') throw new Error(t`es una carpeta: ${path}`);
+    if (handle) { await editorSnapshot(path); return { path, create: false }; }
+    return { path, create: true };
+  }
+
+  async function newFileSnapshot(path) {
+    const target = await editorTarget(path);
+    if (!target.create) throw new Error(t`ya existe: ${target.path}; no se sobrescribió`);
+    return { path: target.path, text: '', hash: null, isNew: true };
   }
 
   function replaceEditorText(text, search, replacement, all) {
@@ -3427,6 +3758,12 @@
   }
 
   async function saveEditorCandidate(snapshot, candidate) {
+    if (snapshot.isNew) {
+      if (!candidate) throw new Error(t('escribe o pega contenido antes de crear el archivo'));
+      validateEditorCandidate(snapshot, candidate);
+      await atomicWrite(snapshot.path, candidate, { mustNotExist: true });
+      return editorSnapshot(snapshot.path);
+    }
     validateEditorCandidate(snapshot, candidate);
     const current = await editorSnapshot(snapshot.path);
     if (current.hash !== snapshot.hash) throw new Error(t('el archivo cambió desde que abriste el editor; no se sobrescribió. Conserva tu borrador y vuelve a abrirlo'));
@@ -3523,63 +3860,825 @@
     return t`${count} sustitución(es) propuesta(s): ${snapshot.path}. Archivo intacto (dry-run); revisa el diff y confirma Aplicar.`;
   });
 
+  // ============================================================
+  // Editor de código: utilidades puras (resaltado, líneas, búsqueda)
+  // ============================================================
+  const EDITOR_LANGS = {
+    js: 'js', mjs: 'js', cjs: 'js', jsx: 'js', ts: 'js', tsx: 'js', json: 'json', css: 'css',
+    html: 'html', htm: 'html', svg: 'html', xml: 'html', vue: 'html', py: 'py',
+    sh: 'sh', bash: 'sh', yml: 'sh', yaml: 'sh', toml: 'sh', ini: 'sh', md: 'md', markdown: 'md'
+  };
+  const EDITOR_LANG_NAMES = { js: 'JavaScript', json: 'JSON', css: 'CSS', html: 'HTML', py: 'Python', sh: 'Shell/YAML', md: 'Markdown' };
+  const VOID_TAGS = new Set('area base br col embed hr img input link meta param source track wbr'.split(' '));
+  const EDITOR_PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
+
+  function editorLanguage(path) {
+    const ext = /\.([^./]+)$/.exec(String(path).toLowerCase())?.[1] || '';
+    return EDITOR_LANGS[ext] || 'text';
+  }
+
+  function lexRules(rules, flags = 'g') {
+    return { re: new RegExp(rules.map(([, src]) => `(${src})`).join('|'), flags), types: rules.map(([type]) => type) };
+  }
+
+  function lexInto(lexer, text, out) {
+    const { re, types } = lexer;
+    const state = { depth: 0 };
+    re.lastIndex = 0;
+    let last = 0, m;
+    while ((m = re.exec(text))) {
+      if (!m[0]) { re.lastIndex++; continue; }
+      if (m.index > last) out.push(['', text.slice(last, m.index)]);
+      let i = 1;
+      while (m[i] === undefined) i++;
+      let type = types[i - 1];
+      if (typeof type === 'function') type = type(m[0], text, re.lastIndex, state);
+      out.push([type, m[0]]);
+      last = re.lastIndex;
+    }
+    if (last < text.length) out.push(['', text.slice(last)]);
+    return out;
+  }
+
+  const wordType = (keywords, literals) => {
+    const kw = new Set(keywords.split(' ')), lit = new Set(literals.split(' '));
+    return (word, text, end) => kw.has(word) ? 'keyword' : lit.has(word) ? 'literal' :
+      /^\s*\(/.test(text.slice(end, end + 40)) ? 'func' : /^[A-Z][a-z]/.test(word) ? 'type' : '';
+  };
+  const EDITOR_STRING = String.raw`"(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?`;
+  const EDITOR_NUMBER = String.raw`\b(?:0[xXbBoO][\da-fA-F_]+n?|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?n?)\b`;
+  const LEXERS = {};
+  LEXERS.js = lexRules([
+    ['comment', String.raw`\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)`],
+    [(value, text, end) => /^\s*:/.test(text.slice(end, end + 30)) ? 'prop' : 'string',
+      EDITOR_STRING + '|' + String.raw`\`(?:[^\`\\]|\\[\s\S])*\`?`],
+    ['number', EDITOR_NUMBER],
+    [wordType('break case catch class const continue debugger default delete do else export extends finally for from ' +
+      'function if import in instanceof let new of return static super switch throw try typeof var void while with yield ' +
+      'async await get set as interface type enum implements private public protected readonly declare namespace',
+    'true false null undefined NaN Infinity this'), String.raw`[A-Za-z_$][\w$]*`]
+  ]);
+  LEXERS.json = LEXERS.js;
+  LEXERS.css = lexRules([
+    ['comment', String.raw`\/\*[\s\S]*?(?:\*\/|$)`],
+    ['string', EDITOR_STRING],
+    [(value, text, end, state) => { state.depth = Math.max(0, state.depth + (value === '{' ? 1 : -1)); return ''; }, '[{}]'],
+    ['keyword', String.raw`@[\w-]+|!important\b`],
+    [(value, text, end, state) => value[0] === '#' && !state.depth ? 'tag' : 'number',
+      String.raw`#[\da-fA-F]{3,8}\b|-?(?:\d+\.?\d*|\.\d+)(?:%|[a-zA-Z]+)?`],
+    [(value, text, end, state) => !state.depth ? 'tag' : /^\s*:/.test(text.slice(end, end + 30)) ? 'prop' : '',
+      String.raw`[A-Za-z_-][\w-]*`]
+  ]);
+  LEXERS.py = lexRules([
+    ['comment', '#[^\\n]*'],
+    ['string', String.raw`[rRbBfFuU]{0,2}(?:"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)|"(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?)`],
+    ['func', String.raw`@[\w.]+`],
+    ['number', EDITOR_NUMBER],
+    [wordType('and as assert async await break class continue def del elif else except finally for from global if ' +
+      'import in is lambda nonlocal not or pass raise return try while with yield match case', 'True False None self cls'),
+    String.raw`[A-Za-z_]\w*`]
+  ]);
+  LEXERS.sh = lexRules([
+    ['comment', String.raw`(?<![^\s;|&(])#[^\n]*`],
+    ['string', EDITOR_STRING],
+    ['prop', String.raw`\$(?:\{[^}\n]*\}?|[\w@#?*!$-]+)`],
+    ['number', EDITOR_NUMBER],
+    [wordType('if then else elif fi for while until do done case esac function in return export local readonly ' +
+      'echo exit source set unset shift', 'true false null'), String.raw`[A-Za-z_][\w-]*`]
+  ]);
+  LEXERS.md = lexRules([
+    ['string', String.raw`\`\`\`[\s\S]*?(?:\`\`\`|(?![\s\S]))`],
+    ['keyword', String.raw`^#{1,6}[ \t][^\n]*`],
+    ['string', String.raw`\`[^\`\n]+\``],
+    ['func', String.raw`!?\[[^\]\n]*\]\([^)\n]*\)`],
+    ['keyword', String.raw`\*\*[^*\n]+\*\*|__[^_\n]+__`],
+    ['number', String.raw`^[ \t]*(?:[-*+]|\d+\.)(?=[ \t])`],
+    ['comment', String.raw`^>[^\n]*`]
+  ], 'gm');
+
+  function lexHTML(text, out) {
+    const re = /<!--[\s\S]*?(?:-->|$)|<![A-Za-z][^>]*>?|<\/?[A-Za-z][\w:.-]*|&#?\w+;/g;
+    const attr = /\s+|\/?>|[^\s=>/"'<]+|=|"[^"]*"?|'[^']*'?|[\s\S]/y;
+    let last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) out.push(['', text.slice(last, m.index)]);
+      const value = m[0];
+      last = re.lastIndex;
+      if (value.startsWith('<!--')) { out.push(['comment', value]); continue; }
+      if (value.startsWith('<!')) { out.push(['keyword', value]); continue; }
+      if (value[0] === '&') { out.push(['number', value]); continue; }
+      out.push(['tag', value]);
+      attr.lastIndex = last;
+      let closed = false, part;
+      while ((part = attr.exec(text))) {
+        const s = part[0];
+        if (s === '>' || s === '/>') { out.push(['tag', s]); closed = true; break; }
+        if (s === '<') { attr.lastIndex--; break; }
+        out.push([/^\s+$/.test(s) || s === '=' || s === '/' ? '' : s[0] === '"' || s[0] === "'" ? 'string' : 'attr', s]);
+      }
+      last = part ? attr.lastIndex : text.length;
+      re.lastIndex = last;
+      const name = value.slice(1).toLowerCase();
+      if (closed && (name === 'script' || name === 'style')) {
+        const close = new RegExp(`</${name}`, 'gi');
+        close.lastIndex = last;
+        const found = close.exec(text);
+        const stop = found ? found.index : text.length;
+        if (stop > last) lexInto(name === 'script' ? LEXERS.js : LEXERS.css, text.slice(last, stop), out);
+        last = stop; re.lastIndex = stop;
+      }
+    }
+    if (last < text.length) out.push(['', text.slice(last)]);
+    return out;
+  }
+
+  function highlightTokens(text, lang) {
+    const out = [];
+    if (lang === 'html') lexHTML(text, out);
+    else if (LEXERS[lang]) lexInto(LEXERS[lang], text, out);
+    else if (text) out.push(['', text]);
+    return out;
+  }
+
+  function countLines(text) {
+    let lines = 1, i = -1;
+    while ((i = text.indexOf('\n', i + 1)) !== -1) lines++;
+    return lines;
+  }
+
+  function editorLineRange(text, start, end) {
+    const lineStart = start > 0 ? text.lastIndexOf('\n', start - 1) + 1 : 0;
+    const stop = end > start && text[end - 1] === '\n' ? end - 1 : end;
+    let lineEnd = text.indexOf('\n', stop);
+    if (lineEnd < 0) lineEnd = text.length;
+    return { lineStart, lineEnd };
+  }
+
+  function editorLineOffset(text, line) {
+    let pos = 0;
+    for (let i = 1; i < line; i++) {
+      const next = text.indexOf('\n', pos);
+      if (next < 0) break;
+      pos = next + 1;
+    }
+    return pos;
+  }
+
+  function moveEditorLines(text, start, end, direction) {
+    const { lineStart, lineEnd } = editorLineRange(text, start, end);
+    const block = text.slice(lineStart, lineEnd);
+    if (direction < 0) {
+      if (lineStart === 0) return null;
+      const prevStart = lineStart > 1 ? text.lastIndexOf('\n', lineStart - 2) + 1 : 0;
+      const prev = text.slice(prevStart, lineStart - 1);
+      const shift = prev.length + 1;
+      return { from: prevStart, to: lineEnd, text: block + '\n' + prev, selStart: start - shift, selEnd: end - shift };
+    }
+    if (lineEnd >= text.length) return null;
+    let nextEnd = text.indexOf('\n', lineEnd + 1);
+    if (nextEnd < 0) nextEnd = text.length;
+    const next = text.slice(lineEnd + 1, nextEnd);
+    const shift = next.length + 1;
+    return { from: lineStart, to: nextEnd, text: next + '\n' + block, selStart: start + shift, selEnd: end + shift };
+  }
+
+  function duplicateEditorLines(text, start, end, direction) {
+    const { lineStart, lineEnd } = editorLineRange(text, start, end);
+    const block = text.slice(lineStart, lineEnd);
+    const shift = direction > 0 ? block.length + 1 : 0;
+    return { from: lineEnd, to: lineEnd, text: '\n' + block, selStart: start + shift, selEnd: end + shift };
+  }
+
+  function deleteEditorLines(text, start, end) {
+    const { lineStart, lineEnd } = editorLineRange(text, start, end);
+    if (lineEnd < text.length) return { from: lineStart, to: lineEnd + 1, text: '', selStart: lineStart, selEnd: lineStart };
+    const from = Math.max(0, lineStart - 1);
+    const caret = from > 0 ? text.lastIndexOf('\n', from - 1) + 1 : 0;
+    return { from, to: lineEnd, text: '', selStart: caret, selEnd: caret };
+  }
+
+  function indentEditorLines(text, start, end, outdent, unit = '  ') {
+    const { lineStart, lineEnd } = editorLineRange(text, start, end);
+    const lines = text.slice(lineStart, lineEnd).split('\n');
+    let first = 0, total = 0;
+    const next = lines.map((line, i) => {
+      let delta = 0;
+      if (outdent) {
+        const lead = /^(?: {1,2}|\t)/.exec(line);
+        if (lead) { delta = -lead[0].length; line = line.slice(lead[0].length); }
+      } else if (line || lines.length === 1) { delta = unit.length; line = unit + line; }
+      if (i === 0) first = delta;
+      total += delta;
+      return line;
+    }).join('\n');
+    return { from: lineStart, to: lineEnd, text: next,
+      selStart: Math.max(lineStart, start + first), selEnd: Math.max(lineStart, end + total) };
+  }
+
+  function editorCommentStyle(text, pos, lang) {
+    if (lang === 'html') {
+      const before = text.slice(0, pos).toLowerCase();
+      for (const [tag, style] of [['script', ['//']], ['style', ['/*', '*/']]]) {
+        const open = before.lastIndexOf('<' + tag);
+        if (open >= 0 && open > before.lastIndexOf('</' + tag)) return style;
+      }
+      return ['<!--', '-->'];
+    }
+    if (lang === 'css') return ['/*', '*/'];
+    if (lang === 'md') return ['<!--', '-->'];
+    if (lang === 'py' || lang === 'sh') return ['#'];
+    if (lang === 'js') return ['//'];
+    return null;
+  }
+
+  function toggleEditorComment(text, start, end, lang) {
+    const style = editorCommentStyle(text, start, lang);
+    if (!style) return null;
+    const { lineStart, lineEnd } = editorLineRange(text, start, end);
+    const block = text.slice(lineStart, lineEnd);
+    let next;
+    if (style.length === 2) {
+      const [open, close] = style;
+      const lead = /^\s*/.exec(block)[0];
+      const body = block.slice(lead.length);
+      const trailing = /\s*$/.exec(body)[0];
+      const core = body.slice(0, body.length - trailing.length);
+      if (!core) return null;
+      if (core.startsWith(open) && core.endsWith(close) && core.length >= open.length + close.length) {
+        let inner = core.slice(open.length, core.length - close.length);
+        if (inner.startsWith(' ')) inner = inner.slice(1);
+        if (inner.endsWith(' ')) inner = inner.slice(0, -1);
+        next = lead + inner + trailing;
+      } else next = `${lead}${open} ${core} ${close}${trailing}`;
+    } else {
+      const token = style[0];
+      const lines = block.split('\n');
+      const filled = lines.filter((line) => line.trim());
+      if (!filled.length) return null;
+      const commented = filled.every((line) => line.trimStart().startsWith(token));
+      const indent = Math.min(...filled.map((line) => /^[ \t]*/.exec(line)[0].length));
+      next = lines.map((line) => {
+        if (!line.trim()) return line;
+        if (commented) {
+          const i = line.indexOf(token);
+          return line.slice(0, i) + line.slice(i + token.length + (line[i + token.length] === ' ' ? 1 : 0));
+        }
+        return line.slice(0, indent) + token + ' ' + line.slice(indent);
+      }).join('\n');
+    }
+    if (start === end) {
+      const caret = Math.max(lineStart, Math.min(start + next.length - block.length, lineStart + next.length));
+      return { from: lineStart, to: lineEnd, text: next, selStart: caret, selEnd: caret };
+    }
+    return { from: lineStart, to: lineEnd, text: next, selStart: lineStart, selEnd: lineStart + next.length };
+  }
+
+  function editorClosingTag(before, after = '') {
+    const m = /<([A-Za-z][\w:.-]*)(?:\s(?:[^<>"']|"[^"]*"|'[^']*')*)?$/.exec(before);
+    if (!m || before.endsWith('/') || VOID_TAGS.has(m[1].toLowerCase())) return '';
+    const close = `</${m[1]}>`;
+    return after.startsWith(close) ? '' : close;
+  }
+
+  function editorSearchRegex(query, { caseSensitive = false, regex = false } = {}, flags = 'g') {
+    const source = regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    try { return new RegExp(source, flags + (caseSensitive ? '' : 'i') + 'm'); }
+    catch (e) { throw new Error(t`expresión regular no válida: ${e.message}`); }
+  }
+
+  function findEditorMatches(text, query, options = {}, limit = 10000) {
+    if (!query) return [];
+    const re = editorSearchRegex(query, options);
+    const out = [];
+    let m;
+    while (out.length < limit && (m = re.exec(text))) {
+      if (!m[0]) { re.lastIndex++; continue; }
+      out.push([m.index, m.index + m[0].length]);
+    }
+    return out;
+  }
+
+  function replaceEditorMatches(text, query, replacement, options = {}, at = null) {
+    const matches = findEditorMatches(text, query, options, Infinity);
+    if (!matches.length) return { text, count: 0 };
+    if (at === null) {
+      const re = editorSearchRegex(query, options);
+      return { text: options.regex ? text.replace(re, replacement) : text.replace(re, () => replacement), count: matches.length };
+    }
+    const [from, to] = matches.find(([a]) => a >= at) || matches[0];
+    let insert = replacement;
+    if (options.regex) {
+      const re = editorSearchRegex(query, options, 'y');
+      re.lastIndex = from;
+      const next = text.replace(re, replacement);
+      insert = next.slice(from, next.length - (text.length - to));
+    }
+    return { text: text.slice(0, from) + insert + text.slice(to), count: 1, from, to, insert };
+  }
+
+  function editorVisualColumn(line, tabSize = 2) {
+    let col = 0;
+    for (const ch of line) col = ch === '\t' ? col + tabSize - (col % tabSize) : col + 1;
+    return col;
+  }
+
+  // ============================================================
+  // Editor de código integrado
+  // ============================================================
   let editorOpen = false;
-  async function openCodeEditor(path, proposal = null) {
+  const EDITOR_FONT_KEY = 'dv-editor-font-v1';
+  const EDITOR_HIGHLIGHT_LIMIT = 60000;
+  async function openCodeEditor(path, proposal = null, { create = false } = {}) {
     if (busy || editorOpen) { uiLog(t('Ya hay una operación o editor abierto.'), 'err'); return false; }
     editorOpen = true;
     ui?.updateState?.();
     let release;
     try {
-      let snapshot = await editorSnapshot(path);
+      let snapshot = create && !proposal ? await newFileSnapshot(path) : await editorSnapshot(path);
+      path = snapshot.path;
       if (proposal && snapshot.hash !== proposal.snapshot.hash) throw new Error(t('archivo cambió antes de abrir la propuesta; usa view de nuevo'));
       if (proposal?.checkpointBeforeSave) snapshot.checkpointBeforeSave = true;
       if (proposal?.checkpointLabel) snapshot.checkpointLabel = proposal.checkpointLabel;
+      const closeAfterSave = !!proposal;
+      const lang = editorLanguage(path);
+      const langName = EDITOR_LANG_NAMES[lang] || t('Texto plano');
+      const isHTML = /\.html?$/i.test(path);
       const host = h('div', { id: 'dv-code-editor' });
       const shadow = host.attachShadow({ mode: 'closed' });
       let saving = false, approvedCandidate = null;
-      const status = h('div', { class: 'status', role: 'status' });
+      const timers = new Set();
+      const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); return id; };
+      const debounce = (fn, ms) => {
+        let id = null;
+        return () => { if (id !== null) { clearTimeout(id); timers.delete(id); } id = later(() => { id = null; fn(); }, ms); };
+      };
+
+      const status = h('span', { class: 'status', role: 'status' });
       const report = (text, error = false) => { status.textContent = text; status.style.color = error ? '#f87171' : '#93c5fd'; };
+      const position = h('span', { class: 'pos' });
+      const info = h('span', { class: 'info' });
+      const dirtyMark = h('span', { class: 'dirty', title: t('Cambios sin guardar') }, '●');
+      const title = h('span', {}, snapshot.isNew ? t`Nuevo archivo · ${path}` : t`Editor local · ${path}`);
       const gutter = h('pre', { class: 'gutter', 'aria-hidden': 'true' });
-      const code = h('textarea', { class: 'code', spellcheck: 'false', wrap: 'off', 'aria-label': t`Código de ${path}` });
-      const normalized = snapshot.text.replace(/\r\n?/g, '\n');
-      const baseline = normalized;
+      const hl = h('pre', { class: 'hl', 'aria-hidden': 'true' });
+      const hit = h('div', { class: 'hit' });
+      const code = h('textarea', { class: 'code', spellcheck: 'false', wrap: 'off', autocapitalize: 'off', autocomplete: 'off', 'aria-label': t`Código de ${path}` });
+      const source = h('div', { class: 'source' });
+      let baseline = snapshot.text.replace(/\r\n?/g, '\n');
       code.value = (proposal ? proposal.candidate : snapshot.text).replace(/\r\n?/g, '\n');
       const initialDraft = code.value;
-      const candidate = () => proposal && code.value === initialDraft ? proposal.candidate :
+      let activeProposal = proposal;
+      const candidate = () => activeProposal && code.value === initialDraft ? activeProposal.candidate :
         code.value === baseline ? snapshot.text :
         snapshot.text.includes('\r\n') && !snapshot.text.replace(/\r\n/g, '').includes('\n')
           ? code.value.replace(/\n/g, '\r\n') : code.value;
-      const diff = h('pre', { class: 'diff', 'aria-label': t('Diferencias propuestas'), style: 'display:none' });
-      const apply = h('button', { disabled: true }, t('Aplicar cambios'));
-      const sync = () => {
-        gutter.textContent = Array.from({ length: code.value.split('\n').length }, (_, i) => i + 1).join('\n');
-        approvedCandidate = null; apply.disabled = true; diff.style.display = 'none';
-        report(t('Borrador local · aún no guardado'));
-      };
-      code.addEventListener('input', sync);
-      code.addEventListener('scroll', () => { gutter.scrollTop = code.scrollTop; });
-      const search = h('textarea', { class: 'query', rows: '2', 'aria-label': t('Buscar texto exacto'), placeholder: t('Buscar texto o función (literal)') });
-      const replacement = h('textarea', { class: 'query', rows: '2', 'aria-label': t('Reemplazar por'), placeholder: t('Código de reemplazo') });
-      const find = h('button', { onclick: () => {
-        if (!search.value) { report(t('Escribe un texto para buscar.'), true); return; }
-        const from = code.selectionEnd;
-        let index = code.value.indexOf(search.value, from);
-        if (index < 0) index = code.value.indexOf(search.value);
-        if (index < 0) { report(t('Sin coincidencias.'), true); return; }
-        code.focus(); code.setSelectionRange(index, index + search.value.length);
-        const line = code.value.slice(0, index).split('\n').length;
-        code.scrollTop = Math.max(0, (line - 3) * 20); gutter.scrollTop = code.scrollTop;
-        report(t`Coincidencia en línea ${line}`);
-      } }, t('Buscar siguiente'));
-      const replace = (all) => {
-        if (saving) return;
+      const isDirty = () => candidate() !== snapshot.text;
+      const diff = h('pre', { class: 'diff', 'aria-label': t('Diferencias propuestas') });
+      diff.style.display = 'none';
+      const saveLabel = () => snapshot.isNew ? t('Crear archivo') : activeProposal ? t('Aplicar cambios') : '💾 ' + t('Guardar');
+      const canSave = () => snapshot.isNew ? !!code.value : isDirty();
+      const apply = h('button', { class: 'primary', disabled: !canSave() }, saveLabel());
+
+      let fontSize = 13;
+      try { fontSize = Math.min(24, Math.max(10, Number(localStorage.getItem(EDITOR_FONT_KEY)) || 13)); } catch { /* sin almacenamiento */ }
+      const lineHeight = () => Math.round(fontSize * 1.54);
+      let charWidth = fontSize * 0.6;
+      const measure = () => {
+        charWidth = fontSize * 0.6;
         try {
-          const result = replaceEditorText(code.value, search.value, replacement.value, all);
-          code.value = result.text; sync(); report(t`${result.count} reemplazo(s) en el borrador. Revisa el diff.`);
+          const ctx = document.createElement('canvas').getContext?.('2d');
+          if (ctx) { ctx.font = `${fontSize}px Consolas, "Cascadia Mono", "Courier New", monospace`; charWidth = ctx.measureText('M'.repeat(20)).width / 20 || charWidth; }
+        } catch { /* medida aproximada */ }
+      };
+      const applyFont = () => {
+        for (const el of [gutter, hl, code]) { el.style.fontSize = fontSize + 'px'; el.style.lineHeight = lineHeight() + 'px'; }
+        measure();
+      };
+
+      let hitRange = null;
+      const placeHit = () => {
+        if (!hitRange) { hit.remove(); return; }
+        const [a, b] = hitRange, value = code.value;
+        const lineStart = a > 0 ? value.lastIndexOf('\n', a - 1) + 1 : 0;
+        const line = countLines(value.slice(0, a));
+        const col = editorVisualColumn(value.slice(lineStart, a));
+        const width = Math.max(1, editorVisualColumn(value.slice(lineStart, b).split('\n')[0]) - col);
+        hit.style.top = (10 + (line - 1) * lineHeight()) + 'px';
+        hit.style.left = (12 + col * charWidth) + 'px';
+        hit.style.width = (width * charWidth) + 'px';
+        hit.style.height = lineHeight() + 'px';
+        hl.append(hit);
+      };
+      const paint = () => {
+        const value = code.value;
+        const highlighted = lang !== 'text' && value.length <= EDITOR_HIGHLIGHT_LIMIT;
+        source.classList.toggle('plain', !highlighted);
+        const nodes = [];
+        if (highlighted) {
+          for (const [type, text] of highlightTokens(value, lang)) {
+            if (!type) { nodes.push(document.createTextNode(text)); continue; }
+            const span = document.createElement('span');
+            span.className = 't-' + type;
+            span.textContent = text;
+            nodes.push(span);
+          }
+          nodes.push(document.createTextNode('\n '));
+        }
+        if (typeof document.createDocumentFragment === 'function') {
+          const fragment = document.createDocumentFragment();
+          for (const node of nodes) fragment.appendChild(node);
+          hl.replaceChildren(fragment);
+        } else hl.replaceChildren(...nodes);
+        placeHit();
+      };
+
+      const mini = h('pre', { class: 'mini-text' });
+      const miniView = h('div', { class: 'mini-view' });
+      const minimap = h('div', { class: 'minimap', 'aria-hidden': 'true' }, mini, miniView);
+      const MINI_LH = 3;
+      let miniOffset = 0, miniDrag = false, gutterLines = 0;
+      const updateMiniView = () => {
+        const contentH = gutterLines * MINI_LH, mapH = minimap.clientHeight || 0;
+        const maxScroll = Math.max(1, (code.scrollHeight || 0) - (code.clientHeight || 0));
+        miniOffset = contentH > mapH ? (contentH - mapH) * Math.min(1, (code.scrollTop || 0) / maxScroll) : 0;
+        const scale = MINI_LH / lineHeight();
+        mini.style.transform = `translateY(${-miniOffset}px)`;
+        miniView.style.top = ((code.scrollTop || 0) * scale - miniOffset) + 'px';
+        miniView.style.height = Math.max(12, (code.clientHeight || 0) * scale) + 'px';
+      };
+      const updateMini = debounce(() => {
+        mini.textContent = code.value.split('\n', 5000).map((line) => line.slice(0, 160)).join('\n');
+        updateMiniView();
+      }, 300);
+      const miniJump = (e) => {
+        const rect = minimap.getBoundingClientRect?.();
+        if (!rect) return;
+        const y = e.clientY - rect.top + miniOffset;
+        code.scrollTop = Math.max(0, (y / MINI_LH) * lineHeight() - (code.clientHeight || 0) / 2);
+        syncScroll();
+      };
+      minimap.addEventListener('pointerdown', (e) => { e.preventDefault(); miniDrag = true; minimap.setPointerCapture?.(e.pointerId); miniJump(e); });
+      minimap.addEventListener('pointermove', (e) => { if (miniDrag) miniJump(e); });
+      minimap.addEventListener('pointerup', () => { miniDrag = false; });
+
+      const syncScroll = () => {
+        gutter.scrollTop = code.scrollTop; hl.scrollTop = code.scrollTop; hl.scrollLeft = code.scrollLeft;
+        updateMiniView();
+      };
+      const updatePosition = () => {
+        const value = code.value, s = code.selectionStart ?? 0, e = code.selectionEnd ?? s;
+        const lineStart = s > 0 ? value.lastIndexOf('\n', s - 1) + 1 : 0;
+        position.textContent = t`Ln ${countLines(value.slice(0, s))}, Col ${s - lineStart + 1}` + (e > s ? t` (${e - s} seleccionados)` : '');
+      };
+      const updateInfo = debounce(() => {
+        const text = candidate();
+        info.textContent = t`${countLines(code.value)} líneas · ${fmtBytes(new TextEncoder().encode(text).length)} · ${langName} · ${text.includes('\r\n') ? 'CRLF' : 'LF'} · UTF-8`;
+      }, 150);
+      const markDirty = () => { dirtyMark.style.visibility = isDirty() ? 'visible' : 'hidden'; };
+
+      let findOpen = false, gotoOpen = false, helpOpen = false, liveOpen = false;
+      const findOptions = { caseSensitive: false, regex: false };
+      let matches = [];
+      const findInput = h('input', { class: 'find-q', type: 'text', spellcheck: 'false', placeholder: t('Buscar'), 'aria-label': t('Buscar') });
+      const replaceInput = h('input', { class: 'find-r', type: 'text', spellcheck: 'false', placeholder: t('Reemplazar'), 'aria-label': t('Reemplazar por') });
+      const countBadge = h('span', { class: 'count' });
+      const runFind = () => {
+        try {
+          matches = findEditorMatches(code.value, findInput.value, findOptions);
+          findInput.classList.toggle('bad', false);
+        } catch (e) {
+          matches = []; findInput.classList.toggle('bad', true);
+          countBadge.textContent = t('regex no válida');
+          return false;
+        }
+        countBadge.textContent = !findInput.value ? '' : matches.length ? t`${matches.length >= 10000 ? '10000+' : matches.length} resultados` : t('Sin resultados');
+        return true;
+      };
+      const scheduleFind = debounce(() => { if (findOpen) runFind(); }, 200);
+      const reveal = (a, b, focus = true) => {
+        if (focus) code.focus?.();
+        code.setSelectionRange?.(a, b);
+        const value = code.value, lh = lineHeight();
+        const top = (countLines(value.slice(0, a)) - 1) * lh;
+        const viewH = code.clientHeight || 400;
+        if (top < code.scrollTop || top > code.scrollTop + viewH - 2 * lh) code.scrollTop = Math.max(0, top - viewH / 3);
+        const lineStart = a > 0 ? value.lastIndexOf('\n', a - 1) + 1 : 0;
+        const x = editorVisualColumn(value.slice(lineStart, a)) * charWidth;
+        const viewW = code.clientWidth || 600;
+        if (x < code.scrollLeft || x > code.scrollLeft + viewW - 60) code.scrollLeft = Math.max(0, x - 80);
+        syncScroll(); updatePosition();
+      };
+      const step = (direction) => {
+        if (!runFind()) return;
+        if (!matches.length) { hitRange = null; placeHit(); report(findInput.value ? t('Sin coincidencias.') : t('Escribe un texto para buscar.'), true); return; }
+        const s = code.selectionStart ?? 0, e = code.selectionEnd ?? s;
+        let index;
+        if (direction > 0) {
+          index = matches.findIndex(([a]) => a > s || (a === s && s === e));
+          if (index < 0) index = 0;
+        } else {
+          index = -1;
+          for (let i = matches.length - 1; i >= 0; i--) if (matches[i][0] < s) { index = i; break; }
+          if (index < 0) index = matches.length - 1;
+        }
+        const [a, b] = matches[index];
+        countBadge.textContent = `${index + 1}/${matches.length >= 10000 ? '10000+' : matches.length}`;
+        hitRange = [a, b]; placeHit();
+        reveal(a, b, false);
+        report(t`Coincidencia en línea ${countLines(code.value.slice(0, a))}`);
+      };
+
+      const edit = (from, to, text, selStart = from + text.length, selEnd = selStart) => {
+        if (code.readOnly || saving) return false;
+        const expected = code.value.slice(0, from) + text + code.value.slice(to);
+        let native = false;
+        if (from !== to || text) {
+          code.focus?.();
+          code.setSelectionRange?.(from, to);
+          try { native = !!document.execCommand?.(text ? 'insertText' : 'delete', false, text); } catch { native = false; }
+        }
+        if (!native || code.value !== expected) { code.value = expected; sync(); }
+        code.setSelectionRange?.(selStart, selEnd);
+        updatePosition();
+        return true;
+      };
+      const applyOp = (op) => op ? edit(op.from, op.to, op.text, op.selStart, op.selEnd) : false;
+
+      const replaceOne = () => {
+        try {
+          const result = replaceEditorMatches(code.value, findInput.value, replaceInput.value, findOptions, code.selectionStart ?? 0);
+          if (!result.count) { report(t('Sin coincidencias.'), true); return; }
+          edit(result.from, result.to, result.insert);
+          report(t`1 reemplazo en línea ${countLines(code.value.slice(0, result.from))}. Revisa el diff.`);
+          step(1);
         } catch (e) { report(e.message, true); }
       };
-      const preview = h('button', { onclick: async () => {
-        if (saving) return;
+      const replaceAll = () => {
+        try {
+          const result = replaceEditorMatches(code.value, findInput.value, replaceInput.value, findOptions);
+          if (!result.count) { report(t('Sin coincidencias.'), true); return; }
+          const caret = Math.min(code.selectionStart ?? 0, result.text.length);
+          edit(0, code.value.length, result.text, caret);
+          hitRange = null; placeHit(); runFind();
+          report(t`${result.count} reemplazo(s) en el borrador. Revisa el diff.`);
+        } catch (e) { report(e.message, true); }
+      };
+      const toggleOption = (button, key) => () => {
+        findOptions[key] = !findOptions[key];
+        button.setAttribute('aria-pressed', String(findOptions[key]));
+        button.classList.toggle('on', findOptions[key]);
+        runFind();
+      };
+      const caseButton = h('button', { class: 'ghost', 'aria-pressed': 'false', 'aria-label': t('Coincidir mayúsculas y minúsculas') }, 'Aa');
+      caseButton.addEventListener('click', toggleOption(caseButton, 'caseSensitive'));
+      const regexButton = h('button', { class: 'ghost', 'aria-pressed': 'false', 'aria-label': t('Usar expresión regular') }, '.*');
+      regexButton.addEventListener('click', toggleOption(regexButton, 'regex'));
+      const replaceRow = h('div', { class: 'row' }, h('span', { class: 'indent' }), replaceInput,
+        h('button', { class: 'ghost', onclick: replaceOne }, t('Reemplazar')),
+        h('button', { class: 'ghost', onclick: replaceAll }, t('Reemplazar todos')));
+      const replaceToggle = h('button', { class: 'ghost twist', 'aria-expanded': 'false', 'aria-label': t('Mostrar u ocultar reemplazar (Ctrl+H)') }, '▶');
+      const showReplace = (open) => {
+        replaceRow.style.display = open ? 'flex' : 'none';
+        replaceToggle.textContent = open ? '▼' : '▶';
+        replaceToggle.setAttribute('aria-expanded', String(open));
+      };
+      replaceToggle.addEventListener('click', () => {
+        const open = replaceRow.style.display === 'none';
+        showReplace(open);
+        (open ? replaceInput : findInput).focus?.();
+      });
+      showReplace(false);
+      const findBox = h('div', { class: 'find', role: 'search' },
+        h('div', { class: 'row' }, replaceToggle, findInput, caseButton, regexButton, countBadge,
+          h('button', { class: 'ghost', 'aria-label': t('Coincidencia anterior (Shift+Enter)'), onclick: () => step(-1) }, '▲'),
+          h('button', { class: 'ghost', 'aria-label': t('Coincidencia siguiente (Enter)'), onclick: () => step(1) }, '▼'),
+          h('button', { class: 'ghost', 'aria-label': t('Cerrar búsqueda (Esc)'), onclick: () => toggleFind(false) }, '✕')),
+        replaceRow);
+      findBox.style.display = 'none';
+      const toggleFind = (open, focusReplace = false) => {
+        findOpen = open;
+        findBox.style.display = open ? 'flex' : 'none';
+        if (open) {
+          if (focusReplace) showReplace(true);
+          const selected = code.value.slice(code.selectionStart ?? 0, code.selectionEnd ?? 0);
+          if (selected && !selected.includes('\n') && selected.length < 200) findInput.value = selected;
+          const target = focusReplace ? replaceInput : findInput;
+          target.focus?.(); target.select?.();
+          runFind();
+        } else {
+          hitRange = null; placeHit(); code.focus?.();
+        }
+      };
+      findInput.addEventListener('input', () => {
+        if (!runFind()) return;
+        if (matches.length) {
+          const s = code.selectionStart ?? 0;
+          const [a, b] = matches.find(([x]) => x >= s) || matches[0];
+          hitRange = [a, b]; placeHit(); reveal(a, b, false);
+        } else { hitRange = null; placeHit(); }
+      });
+      findInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); step(e.shiftKey ? -1 : 1); } });
+      replaceInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey || e.altKey) replaceAll(); else replaceOne();
+      });
+
+      const gotoInput = h('input', { class: 'goto-q', type: 'number', min: '1', placeholder: t('Número de línea'), 'aria-label': t('Ir a la línea') });
+      const goLine = () => {
+        const line = Math.floor(Number(gotoInput.value));
+        if (!Number.isFinite(line) || line < 1) { report(t('Escribe un número de línea válido.'), true); return; }
+        const total = countLines(code.value);
+        const pos = editorLineOffset(code.value, line);
+        toggleGoto(false);
+        reveal(pos, pos);
+        report(t`Línea ${Math.min(line, total)} de ${total}`);
+      };
+      const gotoBox = h('div', { class: 'goto' }, h('div', { class: 'row' }, gotoInput,
+        h('button', { class: 'ghost', onclick: goLine }, t('Ir'))));
+      gotoBox.style.display = 'none';
+      const toggleGoto = (open) => {
+        gotoOpen = open;
+        gotoBox.style.display = open ? 'flex' : 'none';
+        if (open) { gotoInput.value = ''; gotoInput.focus?.(); } else code.focus?.();
+      };
+      gotoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); goLine(); } });
+
+      const shortcuts = [
+        t('Ctrl+S: guardar (muestra el diff y confirma)'), t('Ctrl+F / Ctrl+H: buscar / reemplazar'), t('Ctrl+G: ir a la línea'),
+        t('Ctrl+D: seleccionar la siguiente coincidencia'),
+        t('Ctrl+/: comentar o descomentar'), t('Alt+↑/↓: mover línea · Shift+Alt+↑/↓: duplicar'),
+        t('Ctrl+Shift+K: borrar línea · Tab / Shift+Tab: sangrar'), t('Shift+Alt+F: formatear JSON · Esc: cerrar')
+      ];
+      const helpBox = h('div', { class: 'keys' }, h('strong', {}, t('Atajos de teclado')), ...shortcuts.map((line) => h('div', {}, line)));
+      helpBox.style.display = 'none';
+      const toggleHelp = (open = !helpOpen) => { helpOpen = open; helpBox.style.display = open ? 'block' : 'none'; };
+
+      const live = isHTML ? h('div', { class: 'live' }) : null;
+      const liveFrame = isHTML ? h('iframe', { sandbox: '', referrerpolicy: 'no-referrer', title: t('Vista previa HTML aislada') }) : null;
+      if (live) { live.append(h('div', { class: 'live-bar' }, t('Vista previa en vivo del borrador · sin scripts ni red')), liveFrame); live.style.display = 'none'; }
+      const renderLive = () => {
+        if (!liveOpen) return;
+        try { liveFrame.srcdoc = staticPreviewDocument(code.value); } catch (e) { report(e.message, true); }
+      };
+      const scheduleLive = debounce(renderLive, 350);
+      const liveButton = isHTML ? h('button', { class: 'ghost', 'aria-pressed': 'false', 'aria-label': t('Vista previa en vivo') }, t('Vista previa')) : null;
+      liveButton?.addEventListener('click', () => {
+        liveOpen = !liveOpen;
+        live.style.display = liveOpen ? 'flex' : 'none';
+        liveButton.setAttribute('aria-pressed', String(liveOpen));
+        liveButton.classList.toggle('on', liveOpen);
+        renderLive();
+      });
+      const tabButton = isHTML ? h('button', { class: 'ghost', 'aria-label': t('Abrir el archivo guardado en una pestaña que se actualiza al guardar') }, t('Pestaña')) : null;
+      tabButton?.addEventListener('click', async () => {
+        if (snapshot.isNew) { report(t('Guarda el archivo antes de abrirlo en una pestaña.'), true); return; }
+        try { report(await openHTMLPreview(path)); } catch (e) { report(e.message, true); }
+      });
+
+      const formatJSON = () => {
+        if (lang !== 'json') { report(t('Formatear solo está disponible para JSON.'), true); return; }
+        try {
+          const pretty = JSON.stringify(JSON.parse(code.value), null, 2);
+          if (pretty !== code.value) edit(0, code.value.length, pretty, 0);
+          report(t('JSON formateado. Revisa el diff.'));
+        } catch (e) { report(t`JSON no válido: ${e.message}`, true); }
+      };
+      const copyAll = async () => {
+        try { await navigator.clipboard.writeText(code.value); report(t('Código copiado al portapapeles.')); }
+        catch { code.focus?.(); code.select?.(); report(t('El navegador bloqueó el portapapeles; el código quedó seleccionado, usa Ctrl+C.'), true); }
+      };
+      const pasteClipboard = async () => {
+        try {
+          const text = (await navigator.clipboard.readText()).replace(/\r\n?/g, '\n');
+          const s = code.selectionStart ?? code.value.length, e = code.selectionEnd ?? s;
+          edit(s, e, text);
+          report(t('Pegado desde el portapapeles.'));
+        } catch { code.focus?.(); report(t('El navegador bloqueó el portapapeles; usa Ctrl+V.'), true); }
+      };
+      const downloadDraft = () => {
+        let url = null, link = null;
+        try {
+          const name = splitPath(path).pop() || 'archivo.txt';
+          url = URL.createObjectURL(new Blob([candidate()], { type: 'text/plain;charset=utf-8' }));
+          link = document.createElement('a');
+          link.href = url; link.download = name; link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          const pending = url; setTimeout(() => URL.revokeObjectURL(pending), 60000); url = null;
+          report(t`Borrador descargado: ${name}. El disco virtual no cambia.`);
+        } catch (e) { report(e.message, true); }
+        finally { link?.remove(); if (url) URL.revokeObjectURL(url); }
+      };
+      const changeFont = (delta) => {
+        fontSize = Math.min(24, Math.max(10, fontSize + delta));
+        try { localStorage.setItem(EDITOR_FONT_KEY, String(fontSize)); } catch { /* sin almacenamiento */ }
+        applyFont(); placeHit(); syncScroll();
+        report(t`Tamaño de letra: ${fontSize}px`);
+      };
+
+      const sync = () => {
+        const lines = countLines(code.value);
+        if (lines !== gutterLines) {
+          gutterLines = lines;
+          gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n') + '\n ';
+        }
+        approvedCandidate = null; apply.disabled = !canSave(); diff.style.display = 'none';
+        hitRange = null;
+        paint(); markDirty(); updateInfo(); updateMini(); updatePosition();
+        if (findOpen) scheduleFind();
+        if (liveOpen) scheduleLive();
+        report(snapshot.isNew ? t('Archivo nuevo · aún no existe en el disco') : t('Borrador local · aún no guardado'));
+      };
+      code.addEventListener('input', sync);
+      code.addEventListener('scroll', syncScroll);
+      for (const type of ['keyup', 'click', 'select']) code.addEventListener(type, updatePosition);
+      code.addEventListener('keydown', (e) => {
+        if (code.readOnly || e.isComposing) return;
+        const mod = e.ctrlKey || e.metaKey, key = e.key;
+        const value = code.value, s = code.selectionStart ?? 0, end = code.selectionEnd ?? s;
+        if (key === 'Tab' && !mod && !e.altKey) {
+          e.preventDefault();
+          if (e.shiftKey || value.slice(s, end).includes('\n')) applyOp(indentEditorLines(value, s, end, e.shiftKey));
+          else edit(s, end, '  ');
+          return;
+        }
+        if (e.altKey && !mod && (key === 'ArrowUp' || key === 'ArrowDown')) {
+          e.preventDefault();
+          const direction = key === 'ArrowUp' ? -1 : 1;
+          applyOp(e.shiftKey ? duplicateEditorLines(value, s, end, direction) : moveEditorLines(value, s, end, direction));
+          return;
+        }
+        if (mod && !e.altKey && (key === '/' || e.code === 'NumpadDivide')) {
+          e.preventDefault();
+          if (!applyOp(toggleEditorComment(value, s, end, lang))) report(t('Este tipo de archivo no admite comentarios.'), true);
+          return;
+        }
+        if (mod && e.shiftKey && !e.altKey && (key === 'K' || key === 'k')) { e.preventDefault(); applyOp(deleteEditorLines(value, s, end)); return; }
+        if (mod && !e.shiftKey && !e.altKey && (key === 'd' || key === 'D')) {
+          e.preventDefault();
+          if (s === end) {
+            // Sin selección: selecciona la palabra bajo el cursor, como VS Code.
+            let a = s, b = s;
+            while (a > 0 && /[\w$-]/.test(value[a - 1])) a--;
+            while (b < value.length && /[\w$-]/.test(value[b])) b++;
+            if (a < b) reveal(a, b);
+            return;
+          }
+          const word = value.slice(s, end);
+          const found = findEditorMatches(value, word, { caseSensitive: true });
+          if (found.length < 2) { report(t('No hay más coincidencias.')); return; }
+          const next = found.find(([a]) => a >= end) || found[0];
+          hitRange = null; placeHit();
+          reveal(next[0], next[1]);
+          report(t`Siguiente coincidencia en línea ${countLines(value.slice(0, next[0]))}`);
+          return;
+        }
+        if (mod || e.altKey) return;
+        if (key === 'Enter') {
+          e.preventDefault();
+          const lineStart = s > 0 ? value.lastIndexOf('\n', s - 1) + 1 : 0;
+          const line = value.slice(lineStart, s);
+          const indent = /^[ \t]*/.exec(line)[0];
+          const prev = value[s - 1] || '';
+          const split = (EDITOR_PAIRS[prev] && value[end] === EDITOR_PAIRS[prev] && '([{'.includes(prev)) ||
+            (lang === 'html' && prev === '>' && value.startsWith('</', end) && !!editorClosingTag(value.slice(Math.max(0, s - 2000), s - 1)));
+          if (split) {
+            const inner = '\n' + indent + '  ';
+            edit(s, end, inner + '\n' + indent, s + inner.length);
+            return;
+          }
+          const opens = /[{[(]\s*$/.test(line) || (lang === 'py' && /:\s*$/.test(line)) ||
+            (lang === 'html' && line.endsWith('>') && !!editorClosingTag(line.slice(Math.max(0, line.length - 2000), -1)));
+          edit(s, end, '\n' + indent + (opens ? '  ' : ''));
+          return;
+        }
+        if (key === 'Backspace' && s === end && s > 0) {
+          const close = EDITOR_PAIRS[value[s - 1]];
+          if (close && value[s] === close && lang !== 'text') { e.preventDefault(); edit(s - 1, s + 1, ''); }
+          return;
+        }
+        if (key.length !== 1 || lang === 'text') return;
+        if (s === end && ')]}"\'`'.includes(key) && value[s] === key) {
+          e.preventDefault(); code.setSelectionRange?.(s + 1, s + 1); updatePosition(); return;
+        }
+        if (EDITOR_PAIRS[key] && !(key === '`' && lang !== 'js' && lang !== 'md')) {
+          const quote = key === '"' || key === "'" || key === '`';
+          if (s !== end) { e.preventDefault(); edit(s, end, key + value.slice(s, end) + EDITOR_PAIRS[key], s + 1, end + 1); return; }
+          if (lang === 'md' && key !== '`') return;
+          if (!/^(?:$|[\s)\]}>;,.:])/.test(value[s] || '')) return;
+          if (quote && /[\w$\\]/.test(value[s - 1] || '')) return;
+          e.preventDefault(); edit(s, s, key + EDITOR_PAIRS[key], s + 1);
+          return;
+        }
+        if (key === '>' && lang === 'html' && s === end) {
+          const close = editorClosingTag(value.slice(Math.max(0, s - 2000), s), value.slice(end, end + 200));
+          if (close) { e.preventDefault(); edit(s, s, '>' + close, s + 1); }
+        }
+      });
+
+      const reviewDiff = async () => {
+        if (saving) return false;
         const proposed = candidate();
         try {
           validateEditorCandidate(snapshot, proposed);
@@ -3588,53 +4687,181 @@
           if (patch === undefined) throw new Error(t('diff excedió el tiempo límite'));
           diff.textContent = patch; diff.style.display = 'block';
           approvedCandidate = proposed;
-          apply.disabled = candidate() !== proposed;
+          apply.disabled = candidate() !== proposed || !canSave();
           report(t('Revisa el diff completo; Aplicar comprueba la versión original.'));
-        } catch (e) { approvedCandidate = null; apply.disabled = true; report(e.message, true); }
-      } }, t('Revisar diff'));
-      release = () => { host.remove(); editorOpen = false; ui?.updateState?.(); };
-      const close = h('button', { onclick: () => {
+          return candidate() === proposed;
+        } catch (e) { approvedCandidate = null; apply.disabled = true; report(e.message, true); return false; }
+      };
+      const preview = h('button', { onclick: () => { reviewDiff(); } }, t('Revisar diff'));
+      const nextPaint = () => new Promise(resolve => {
+        const raf = globalThis.requestAnimationFrame;
+        if (typeof raf === 'function') raf(() => setTimeout(resolve, 0)); else setTimeout(resolve, 0);
+      });
+      const beforeUnload = (e) => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } };
+      release = () => {
+        for (const id of timers) clearTimeout(id);
+        timers.clear();
+        window.removeEventListener?.('beforeunload', beforeUnload);
+        if (liveFrame) liveFrame.removeAttribute?.('srcdoc');
+        host.remove(); editorOpen = false; ui?.updateState?.();
+      };
+      const close = h('button', { class: 'ghost', onclick: () => {
         if (saving) return;
-        if (candidate() !== snapshot.text && !confirm(t('¿Descartar el borrador sin guardar?'))) return;
+        if (isDirty() && !confirm(t('¿Descartar el borrador sin guardar?'))) return;
         release();
       } }, t('Cerrar'));
       apply.addEventListener('click', async () => {
-        if (saving || busy || approvedCandidate === null || candidate() !== approvedCandidate) {
-          report(t('Revisa de nuevo el diff o espera a que termine la operación.'), true); return;
+        const created = snapshot.isNew;
+        if (created) {
+          if (saving || busy) { report(t('Revisa de nuevo el diff o espera a que termine la operación.'), true); return; }
+          approvedCandidate = candidate();
+        } else {
+          if (saving || busy) { report(t('Revisa de nuevo el diff o espera a que termine la operación.'), true); return; }
+          if (approvedCandidate === null || candidate() !== approvedCandidate) {
+            // Guardar directo: muestra el diff antes de la confirmación.
+            if (!(await reviewDiff())) return;
+            await nextPaint();
+            if (saving || busy || candidate() !== approvedCandidate) return;
+          }
+          if (!confirm(t`¿Aplicar el diff revisado a "${path}"? ${snapshot.checkpointBeforeSave ?
+            t('Se creará y verificará un checkpoint previo; si falla, no se guarda.') :
+            t('No crea backup automático.')} No crea commit.`)) return;
         }
-        if (!confirm(t`¿Aplicar el diff revisado a "${path}"? ${snapshot.checkpointBeforeSave ?
-          t('Se creará y verificará un checkpoint previo; si falla, no se guarda.') :
-          t('No crea backup automático.')} No crea commit.`)) return;
         saving = true; setBusy(true); code.readOnly = true; apply.disabled = true;
+        let saved = false;
         try {
           snapshot = await saveEditorCandidate(snapshot, approvedCandidate);
-          uiLog(t`Editor: guardado y verificado ${path} (SHA256 ${snapshot.hash.slice(0, 8)}). Revisa git diff.`, 'info');
-          release();
+          saved = true;
+          uiLog(created ? t`Editor: creado y verificado ${path} (SHA256 ${snapshot.hash.slice(0, 8)}). Usa Ejecutar para verlo y Guardar en Git para versionarlo.` :
+            t`Editor: guardado y verificado ${path} (SHA256 ${snapshot.hash.slice(0, 8)}). Revisa git diff.`, 'info');
+          if (closeAfterSave) release();
         } catch (e) { report(e.message, true); }
-        finally { saving = false; setBusy(false); code.readOnly = false; await ui?.refresh(); }
+        finally {
+          saving = false; setBusy(false); code.readOnly = false;
+          if (saved && !closeAfterSave) {
+            activeProposal = null;
+            baseline = snapshot.text.replace(/\r\n?/g, '\n');
+            approvedCandidate = null; diff.style.display = 'none';
+            apply.replaceChildren(document.createTextNode(saveLabel()));
+            if (created) title.textContent = t`Editor local · ${path}`;
+            markDirty(); updateInfo();
+            report(t`Guardado y verificado · SHA256 ${snapshot.hash.slice(0, 8)} · puedes seguir editando`);
+          }
+          apply.disabled = !canSave();
+          await ui?.refresh();
+        }
       });
+
+      const fontDown = h('button', { class: 'ghost', 'aria-label': t('Reducir tamaño de letra'), onclick: () => changeFont(-1) }, 'A−');
+      const fontUp = h('button', { class: 'ghost', 'aria-label': t('Aumentar tamaño de letra'), onclick: () => changeFont(1) }, 'A+');
+      const tools = [
+        h('button', { class: 'ghost', 'aria-label': t('Buscar y reemplazar (Ctrl+F)'), onclick: () => toggleFind(!findOpen) }, '🔍 ', t('Buscar')),
+        h('button', { class: 'ghost', 'aria-label': t('Ir a la línea (Ctrl+G)'), onclick: () => toggleGoto(!gotoOpen) }, t('Ir a línea')),
+        fontDown, fontUp,
+        h('button', { class: 'ghost', onclick: copyAll }, t('Copiar')),
+        h('button', { class: 'ghost', onclick: pasteClipboard }, t('Pegar')),
+        h('button', { class: 'ghost', 'aria-label': t('Descargar el borrador sin guardarlo en el disco virtual'), onclick: downloadDraft }, t('Descargar')),
+        ...(lang === 'json' ? [h('button', { class: 'ghost', onclick: formatJSON }, t('Formatear'))] : []),
+        ...(isHTML ? [liveButton, tabButton] : []),
+        h('button', { class: 'ghost', 'aria-label': t('Atajos de teclado'), onclick: () => toggleHelp() }, '⌨')
+      ];
+
       shadow.append(h('style', {}, `
-        :host{all:initial} .editor{position:fixed;inset:4%;z-index:1000001;background:#1e1e1e;color:#ddd;border:1px solid #555;border-radius:10px;box-shadow:0 15px 60px #0009;display:flex;flex-direction:column;padding:16px;gap:10px;font:13px system-ui}
-        .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center} button{background:#094771;color:white;border:1px solid #38617e;border-radius:5px;padding:7px 12px;cursor:pointer} button:disabled{opacity:.4;cursor:default}
-        .queries{display:flex;gap:8px}.query{width:50%;background:#252526;color:#eee;border:1px solid #555;padding:8px;font:12px monospace;resize:vertical}
-        .source{display:flex;flex:1;min-height:120px;border:1px solid #444;overflow:hidden}.gutter,.code{font:13px/20px Consolas,monospace;padding:10px 8px;margin:0;box-sizing:border-box;tab-size:2}
-        .gutter{background:#252526;color:#858585;text-align:right;overflow:hidden;min-width:55px}.code{flex:1;min-width:0;background:#1e1e1e;color:#d4d4d4;border:0;resize:none;outline:none;white-space:pre}
-        .diff{margin:0;padding:10px;background:#111;color:#b5cea8;overflow:auto;max-height:30vh;font:12px/18px monospace;white-space:pre}.status{font-size:12px;overflow-wrap:anywhere}
+        :host{all:initial}
+        .editor{position:fixed;inset:2.5%;z-index:1000001;background:#1e1e1e;color:#ddd;border:1px solid #555;border-radius:10px;box-shadow:0 15px 60px #0009;display:flex;flex-direction:column;font:13px system-ui,sans-serif;overflow:hidden}
+        .bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:#252526;border-bottom:1px solid #333}
+        .title{margin-right:auto;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42%}
+        .dirty{color:#e2c08d;margin-left:6px}
+        button{background:#094771;color:#fff;border:1px solid #38617e;border-radius:5px;padding:5px 10px;cursor:pointer;font:12px system-ui,sans-serif;white-space:nowrap}
+        button:hover:not(:disabled){filter:brightness(1.2)} button:disabled{opacity:.4;cursor:default}
+        button.ghost{background:#2d2d2d;border-color:#454545} button.primary{background:#0e7a3e;border-color:#16a34a}
+        button.on{background:#0e639c;border-color:#1f8ad2}
+        .main{flex:1;display:flex;min-height:0;position:relative}
+        .source{flex:1;display:flex;min-width:0;min-height:0;background:#1e1e1e;position:relative}
+        .twist{padding:3px 6px;font-size:10px} .indent{width:26px;flex:none}
+        .gutter,.hl,.code{font-family:Consolas,"Cascadia Mono","Courier New",monospace;font-variant-ligatures:none;tab-size:2;-moz-tab-size:2;white-space:pre;letter-spacing:0;margin:0;box-sizing:border-box}
+        .gutter{padding:10px 8px 60px 8px;color:#858585;text-align:right;user-select:none;overflow:hidden;min-width:3.4em;border-right:1px solid #333}
+        .wrap{position:relative;flex:1;min-width:0}
+        .hl,.code{position:absolute;inset:0;width:100%;height:100%;padding:10px 12px;overflow:scroll;border:0}
+        .hl{pointer-events:none;color:#d4d4d4;scrollbar-color:transparent transparent}
+        .code{background:transparent;color:transparent;caret-color:#aeafad;resize:none;outline:none;z-index:1;scrollbar-color:#4b4b4b #1e1e1e}
+        .code::selection{background:#3a7bd566;color:transparent}
+        .source.plain .code{color:#d4d4d4} .source.plain .code::selection{color:#fff}
+        .t-comment{color:#6a9955}.t-string{color:#ce9178}.t-number{color:#b5cea8}.t-keyword{color:#c586c0}.t-literal{color:#569cd6}
+        .t-func{color:#dcdcaa}.t-tag{color:#569cd6}.t-attr{color:#9cdcfe}.t-prop{color:#9cdcfe}.t-type{color:#4ec9b0}
+        .hit{position:absolute;background:#f8d34a40;outline:1px solid #f8d34a;border-radius:2px;pointer-events:none}
+        .minimap{width:84px;position:relative;overflow:hidden;border-left:1px solid #333;cursor:pointer;flex:none;touch-action:none}
+        .mini-text{margin:0;padding:0 4px;font:2.4px/3px monospace;color:#8b949e;white-space:pre;pointer-events:none;overflow:hidden}
+        .mini-view{position:absolute;left:0;right:0;background:#ffffff14;border-top:1px solid #ffffff2a;border-bottom:1px solid #ffffff2a;pointer-events:none}
+        .find,.goto,.keys{position:absolute;top:6px;z-index:3;background:#252526;border:1px solid #454545;border-radius:6px;box-shadow:0 4px 16px #0008;padding:6px}
+        .find{right:100px;flex-direction:column;gap:5px;width:min(460px,80%)} .goto{left:50%;transform:translateX(-50%);width:220px}
+        .keys{right:100px;font-size:12px;line-height:1.7;padding:10px 14px} .keys strong{display:block;margin-bottom:4px}
+        .row{display:flex;gap:4px;align-items:center;width:100%}
+        .row input{flex:1;background:#3c3c3c;color:#eee;border:1px solid #555;border-radius:3px;padding:5px 7px;font:12px Consolas,monospace;outline:none;min-width:0}
+        .row input:focus{border-color:#1f8ad2} .row input.bad{border-color:#f87171} .row button{padding:3px 8px}
+        .count{font-size:11px;color:#aaa;min-width:72px;text-align:center}
+        .live{width:42%;min-width:240px;flex-direction:column;border-left:1px solid #444;background:#fff}
+        .live-bar{background:#252526;color:#aaa;font-size:11px;padding:5px 8px}
+        .live iframe{flex:1;border:0;width:100%;background:#fff}
+        .diff{margin:0;padding:10px;background:#111;color:#b5cea8;overflow:auto;max-height:30vh;font:12px/18px monospace;white-space:pre;border-top:1px solid #333}
+        .statusbar{display:flex;gap:14px;align-items:center;padding:5px 10px;background:#181818;border-top:1px solid #333;font-size:11.5px;color:#aaa}
+        .status{flex:1;overflow-wrap:anywhere}.pos,.info{white-space:nowrap}
+        @media (max-width:900px){.minimap{display:none}.live{width:50%}.find{right:8px}.info{display:none}}
       `));
-      shadow.append(h('section', { class: 'editor', role: 'dialog', 'aria-label': t`Editor de ${path}` },
-        h('div', { class: 'toolbar' }, h('strong', {}, t`Editor local · ${path}`), preview, apply, close),
-        h('div', { class: 'queries' }, search, replacement),
-        h('div', { class: 'toolbar' }, find,
-          h('button', { onclick: () => replace(false) }, t('Reemplazar primero')),
-          h('button', { onclick: () => replace(true) }, t('Reemplazar todos'))),
-        h('div', { class: 'source' }, gutter, code), diff, status));
+      source.append(gutter, h('div', { class: 'wrap' }, hl, code), minimap, findBox, gotoBox, helpBox);
+      const dialog = h('section', { class: 'editor', role: 'dialog', 'aria-label': snapshot.isNew ? t`Nuevo archivo · ${path}` : t`Editor de ${path}` },
+        h('div', { class: 'bar' }, h('strong', { class: 'title' }, title, dirtyMark), ...tools, preview, apply, close),
+        h('div', { class: 'main' }, source, ...(live ? [live] : [])),
+        diff, h('div', { class: 'statusbar' }, status, position, info));
+      dialog.addEventListener('keydown', (e) => {
+        const mod = e.ctrlKey || e.metaKey, key = String(e.key || '').toLowerCase();
+        if (mod && !e.altKey && key === 's') {
+          e.preventDefault();
+          (apply.disabled ? preview : apply).click();
+        } else if (mod && !e.altKey && !e.shiftKey && key === 'f') {
+          e.preventDefault(); toggleFind(true);
+        } else if (mod && !e.altKey && !e.shiftKey && key === 'h') {
+          e.preventDefault(); toggleFind(true, true);
+        } else if (mod && !e.altKey && !e.shiftKey && key === 'g') {
+          e.preventDefault(); toggleGoto(true);
+        } else if (key === 'f3') {
+          e.preventDefault(); if (!findOpen) toggleFind(true); step(e.shiftKey ? -1 : 1);
+        } else if (e.shiftKey && e.altKey && !mod && (key === 'f' || e.code === 'KeyF')) {
+          e.preventDefault(); formatJSON();
+        } else if (key === 'escape') {
+          e.preventDefault();
+          if (helpOpen) toggleHelp(false);
+          else if (gotoOpen) toggleGoto(false);
+          else if (findOpen) toggleFind(false);
+          else close.click();
+        }
+      });
+      shadow.append(dialog);
       for (const type of ['keydown', 'keyup', 'keypress']) host.addEventListener(type, (e) => e.stopPropagation());
-      document.body.append(host); sync(); report(t`SHA256 original: ${snapshot.hash} · UTF-8 · pega o edita funciones`);
+      window.addEventListener?.('beforeunload', beforeUnload);
+      document.body.append(host);
+      applyFont(); sync();
+      report(snapshot.isNew ? t`Archivo nuevo ${path} · pega o escribe el código · Ctrl+S crea · Tab sangra · Esc cierra` :
+        t`SHA256 original: ${snapshot.hash} · UTF-8 · Ctrl+S guarda (muestra el diff y confirma) · Tab sangra · Esc cierra`);
       if (proposal) preview.click();
+      else { code.focus?.(); code.setSelectionRange?.(0, 0); }
       return true;
     } catch (e) {
       if (release) release(); else editorOpen = false;
       ui?.updateState?.();
+      uiLog(t`❌ Editor: ${e.message}`, 'err');
+      return false;
+    }
+  }
+
+  async function createFileFromPanel(name) {
+    if (busy || editorOpen) { uiLog(t('Ya hay una operación o editor abierto.'), 'err'); return false; }
+    try {
+      if (typeof name !== 'string' || !name.trim()) throw new Error(t('escribe un nombre de archivo'));
+      const target = await editorTarget(name.trim());
+      if (!target.create) uiLog(t`${target.path} ya existe; se abre para editarlo.`, 'info');
+      return openCodeEditor(target.path, null, { create: target.create });
+    } catch (e) {
       uiLog(t`❌ Editor: ${e.message}`, 'err');
       return false;
     }
@@ -4023,18 +5250,32 @@
       const lines = (await (await h.getFile()).text()).trim().split('\n').filter(Boolean);
       return lines.slice(-n).map(l => {
         const j = JSON.parse(l);
-        return `[${j.timestamp.slice(11, 19)}] ${j.type} -> ${j.path} (${j.bytes || 0} B, hash:${(j.newHash || '').slice(0, 7)})`;
+        return `[${j.timestamp.slice(11, 19)}] ${j.type}${j.status ? ` ${j.status}` : ''} -> ${j.path} (${j.bytes || 0} B, hash:${(j.newHash || '').slice(0, 7)})`;
       }).join('\n');
     } catch { return t('(registro de auditoría vacío)'); }
   });
 
+  def('recover', 'Auditoría', 'recover', 'Revisa escrituras interrumpidas: completa, revierte o guarda copia; limpia temporales huérfanos', async (ctx) => {
+    if (ctx.args.length) throw new Error(t('uso: recover'));
+    return formatRecovery(await recoverTransactions());
+  });
+
+  def('edit', 'Ficheros', 'edit <archivo>', 'Abre el editor; si el archivo no existe, empieza uno en blanco para pegar código', async (ctx) => {
+    if (ctx.args.length !== 1) throw new Error(t('uso: edit <archivo>'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de proponer otro cambio'));
+    const target = await editorTarget(ctx.args[0]);
+    ctx.openEditor(target);
+    return target.create ? t`Archivo nuevo: ${target.path}. Pega o escribe el código y pulsa Crear archivo; no existe hasta guardarlo.` :
+      t`Editor abierto: ${target.path}`;
+  });
+
   // Git Local
-  def('git', 'Git', 'git <init|status|add|commit|log|diff|show|branch|checkout> [args]', 'Control de versiones local (sin remoto)', async (ctx) => {
-    if (!ctx.args.length) throw new Error(t('uso: git <init|status|add|commit|log|diff|show|branch|checkout>'));
+  def('git', 'Git', 'git <init|status|add|commit|log|diff|show|restore|branch|checkout> [args]', 'Control de versiones local (sin remoto)', async (ctx) => {
+    if (!ctx.args.length) throw new Error(t('uso: git <init|status|add|commit|log|diff|show|restore|branch|checkout>'));
     const sub = ctx.args[0].toLowerCase();
     const subArgs = ctx.args.slice(1);
     const { git, fs } = await getGit();
-    if (['status', 'add', 'commit', 'log', 'diff', 'show', 'branch', 'checkout'].includes(sub)) {
+    if (['status', 'add', 'commit', 'log', 'diff', 'show', 'restore', 'branch', 'checkout'].includes(sub)) {
       const repository = await getHandle('.git');
       if (!repository) throw new Error(t('no hay repositorio Git. Usa: git init'));
       if (repository.kind !== 'directory') throw new Error(t('.git no es una carpeta; revisa el repositorio'));
@@ -4102,6 +5343,8 @@
         return gitDiff(git, fs, subArgs);
       case 'show':
         return gitShow(git, fs, subArgs);
+      case 'restore':
+        return gitRestore(git, fs, subArgs, ctx);
       default:
         throw new Error(t`subcomando no implementado: ${sub}`);
     }
@@ -4124,6 +5367,9 @@
       t('  rm pide confirmación y no ofrece deshacer automático.'),
       t('  Explorador: Eliminar por archivo o Eliminar todos (conserva Git/journal).'),
       t('  Editar: código numerado, buscar/reemplazar literal y diff antes de Aplicar.'),
+      t('  Nuevo archivo… o edit pagina.html: editor en blanco; pega el código y pulsa Crear archivo (nunca sobrescribe).'),
+      t('  Editor: Ctrl+S o 💾 Guardar muestran el diff y piden confirmación; Tab sangra (Shift+Tab sale); Esc cierra.'),
+      t('  Escrituras con registro PREPARED/COMMITTED; al abrir DeepSeek se recuperan las interrumpidas (también: recover).'),
       t('  Ejecutar junto a Editar: mismo run local con confirmación, HTML estático o consola JS.'),
       t('  Primeros pasos prepara ejemplos sin ejecutarlos; Ampliar/Reducir conserva el comando escrito.'),
       t('  Descargar por archivo: bytes originales a la PC (también binarios/gzip), sin chat ni staging.'),
@@ -4131,6 +5377,9 @@
       t('  checkpoint archivo [etiqueta]: copia bytes/hash hasta 256 KB; checkpoint --list muestra IDs.'),
       t('  restore ID: ruta original; texto existente en editor/diff, binario o ausente con confirmación.'),
       t('  Restore conserva checkpoint previo si sobrescribe; no hace staging/commit ni elimina copias.'),
+      t('  git restore archivo: vuelve a la versión del staging; --source HEAD (o rama/SHA) usa un commit.'),
+      t('  git restore muestra diff y crea checkpoint antes de escribir; --staged solo saca del staging.'),
+      t('  Botón Revertir…: elige un archivo y vuelve a la versión del último commit, sin escribir comandos.'),
       t('  checkpoint --list [--file ruta] [--tag texto]: recientes primero; tag busca literal en etiqueta.'),
       t('  checkpoint show ID [--content] / diff ID1 ID2: consulta sin restaurar; contenido/diff solo UTF-8.'),
       t('  checkpoint delete ID / prune --keep N / prune --older-than 7d: borrado confirmado.'),
@@ -4196,7 +5445,7 @@
       const segs = parsePipeline(Array.isArray(raw) ? raw : tokenize(raw.trim()));
       if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && seg.argv[1]?.toLowerCase() === 'checkout') &&
           (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
-      const editorCommand = segs.find((seg) => ['propose', 'replace', 'checkpoint', 'restore'].includes(seg.argv[0].toLowerCase()));
+      const editorCommand = segs.find((seg) => ['propose', 'replace', 'checkpoint', 'restore', 'edit', 'recover'].includes(seg.argv[0].toLowerCase()));
       if (editorCommand && (segs.length !== 1 || segs[0].redirect)) {
         throw new Error(t`${editorCommand.argv[0]} no admite pipes ni redirecciones`);
       }
@@ -4427,7 +5676,10 @@
     } finally {
       setBusy(false);
       ui?.refresh();
-      if (editorRequest) await openCodeEditor(editorRequest.snapshot.path, editorRequest);
+      if (editorRequest) {
+        if (editorRequest.snapshot) await openCodeEditor(editorRequest.snapshot.path, editorRequest);
+        else await openCodeEditor(editorRequest.path, null, { create: editorRequest.create });
+      }
     }
   }
 
@@ -4738,6 +5990,8 @@
     .file-dialog select {
       width: 100%; background: #09090b; color: #fff; border: 1px solid #3f3f46; padding: 4px; border-radius: 4px; margin-bottom: 6px; font-size: 11px;
     }
+    .new-file-name { width:100%;box-sizing:border-box;background:#09090b;color:#f4f4f5;border:1px solid #3f3f46;border-radius:4px;padding:6px;font:12px monospace; }
+    .new-file-name:focus { outline:1px solid #3b82f6;border-color:#3b82f6; }
     .git-overlay { position:fixed;inset:0;z-index:1000002;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box; }
     .git-modal { width:min(860px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:#18181b;color:#f4f4f5;border:1px solid #52525b;border-radius:10px;padding:18px;box-sizing:border-box;font:13px system-ui; }
     .git-modal pre { max-height:35vh;overflow:auto;background:#09090b;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px monospace; }
@@ -4777,6 +6031,31 @@
       if (busy) { uiLog(t('⏳ Hay una operación en curso; espera antes de importar.'), 'err'); return; }
       localFileInput.click();
     } }, t('Explorar / Importar archivos…'));
+    // Inline form instead of prompt(): some browsers and embedded views block native dialogs.
+    const newFileName = h('input', { type: 'text', class: 'new-file-name', spellcheck: 'false',
+      'aria-label': t('Nombre del archivo (puede incluir carpeta, ej. web/index.html):'), placeholder: 'pagina.html' });
+    const hideNewFile = () => { newFileForm.style.display = 'none'; };
+    const submitNewFile = async () => {
+      if (await createFileFromPanel(newFileName.value)) { hideNewFile(); newFileName.value = ''; }
+    };
+    newFileName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submitNewFile(); }
+      else if (e.key === 'Escape') { e.preventDefault(); hideNewFile(); }
+    });
+    const newFileForm = h('div', { class: 'file-dialog new-file-form', role: 'group', 'aria-label': t('Nuevo archivo…') },
+      h('div', { style: 'font-size:11px;color:#a1a1aa;margin-bottom:4px;' }, t('Nombre del archivo (puede incluir carpeta, ej. web/index.html):')),
+      newFileName,
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', onclick: submitNewFile }, t('Abrir editor')),
+        h('button', { class: 'btn btn-secondary', onclick: hideNewFile }, t('Cancelar'))));
+    const showNewFile = () => {
+      if (busy || editorOpen) { uiLog(t('Ya hay una operación o editor abierto.'), 'err'); return; }
+      newFileForm.style.display = 'block';
+      if (!newFileName.value) newFileName.value = 'pagina.html';
+      newFileName.focus(); newFileName.select?.();
+    };
+    const btnNewFile = h('button', { class: 'btn btn-secondary', title: t('Crear un archivo en blanco y abrirlo en el editor para pegar código'),
+      onclick: showNewFile }, t('Nuevo archivo…'));
     const cmdInput = h('textarea', {
       class: 'input-cmd',
       'aria-label': t('Comando local'),
@@ -4837,7 +6116,16 @@
         const review = await getGitStatus({ capture: true });
         if (!review.initialized) throw new Error(t('Git no está inicializado; cierra y pulsa Inicializar Git local'));
         gitReview = review;
-        for (const change of review.changes) gitPaths.append(h('li', {}, `${change.path} — ${change.description}`));
+        for (const change of review.changes) {
+          const item = h('li', {}, `${change.path} — ${change.description} `);
+          if (change.head !== 0) item.append(h('button', {
+            class: 'btn btn-secondary git-revert', style: 'padding:1px 6px;font-size:10px;margin-left:6px;',
+            'aria-label': t`Revertir ${change.path} a HEAD`,
+            title: t('Volver a la versión del último commit: muestra el diff y crea checkpoint antes de escribir'),
+            onclick: () => revertGitFile(change.path)
+          }, t('Revertir')));
+          gitPaths.append(item);
+        }
         gitNotice.textContent = t`Rama: ${review.branch}. ${review.changes.length} archivo(s). ` +
           t('Se guardan las versiones actuales y los borrados de esta lista. El staging anterior se reemplaza por esos archivos actuales. ') +
           t('Los archivos ignorados sin seguimiento y metadatos internos se excluyen. No sube nada a un servidor.');
@@ -4872,6 +6160,18 @@
       await loadGitReview();
       if (gitReview) await showGitDiff();
     } }, t('Ver cambios'));
+    const btnGitRevert = h('button', { class: 'btn btn-secondary', disabled: true,
+      title: t('Elige en la lista qué archivo volver a la versión del último commit'),
+      onclick: async () => {
+        await loadGitReview();
+        if (gitReview) gitNotice.textContent = t('Pulsa Revertir junto al archivo que quieres volver a la versión del último commit. Verás el diff antes de escribir y se creará un checkpoint.');
+        gitPaths.querySelector('.git-revert')?.focus?.();
+      } }, t('Revertir…'));
+    async function revertGitFile(path) {
+      if (busy || gitLoading) return;
+      gitOverlay.style.display = 'none'; panel.inert = false; gitReview = null; updateState();
+      await handleExecution(`git restore --source HEAD ${quoteCommandPath(path)}`, { origin: 'panel', forceShare: false });
+    }
     const confirmGit = h('button', { class: 'btn', disabled: true, onclick: async () => {
       try {
         const oid = await saveGitChanges(gitReview, gitMessage.value);
@@ -4909,7 +6209,7 @@
       e.stopPropagation();
       if (e.key === 'Escape') { e.preventDefault(); closeGit(); }
       if (e.key === 'Tab') {
-        const controls = [gitMessage, btnGitRefresh, btnGitReviewDiff, confirmGit, btnGitClose].filter(el => !el.disabled);
+        const controls = [...gitPaths.querySelectorAll('.git-revert'), gitMessage, btnGitRefresh, btnGitReviewDiff, confirmGit, btnGitClose].filter(el => !el.disabled);
         const first = controls[0], last = controls.at(-1);
         if (e.shiftKey && e.target === first) { e.preventDefault(); last.focus(); }
         else if (!e.shiftKey && e.target === last) { e.preventDefault(); first.focus(); }
@@ -4924,7 +6224,7 @@
         h('span', { class: 'badge-local' }, t('Panel Soberano'))
       ),
       h('div', { class: 'row' }, stateEl, languageSelect, expandEl, toggleEl),
-      h('div', { class: 'row', style: 'width:100%;cursor:default' }, gitBadge, btnGitSave, btnGitDiff)
+      h('div', { class: 'row', style: 'width:100%;cursor:default' }, gitBadge, btnGitSave, btnGitDiff, btnGitRevert)
     );
 
     let histIdx = previous.histIdx ?? -1;
@@ -5042,8 +6342,9 @@
       class: 'file-dialog', role: 'region', 'aria-label': t('Primeros pasos')
     },
       h('strong', {}, t('Bienvenido a loopwork')),
-      h('p', {}, t('Importa un archivo o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.')),
+      h('p', {}, t('Crea un archivo nuevo, importa uno o prepara un ejemplo. Nada se ejecuta ni se comparte por abrir esta guía.')),
       h('div', { class: 'row' },
+        h('button', { class: 'btn', title: t('Crear un archivo en blanco y abrirlo en el editor para pegar código'), onclick: showNewFile }, t('Nuevo archivo…')),
         h('button', { class: 'btn btn-secondary', title: t('Preparar !ls para listar archivos; luego pulsa Ejecutar'), onclick: () => prepareExample('!ls') }, t('Ver archivos: !ls')),
         h('button', { class: 'btn btn-secondary', title: t('Preparar consulta del estado Git; requiere git init previo'), onclick: () => prepareExample('!git status') }, t('Estado: !git status')),
         h('button', { class: 'btn btn-secondary', title: t('Preparar el comando de ayuda, sin ejecutarlo'), onclick: () => prepareExample('!help') }, t('Comandos: !help'))),
@@ -5084,7 +6385,8 @@
         h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => deleteUserFiles() }, t('Eliminar todos')),
         h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, t('Limpiar log'))
       ),
-      h('div', { class: 'row' }, btnImport, btnHelp, btnWelcome, localFileInput),
+      h('div', { class: 'row' }, btnNewFile, btnImport, btnHelp, btnWelcome, localFileInput),
+      newFileForm,
       welcome,
       helpDialog,
       filesEl,
@@ -5159,7 +6461,7 @@
       try {
         const files = (await listFiles()).filter((file) => !isInternalPath(file.path));
         if (fileDialog.style.display === 'block') populateShareFiles(files);
-        if (!files.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, t('Tu disco está vacío. Usa Explorar / Importar archivos para empezar.')));
+        if (!files.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, t('Tu disco está vacío. Usa Nuevo archivo… para escribir o pegar código, o Explorar / Importar archivos.')));
         for (const f of files.slice(0, 50)) {
           filesEl.append(h('li', {},
             h('span', { title: f.path, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, f.path),
@@ -5209,11 +6511,14 @@
     }
 
     const updateState = () => {
-      stateEl.textContent = busy ? t('Operación en curso') : editorOpen ? 'Editor abierto' : t('Listo · local');
+      stateEl.textContent = busy ? t('Operación en curso') : editorOpen ? t('Editor abierto') : t('Listo · local');
       panel.setAttribute('aria-busy', String(busy));
       for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog]) button.disabled = busy;
+      btnNewFile.disabled = busy || editorOpen;
       btnGitSave.disabled = busy || editorOpen || gitLoading || gitState?.initialized && !gitState.changes.length;
       btnGitDiff.disabled = busy || editorOpen || gitLoading || !gitState?.initialized;
+      btnGitRevert.disabled = busy || editorOpen || gitLoading || !gitState?.changes?.some(c => c.head !== 0);
+      for (const button of gitPaths.querySelectorAll('.git-revert')) button.disabled = busy || editorOpen || gitLoading;
       confirmGit.disabled = busy || editorOpen || gitLoading || !gitReview?.changes.length || !gitMessage.value.trim();
       btnGitRefresh.disabled = busy || editorOpen || gitLoading;
       btnGitReviewDiff.disabled = busy || editorOpen || gitLoading || !gitReview;
@@ -5249,6 +6554,13 @@
       const body = await waitFor(() => document.body, 20000, 200);
       if (!body) throw new Error(t('no se encontró document.body; no se puede montar el panel'));
       ui = buildPanel();
+      try {
+        const report = await recoverTransactions();
+        if (report.messages.length || report.cleaned) {
+          uiLog(t`Recuperación al iniciar:\n${formatRecovery(report)}`, report.conflicts ? 'err' : 'info');
+          await ui?.refresh();
+        }
+      } catch (e) { uiLog(t`Recuperación al iniciar no completada: ${e.message}. Usa recover para reintentar.`, 'err'); }
       installInterceptors();
       installChatCodeActions();
     } catch (e) {
