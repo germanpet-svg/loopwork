@@ -3,7 +3,7 @@
 // @name:en      DeepSeek Virtual Disk (Dual-Channel OPFS + Git)
 // @name:zh-CN   DeepSeek 虚拟磁盘（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.5.39
+// @version      1.5.40
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -13,7 +13,8 @@
 // @match        https://gemini.google.com/*
 // @require      https://cdn.jsdelivr.net/npm/isomorphic-git@1.32.1/index.umd.min.js
 // @require      https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      github.com
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
@@ -26,7 +27,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.5.39',
+    VERSION: '1.5.40',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -2412,6 +2413,55 @@
     'Ampliar editor': ['Expand editor', '展开编辑器'],
     'Reducir editor': ['Reduce editor', '缩小编辑器'],
     'Arrastra la barra para mover el editor': ['Drag the title bar to move the editor', '拖动标题栏以移动编辑器'],
+    'GitHub: usa https://github.com/usuario/repositorio.git sin credenciales ni parámetros.': ['GitHub: use https://github.com/owner/repository.git without credentials or parameters.', 'GitHub：请使用 https://github.com/owner/repository.git，不要包含凭据或参数。'],
+    'GitHub: configura primero git remote add origin https://github.com/usuario/repositorio.git': ['GitHub: first configure git remote add origin https://github.com/owner/repository.git', 'GitHub：请先配置 git remote add origin https://github.com/owner/repository.git'],
+    'GitHub: usa git auth para introducir el token privado de este repositorio.': ['GitHub: use git auth to enter the private token for this repository.', 'GitHub：使用 git auth 输入此仓库的私密令牌。'],
+    'GitHub rechazó la autenticación. Revisa el token, sus permisos y la URL; vuelve a usar git auth.': ['GitHub rejected authentication. Check the token, its permissions and the URL; use git auth again.', 'GitHub 拒绝认证。请检查令牌、权限及 URL，然后重新运行 git auth。'],
+    'Cierra el editor o el diálogo de autenticación antes de continuar.': ['Close the editor or authentication dialog before continuing.', '请先关闭编辑器或认证对话框。'],
+    'Autenticación GitHub': ['GitHub authentication', 'GitHub 认证'],
+    'Aceptar': ['Accept', '接受'],
+    'Token GitHub (solo en memoria)': ['GitHub token (memory only)', 'GitHub 令牌（仅保存在内存中）'],
+    'Introduce un token válido, sin espacios.': ['Enter a valid token without spaces.', '请输入有效令牌，不含空格。'],
+    'Token GitHub preparado solo en memoria para este repositorio. Usa git logout para olvidarlo.': ['GitHub token ready in memory only for this repository. Use git logout to forget it.', 'GitHub 令牌仅在内存中用于此仓库。使用 git logout 清除。'],
+    'Autenticación cancelada; no se envió el token.': ['Authentication cancelled; the token was not sent.', '认证已取消；未发送令牌。'],
+    'Crear token limitado en GitHub': ['Create a limited token on GitHub', '在 GitHub 上创建受限令牌'],
+    'Token fine-grained: solo este repositorio, Contents: Read and write. No lo pegues en comandos ni en el chat. Se olvida al recargar.': ['Fine-grained token: only this repository, Contents: Read and write. Do not paste it into commands or chat. Forgotten on reload.', '细粒度令牌：仅此仓库，Contents: Read and write。不要粘贴到命令或聊天中。重新加载后清除。'],
+    'GitHub requiere reinstalar el UserScript y aceptar el permiso de red de Tampermonkey/Violentmonkey.': ['GitHub requires reinstalling the UserScript and accepting the Tampermonkey/Violentmonkey network permission.', 'GitHub 需要重新安装用户脚本并接受 Tampermonkey/Violentmonkey 网络权限。'],
+    'GitHub: solicitud fuera del repositorio autorizado.': ['GitHub: request outside the authorized repository.', 'GitHub：请求超出已授权仓库范围。'],
+    'GitHub: transferencia superior al límite de 64 MB.': ['GitHub: transfer exceeds the 64 MB limit.', 'GitHub：传输超过 64 MB 限制。'],
+    'GitHub: error de red, permiso denegado o redirección bloqueada. Revisa la URL y los permisos del gestor de scripts.': ['GitHub: network error, permission denied or redirect blocked. Check the URL and script manager permissions.', 'GitHub：网络错误、权限被拒绝或重定向被阻止。请检查 URL 和脚本管理器权限。'],
+    'GitHub: cierra el editor antes de sincronizar.': ['GitHub: close the editor before synchronizing.', 'GitHub：同步前请关闭编辑器。'],
+    'GitHub: hay archivos pendientes o ignorados. Confirma tus cambios y conserva los ignorados fuera del disco antes de sincronizar.': ['GitHub: pending or ignored files exist. Commit changes and preserve ignored files outside the disk before synchronizing.', 'GitHub：存在未提交或忽略的文件。同步前请提交更改并将忽略的文件保存在磁盘之外。'],
+    'GitHub: crea un commit antes de enviar.': ['GitHub: create a commit before pushing.', 'GitHub：推送前请创建提交。'],
+    'GitHub {0}: {1} · {2}\nSe usará la red. Push envía TODO el historial de esta rama, incluidos archivos borrados en commits anteriores. No incluyas secretos. Pull solo avanza sin conflictos y requiere confirmación antes de reemplazar archivos. ¿Continuar?': [
+      'GitHub {0}: {1} · {2}\nNetwork will be used. Push sends ALL history of this branch, including files deleted in earlier commits. Do not include secrets. Pull only fast-forwards and asks before replacing files. Continue?',
+      'GitHub {0}：{1} · {2}\n将使用网络。Push 发送此分支的全部历史，包括之前提交中已删除的文件。不要包含秘密。Pull 仅快进，替换文件前需要确认。继续？'
+    ],
+    'Sincronización cancelada.': ['Synchronization cancelled.', '同步已取消。'],
+    'GitHub: el disco cambió durante la revisión; vuelve a intentarlo.': ['GitHub: the disk changed during review; try again.', 'GitHub：审查期间磁盘已变化；请重试。'],
+    'GitHub rechazó el push. Revisa permisos, protección de rama y si debes hacer pull. No se fuerza el historial.': ['GitHub rejected the push. Check permissions, branch protection and whether you need to pull. History is not forced.', 'GitHub 拒绝推送。请检查权限、分支保护及是否需要拉取。不会强制覆盖历史。'],
+    'GitHub: rama {0} enviada a {1}.': ['GitHub: branch {0} pushed to {1}.', 'GitHub：分支 {0} 已推送至 {1}。'],
+    'GitHub: no se recibió una rama. Comprueba que el repositorio tenga commits y la misma rama local.': ['GitHub: no branch received. Check that the repository has commits and the same branch as local.', 'GitHub：未收到分支。请检查仓库是否有提交且分支与本地相同。'],
+    'GitHub: no hay cambios nuevos que aplicar. Tus commits locales se conservan.': ['GitHub: no new changes to apply. Local commits are preserved.', 'GitHub：没有需要应用的新更改。本地提交已保留。'],
+    'GitHub: historiales divergentes. No se mezcla, sobrescribe ni fuerza nada; conserva ambas versiones y resuelve el conflicto fuera de DV.': ['GitHub: histories diverged. No merging, overwriting or forcing; preserve both versions and resolve outside DV.', 'GitHub：历史已分叉。不会合并、覆盖或强制更新；请保留两个版本并在 DV 外解决。'],
+    '¿Aplicar la versión GitHub {0} en la rama {1}?\nSe reemplazarán los archivos confirmados por esta versión. Se crearán checkpoints de los archivos actuales; no hay descarte de cambios pendientes ni merge automático.': [
+      'Apply GitHub version {0} on branch {1}?\nCommitted files will be replaced by this version. Checkpoints of current files will be created; pending changes are not discarded and no automatic merge is performed.',
+      '在分支 {1} 上应用 GitHub 版本 {0}？\n已提交文件将被此版本替换。将创建当前文件的检查点；不会丢弃待提交更改或自动合并。'
+    ],
+    'Aplicación cancelada. Solo se descargaron objetos Git; archivos y rama intactos.': ['Application cancelled. Only Git objects were downloaded; files and branch are unchanged.', '应用已取消。仅下载了 Git 对象；文件和分支未改变。'],
+    'GitHub: aplicación no completada/verificada: {0}. Revisa git status; checkpoints conservados, sin rollback automático.': ['GitHub: update incomplete/unverified: {0}. Check git status; checkpoints preserved, no automatic rollback.', 'GitHub：更新未完成或未验证：{0}。请检查 git status；检查点已保留，不会自动回滚。'],
+    'GitHub: rama {0} actualizada a {1}. Archivos verificados.': ['GitHub: branch {0} updated to {1}. Files verified.', 'GitHub：分支 {0} 已更新至 {1}。文件已验证。'],
+    'Git local y sincronización GitHub explícita': ['Local Git and explicit GitHub synchronization', '本地 Git 和显式 GitHub 同步'],
+    'Sin remotos configurados.': ['No remotes configured.', '未配置远程仓库。'],
+    'Uso: git remote add origin <URL-GitHub> o git remote set-url origin <URL-GitHub>': ['Usage: git remote add origin <GitHub-URL> or git remote set-url origin <GitHub-URL>', '用法：git remote add origin <GitHub-URL> 或 git remote set-url origin <GitHub-URL>'],
+    'Remoto GitHub configurado. No se enviaron archivos. Usa git auth.': ['GitHub remote configured. No files sent. Use git auth.', 'GitHub 远程仓库已配置。未发送文件。请使用 git auth。'],
+    'Usa git auth sin argumentos. Nunca escribas el token en comandos ni en el chat.': ['Use git auth without arguments. Never put the token in commands or chat.', '请使用不带参数的 git auth。不要将令牌写入命令或聊天。'],
+    'Uso: git logout': ['Usage: git logout', '用法：git logout'],
+    'Token GitHub olvidado. No se revoca en GitHub; revócalo allí si ya no lo necesitas.': ['GitHub token forgotten. Not revoked on GitHub; revoke it there when no longer needed.', 'GitHub 令牌已清除，但未在 GitHub 上撤销；不再需要时请在那里撤销。'],
+    'Usa git pull o git push sin argumentos. Solo origin y la rama actual; sin --force.': ['Use git pull or git push without arguments. Only origin and the current branch; no --force.', '请使用不带参数的 git pull 或 git push。仅限 origin 和当前分支；不允许 --force。'],
+    'La sincronización GitHub no admite pipes ni redirecciones.': ['GitHub synchronization does not support pipes or redirections.', 'GitHub 同步不支持管道或重定向。'],
+    '  GitHub: remote add origin URL, auth, push y pull. Solo red explícita; pull sin conflictos y con disco limpio.': ['  GitHub: remote add origin URL, auth, push and pull. Explicit network only; pull requires a clean disk and fast-forward.', '  GitHub：remote add origin URL、auth、push 和 pull。仅显式联网；pull 需要干净磁盘且仅快进。'],
+    'uso: git <init|status|add|commit|log|diff|show|restore|branch|checkout|remote|auth|logout|pull|push>': ['usage: git <init|status|add|commit|log|diff|show|restore|branch|checkout|remote|auth|logout|pull|push>', '用法：git <init|status|add|commit|log|diff|show|restore|branch|checkout|remote|auth|logout|pull|push>'],
     'HTML y CSS del disco · Gemini bloquea JavaScript por CSP': ['Disk HTML and CSS · Gemini blocks JavaScript through CSP', '磁盘 HTML 和 CSS · Gemini 的 CSP 阻止 JavaScript'],
     'HTML, CSS y JS del disco · scripts aislados, sin red': ['Disk HTML, CSS and JS · isolated scripts, no network', '磁盘 HTML、CSS 和 JS · 隔离脚本，无网络'],
     'HTML y CSS del disco · JavaScript desactivado': ['Disk HTML and CSS · JavaScript disabled', '磁盘 HTML 和 CSS · JavaScript 已禁用'],
@@ -3182,12 +3232,118 @@
 
   let gitInstance = null;
   let gitFs = null;
+  let githubCredential = null;
+
+  function githubRepository(value) {
+    const match = /^https:\/\/github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(value);
+    if (!match || ['.', '..'].includes(match[2])) throw new Error(t('GitHub: usa https://github.com/usuario/repositorio.git sin credenciales ni parámetros.'));
+    return `https://github.com/${match[1]}/${match[2]}.git`;
+  }
+
+  async function githubOrigin(git, fs) {
+    const remotes = await git.listRemotes({ fs, dir: '.' });
+    const origin = remotes.find(remote => remote.remote === 'origin');
+    if (!origin) throw new Error(t('GitHub: configura primero git remote add origin https://github.com/usuario/repositorio.git'));
+    return githubRepository(origin.url);
+  }
+
+  function githubAuthentication(url) {
+    if (!githubCredential || githubCredential.url !== url) throw new Error(t('GitHub: usa git auth para introducir el token privado de este repositorio.'));
+    const credential = githubCredential;
+    return {
+      onAuth: () => ({ username: 'x-access-token', password: credential.token }),
+      onAuthFailure: () => {
+        if (githubCredential === credential) githubCredential = null;
+        throw new Error(t('GitHub rechazó la autenticación. Revisa el token, sus permisos y la URL; vuelve a usar git auth.'));
+      }
+    };
+  }
+
+  function openGitHubAuthentication(url) {
+    if (editorOpen || document.getElementById('dv-github-auth')) throw new Error(t('Cierra el editor o el diálogo de autenticación antes de continuar.'));
+    return new Promise((resolve, reject) => {
+      const host = h('div', { id: 'dv-github-auth' });
+      host.id = 'dv-github-auth';
+      const shadow = host.attachShadow({ mode: 'closed' });
+      const dialog = h('section', { role: 'dialog', 'aria-modal': 'true', 'aria-label': t('Autenticación GitHub') });
+      const token = h('input', { type: 'password', autocomplete: 'off', spellcheck: 'false', 'aria-label': t('Token GitHub (solo en memoria)') });
+      let stopTrap;
+      const finish = (accepted) => {
+        const value = token.value.trim();
+        if (accepted && (!value || !/^[A-Za-z0-9_]+$/.test(value))) {
+          status.textContent = t('Introduce un token válido, sin espacios.'); token.focus(); return;
+        }
+        if (accepted) githubCredential = { url, token: value };
+        token.value = '';
+        stopTrap?.(); host.remove();
+        if (accepted) resolve(t('Token GitHub preparado solo en memoria para este repositorio. Usa git logout para olvidarlo.'));
+        else reject(new Error(t('Autenticación cancelada; no se envió el token.')));
+      };
+      const status = h('p', { role: 'status' });
+      const link = h('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener noreferrer' }, t('Crear token limitado en GitHub'));
+      dialog.append(h('h2', {}, t('Autenticación GitHub')), h('p', {}, url),
+        h('p', {}, t('Token fine-grained: solo este repositorio, Contents: Read and write. No lo pegues en comandos ni en el chat. Se olvida al recargar.')), link, token, status,
+        h('button', { onclick: () => finish(true) }, t('Aceptar')),
+        h('button', { onclick: () => finish(false) }, t('Cancelar')));
+      dialog.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finish(true); }
+      });
+      const style = h('style');
+      style.textContent = ':host{all:initial;position:fixed;inset:0;z-index:2147483647;background:#0009;display:grid;place-items:center;font:14px system-ui;color:#f4f4f5}section{background:#18181b;padding:24px;border:1px solid #52525b;border-radius:10px;width:min(520px,85vw);overflow-wrap:anywhere}input{display:block;box-sizing:border-box;width:100%;margin:16px 0;padding:10px}button{margin:8px;padding:8px 16px;cursor:pointer}a{color:#93c5fd}';
+      shadow.append(style, dialog); document.body.append(host);
+      stopTrap = installFocusTrap(host, dialog, token, () => host.isConnected);
+      token.focus();
+    });
+  }
+
+  function githubHttp(url) {
+    url = githubRepository(url);
+    return {
+      async request({ url: target, method = 'GET', headers = {}, body }) {
+        if (typeof GM_xmlhttpRequest !== 'function') throw new Error(t('GitHub requiere reinstalar el UserScript y aceptar el permiso de red de Tampermonkey/Violentmonkey.'));
+        if (![`${url}/info/refs?service=git-upload-pack`, `${url}/info/refs?service=git-receive-pack`, `${url}/git-upload-pack`, `${url}/git-receive-pack`].includes(target) ||
+            !['GET', 'POST'].includes(method)) throw new Error(t('GitHub: solicitud fuera del repositorio autorizado.'));
+        const chunks = [];
+        let size = 0;
+        if (body) for await (const chunk of body) {
+          size += chunk.byteLength;
+          if (size > 64 * 1024 * 1024) throw new Error(t('GitHub: transferencia superior al límite de 64 MB.'));
+          chunks.push(chunk);
+        }
+        const data = new Uint8Array(size);
+        let offset = 0;
+        for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.byteLength; }
+        return new Promise((resolve, reject) => {
+          const fail = () => reject(new Error(t('GitHub: error de red, permiso denegado o redirección bloqueada. Revisa la URL y los permisos del gestor de scripts.')));
+          GM_xmlhttpRequest({
+            method, url: target, headers, data: body ? data.buffer : undefined,
+            responseType: 'arraybuffer', anonymous: true, redirect: 'error', timeout: 120000,
+            onerror: fail, ontimeout: fail, onabort: fail,
+            onload(response) {
+              if (response.finalUrl && response.finalUrl !== target) { fail(); return; }
+              const bytes = new Uint8Array(response.response);
+              if (bytes.byteLength > 64 * 1024 * 1024) { reject(new Error(t('GitHub: transferencia superior al límite de 64 MB.'))); return; }
+              const responseHeaders = {};
+              for (const line of (response.responseHeaders || '').split(/\r?\n/)) {
+                const colon = line.indexOf(':');
+                if (colon > 0) responseHeaders[line.slice(0, colon).toLowerCase()] = line.slice(colon + 1).trim();
+              }
+              resolve({ url: target, method, statusCode: response.status, statusMessage: response.statusText || '',
+                headers: responseHeaders, body: (async function* () { yield bytes; })() });
+            }
+          });
+        });
+      }
+    };
+  }
 
   async function getGit() {
     if (gitInstance) return { git: gitInstance, fs: gitFs };
     uiLog(t('Cargando isomorphic-git...'), 'info');
-    if (typeof window.git !== 'undefined') {
-      gitInstance = window.git;
+    const requiredGit = globalThis.git || window.git;
+    if (requiredGit) {
+      gitInstance = requiredGit;
     } else {
       const mod = await import('https://esm.sh/isomorphic-git@1.32.1');
       gitInstance = mod.default || mod;
@@ -3199,8 +3355,9 @@
   let diffInstance = null;
   async function getDiff() {
     if (!diffInstance) {
-      if (typeof window.Diff !== 'undefined') {
-        diffInstance = window.Diff;
+      const requiredDiff = globalThis.Diff || window.Diff;
+      if (requiredDiff) {
+        diffInstance = requiredDiff;
       } else {
         diffInstance = await import('https://esm.sh/diff@7.0.0');
       }
@@ -3336,15 +3493,14 @@
     }
   }
 
-  async function checkoutBranch(git, fs, ref) {
-    const branches = await git.listBranches({ fs, dir: '.' });
-    if (!branches.includes(ref)) throw new Error(t('checkout: rama local no existe; créala con git branch <nombre>'));
-    const oid = await git.resolveRef({ fs, dir: '.', ref: `refs/heads/${ref}` });
+  async function validateGitTree(git, fs, oid) {
     await git.walk({
       fs, dir: '.', trees: [git.TREE({ ref: oid })],
       map: async (path, [entry]) => {
         if (path === '.' || !entry) return;
-        if (isInternalPath(path)) throw new Error(t`checkout: rama contiene metadatos protegidos: ${path}`);
+        const names = path.split('/').map(part => part.replace(/[ .]+$/g, '').toLowerCase());
+        if (isInternalPath(path) || ['.git', '.dv', '.dv_tmp'].includes(names[0]) ||
+            names.some(name => name === '.git' || /^\.?git~\d/.test(name))) throw new Error(t`checkout: rama contiene metadatos protegidos: ${path}`);
         if (splitPath(path).join('/') !== path) throw new Error(t`checkout: ruta no válida en rama: ${path}`);
         const type = await entry.type();
         if (!['tree', 'blob'].includes(type) || type === 'blob' && ![0o100644, 0o100755].includes(await entry.mode())) {
@@ -3352,6 +3508,71 @@
         }
       }
     });
+  }
+
+  async function syncGitState(git, fs) {
+    if (editorOpen) throw new Error(t('GitHub: cierra el editor antes de sincronizar.'));
+    const state = await getGitStatus({ capture: true });
+    const tracked = new Set(await git.listFiles({ fs, dir: '.' }));
+    const files = (await listFiles()).filter(file => !isInternalPath(file.path));
+    if (state.changes.length || files.some(file => !tracked.has(file.path))) {
+      throw new Error(t('GitHub: hay archivos pendientes o ignorados. Confirma tus cambios y conserva los ignorados fuera del disco antes de sincronizar.'));
+    }
+    return state;
+  }
+
+  async function synchronizeGitHub(git, fs, operation) {
+    const url = await githubOrigin(git, fs);
+    const before = await syncGitState(git, fs);
+    const auth = githubAuthentication(url);
+    const branch = before.branch;
+    if (operation === 'push' && !before.head) throw new Error(t('GitHub: crea un commit antes de enviar.'));
+    if (!confirm(t`GitHub ${operation}: ${url} · ${branch}\nSe usará la red. Push envía TODO el historial de esta rama, incluidos archivos borrados en commits anteriores. No incluyas secretos. Pull solo avanza sin conflictos y requiere confirmación antes de reemplazar archivos. ¿Continuar?`)) {
+      throw new Error(t('Sincronización cancelada.'));
+    }
+    if ((await syncGitState(git, fs)).signature !== before.signature) throw new Error(t('GitHub: el disco cambió durante la revisión; vuelve a intentarlo.'));
+    const options = { fs, dir: '.', http: githubHttp(url), url, remote: 'origin', ref: branch, remoteRef: branch, ...auth };
+    if (operation === 'push') {
+      for (const entry of await git.log({ fs, dir: '.', ref: before.head })) await validateGitTree(git, fs, entry.oid);
+      if ((await syncGitState(git, fs)).signature !== before.signature) throw new Error(t('GitHub: el disco cambió durante la revisión; vuelve a intentarlo.'));
+      const result = await git.push({ ...options, force: false });
+      if (!result.ok || result.refs?.[`refs/heads/${branch}`]?.ok !== true) {
+        throw new Error(t('GitHub rechazó el push. Revisa permisos, protección de rama y si debes hacer pull. No se fuerza el historial.'));
+      }
+      return t`GitHub: rama ${branch} enviada a ${url}.`;
+    }
+    const fetched = await git.fetch({ ...options, singleBranch: true, tags: false });
+    const oid = fetched.fetchHead;
+    if (!oid) throw new Error(t('GitHub: no se recibió una rama. Comprueba que el repositorio tenga commits y la misma rama local.'));
+    if (oid === before.head || before.head && await git.isDescendent({ fs, dir: '.', oid: before.head, ancestor: oid })) {
+      return t('GitHub: no hay cambios nuevos que aplicar. Tus commits locales se conservan.');
+    }
+    if (before.head && !await git.isDescendent({ fs, dir: '.', oid, ancestor: before.head })) {
+      throw new Error(t('GitHub: historiales divergentes. No se mezcla, sobrescribe ni fuerza nada; conserva ambas versiones y resuelve el conflicto fuera de DV.'));
+    }
+    await validateGitTree(git, fs, oid);
+    if (!confirm(t`¿Aplicar la versión GitHub ${oid.slice(0, 7)} en la rama ${branch}?\nSe reemplazarán los archivos confirmados por esta versión. Se crearán checkpoints de los archivos actuales; no hay descarte de cambios pendientes ni merge automático.`)) {
+      throw new Error(t('Aplicación cancelada. Solo se descargaron objetos Git; archivos y rama intactos.'));
+    }
+    if ((await syncGitState(git, fs)).signature !== before.signature) throw new Error(t('GitHub: el disco cambió durante la revisión; vuelve a intentarlo.'));
+    for (const file of (await listFiles()).filter(file => !isInternalPath(file.path))) await createCheckpoint(file.path, 'github-pull');
+    await git.checkout({ fs, dir: '.', ref: oid, noUpdateHead: true, force: false, dryRun: true });
+    try {
+      await git.checkout({ fs, dir: '.', ref: oid, noUpdateHead: true, force: false });
+      await git.writeRef({ fs, dir: '.', ref: `refs/heads/${branch}`, value: oid, force: true });
+      const after = await getGitStatus();
+      if (after.head !== oid || after.branch !== branch || after.changes.length) throw new Error(t('estado final no coincide con la rama o no está limpio'));
+    } catch (error) {
+      throw new Error(t`GitHub: aplicación no completada/verificada: ${error.message}. Revisa git status; checkpoints conservados, sin rollback automático.`);
+    }
+    return t`GitHub: rama ${branch} actualizada a ${oid.slice(0, 7)}. Archivos verificados.`;
+  }
+
+  async function checkoutBranch(git, fs, ref) {
+    const branches = await git.listBranches({ fs, dir: '.' });
+    if (!branches.includes(ref)) throw new Error(t('checkout: rama local no existe; créala con git branch <nombre>'));
+    const oid = await git.resolveRef({ fs, dir: '.', ref: `refs/heads/${ref}` });
+    await validateGitTree(git, fs, oid);
     const inspect = async () => {
       const matrix = await git.statusMatrix({ fs, dir: '.' });
       const dirty = matrix.filter(([path, head, work, stage]) => !isInternalPath(path) &&
@@ -5975,19 +6196,38 @@
       t`Editor abierto: ${target.path}`;
   });
 
-  // Git Local
-  def('git', 'Git', 'git <init|status|add|commit|log|diff|show|restore|branch|checkout> [args]', 'Control de versiones local (sin remoto)', async (ctx) => {
-    if (!ctx.args.length) throw new Error(t('uso: git <init|status|add|commit|log|diff|show|restore|branch|checkout>'));
+  // Git
+  def('git', 'Git', 'git <init|status|add|commit|log|diff|show|restore|branch|checkout|remote|auth|logout|pull|push> [args]', 'Git local y sincronización GitHub explícita', async (ctx) => {
+    if (!ctx.args.length) throw new Error(t('uso: git <init|status|add|commit|log|diff|show|restore|branch|checkout|remote|auth|logout|pull|push>'));
     const sub = ctx.args[0].toLowerCase();
     const subArgs = ctx.args.slice(1);
     const { git, fs } = await getGit();
-    if (['status', 'add', 'commit', 'log', 'diff', 'show', 'restore', 'branch', 'checkout'].includes(sub)) {
+    if (['status', 'add', 'commit', 'log', 'diff', 'show', 'restore', 'branch', 'checkout', 'remote', 'auth', 'pull', 'push'].includes(sub)) {
       const repository = await getHandle('.git');
       if (!repository) throw new Error(t('no hay repositorio Git. Usa: git init'));
       if (repository.kind !== 'directory') throw new Error(t('.git no es una carpeta; revisa el repositorio'));
     }
 
     switch (sub) {
+      case 'remote':
+        if (!subArgs.length || subArgs.length === 1 && subArgs[0] === '-v') {
+          return (await git.listRemotes({ fs, dir: '.' })).map(remote => `${remote.remote} ${githubRepository(remote.url)}`).join('\n') || t('Sin remotos configurados.');
+        }
+        if (subArgs.length !== 3 || !['add', 'set-url'].includes(subArgs[0]) || subArgs[1] !== 'origin') throw new Error(t('Uso: git remote add origin <URL-GitHub> o git remote set-url origin <URL-GitHub>'));
+        await git.addRemote({ fs, dir: '.', remote: 'origin', url: githubRepository(subArgs[2]), force: subArgs[0] === 'set-url' });
+        githubCredential = null;
+        return t('Remoto GitHub configurado. No se enviaron archivos. Usa git auth.');
+      case 'auth':
+        if (subArgs.length) throw new Error(t('Usa git auth sin argumentos. Nunca escribas el token en comandos ni en el chat.'));
+        return openGitHubAuthentication(await githubOrigin(git, fs));
+      case 'logout':
+        if (subArgs.length) throw new Error(t('Uso: git logout'));
+        githubCredential = null;
+        return t('Token GitHub olvidado. No se revoca en GitHub; revócalo allí si ya no lo necesitas.');
+      case 'pull':
+      case 'push':
+        if (subArgs.length) throw new Error(t('Usa git pull o git push sin argumentos. Solo origin y la rama actual; sin --force.'));
+        return synchronizeGitHub(git, fs, sub);
       case 'init':
         await git.init({ fs, dir: '.', defaultBranch: 'main' });
         return t('Repositorio Git local inicializado (rama: main).');
@@ -6122,7 +6362,7 @@
       t('  Referencias de commit: HEAD, nombre de rama o SHA completo; sin HEAD~N ni SHA abreviado.'),
       t('  El log resume 800 caracteres; git show HEAD:archivo | head -n 20 permite ver un fragmento.'),
       t('  Redirigir show guarda texto, no exporta bytes exactos (saltos/BOM pueden cambiar).'),
-      t('  Git remoto todavía no está implementado.'),
+      t('  GitHub: remote add origin URL, auth, push y pull. Solo red explícita; pull sin conflictos y con disco limpio.'),
       t('  Guardar cambios en Git: revisa lista y mensaje; confirma add --all + commit local, incluidos borrados.'),
       t('  El botón usa los archivos actuales, reemplaza staging anterior y excluye metadatos; no elimina comandos.'),
       t('  Ver cambios muestra estado, diff sin staging y diff staged; sin revertir automático.'),
@@ -6149,6 +6389,8 @@
   async function execute(raw) {
     try {
       const segs = parsePipeline(Array.isArray(raw) ? raw : tokenize(raw.trim()));
+      if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && ['auth', 'logout', 'remote', 'pull', 'push'].includes(seg.argv[1]?.toLowerCase())) &&
+          (segs.length !== 1 || segs[0].redirect)) throw new Error(t('La sincronización GitHub no admite pipes ni redirecciones.'));
       if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && seg.argv[1]?.toLowerCase() === 'checkout') &&
         (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
       const editorCommand = segs.find((seg) => ['propose', 'replace', 'checkpoint', 'restore', 'edit', 'recover'].includes(seg.argv[0].toLowerCase()));
@@ -6434,7 +6676,7 @@
   // Interceptor del Chat como atajo ergonómico (sin observer invasivo)
   function isInsidePanel(node) {
     for (let current = node; current; current = current.parentNode || current.host) {
-      if (current.id === CFG.HOST_ID || current.id === 'dv-code-editor') return true;
+      if (current.id === CFG.HOST_ID || current.id === 'dv-code-editor' || current.id === 'dv-github-auth') return true;
     }
     return false;
   }

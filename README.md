@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT y Gemini.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.5.39**. **158 pruebas Node** y validaciones aisladas en navegador.
+Versión actual: **1.5.40**. **165 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 ## Contenido
@@ -46,6 +46,7 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
   Reconoce el formato real de DeepSeek (`.md-code-block` con `<pre>` sin `<code>`;
   lenguaje `dv` leído de la cabecera del bloque). Validado en chat.deepseek.com.
 - Git local: commits, staging, diff, lectura histórica y ramas protegidas.
+- GitHub opcional: remoto `origin`, token solo en memoria, push sin force y pull fast-forward verificado.
 - Guardado contextual en Git con lista revisable, mensaje editable y confirmación sin escribir comandos.
 - Checkpoints independientes de Git, incluso para archivos sin commit.
 - Vista previa HTML con recursos relativos del disco y JavaScript de consola aislado.
@@ -110,7 +111,7 @@ desde `file:`, sirve la página con un servidor local que ya tengas disponible.
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.5.39**.
+5. Comprueba que el panel muestra **v1.5.40**.
 
 No hace falta npm para usarlo. Sí hace falta el gestor de userscripts; si el
 navegador exige permisos adicionales para ejecutarlos, concédelos al gestor.
@@ -283,6 +284,81 @@ rollback automático. No hay bloqueo entre pestañas.
 
 El estado se actualiza tras las operaciones del panel. Cambios desde otra pestaña
 pueden requerir **Actualizar lista**.
+
+### Continuar en otra PC con GitHub privado
+
+No se sincroniza automáticamente. Actualiza/reinstala el UserScript en ambas
+PC y acepta el nuevo permiso `GM_xmlhttpRequest` con conexión a `github.com`
+en Tampermonkey/Violentmonkey. No se usa un proxy externo ni las cookies de
+GitHub; iniciar sesión en una pestaña de GitHub no autentica estos comandos.
+
+1. En GitHub crea un repositorio **privado vacío**, sin README, licencia ni
+   `.gitignore` iniciales si ya tienes commits locales. No se crea desde DV.
+2. En el panel de la primera PC, inicializa Git si aún no existe, guarda tus
+   archivos y haz commit mediante **Guardar cambios en Git** o:
+
+   ```text
+   !git init
+   !git add --all
+   !git commit -m "Primera version"
+   !git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
+   !git auth
+   !git push
+   ```
+
+   No repitas `git init` si ya tienes repositorio. `git auth` abre un diálogo
+   privado con campo de contraseña y enlace para crear un token fine-grained:
+   **Only select repositories → ese repositorio**, permiso de repositorio
+   **Contents: Read and write**, con caducidad corta. Puede requerir aprobación
+   de la organización/SSO; los cambios en `.github/workflows` pueden necesitar
+   además el permiso **Workflows: Read and write**.
+   **Nunca pegues el token en el chat ni en un comando.**
+   Se mantiene solo en memoria, asociado a esa URL; recargar requiere otro
+   `git auth`. `git logout` lo olvida, pero no lo revoca en GitHub.
+3. En la segunda PC, usa un disco vacío (o vincula una carpeta vacía):
+
+   ```text
+   !git init
+   !git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
+   !git auth
+   !git pull
+   ```
+
+   No crees un commit inicial vacío en la segunda PC: pull descarga los
+   commits existentes y escribe los archivos. La rama inicial es `main`;
+   el remoto debe tener la misma rama que la rama local activa.
+4. Antes de cambiar de PC: guarda, haz commit y `git push`. Al volver a una
+   PC: `git auth` si recargaste y `git pull` **antes de editar**.
+
+`git remote -v` muestra el destino. Para cambiarlo usa
+`git remote set-url origin https://github.com/TU_USUARIO/OTRO_REPO.git`
+y vuelve a autenticarte. Solo se admite HTTPS GitHub con `origin`, sin
+credenciales en la URL, argumentos en push/pull, borrado remoto ni `--force`.
+Los comandos remotos no admiten pipes ni redirecciones.
+
+Cada push/pull pide autorización de red mostrando repositorio y rama.
+**Push publica todo el historial alcanzable**, incluso versiones antiguas de
+archivos borrados: revisa que no haya secretos, aunque el repositorio sea privado.
+No se envía el chat, checkpoints ni journal. El envío se rechaza si el historial
+incluye metadatos internos. El token no se añade a la configuración Git.
+
+Ambos comandos exigen disco limpio y editor cerrado; también se rechazan archivos
+ignorados sin seguimiento para evitar pérdidas o confundir lo que se sincroniza.
+Guarda copias de esos archivos fuera del disco. Pull descarga primero los objetos
+Git y solo aplica **fast-forward**, sin merge automático: si hay commits distintos
+en las dos PCs se detiene y debes resolverlos fuera de DV. No usa force remoto.
+Antes de reemplazar archivos pide una segunda confirmación, valida rutas/tipos
+(sin enlaces simbólicos/submódulos) y crea checkpoints de los archivos actuales.
+La escritura multiarchivo no es atómica: si falla, informa del estado parcial;
+revisa `git status` y los checkpoints. No hay rollback automático ni bloqueo
+contra modificaciones externas o desde otra pestaña. Repositorios con archivos
+que excedan el límite de checkpoints no se aplican automáticamente.
+
+Las solicitudes Git tienen timeout de 120 s y un límite de 64 MB por cuerpo de
+solicitud/respuesta (la respuesta se comprueba al recibirse). Repositorios grandes,
+Git LFS, submódulos y resolución de conflictos quedan fuera de este flujo.
+La integración se prueba con transportes simulados e historiales Git reales;
+una prueba contra tu repositorio privado requiere que tú autorices el token.
 
 **Revertir…** abre la misma lista con un botón **Revertir** junto a cada archivo
 que existe en el último commit (los archivos nuevos no lo tienen; usa Eliminar).
@@ -632,12 +708,13 @@ completo. Las confirmaciones propias de ejecución, edición y borrado no cambia
 Tampermonkey/Violentmonkey descarga y gestiona las bibliotecas Git/diff mediante
 `@require` desde jsDelivr (`isomorphic-git@1.32.1`, `diff@7.0.0`) antes de ejecutar
 el userscript. Actualiza también la cabecera completa y recarga el chat para
-que el gestor procese estas dependencias. Se usan los globales `window.git` y
-`window.Diff`, sin importar módulos desde la página cuando están disponibles.
+que el gestor procese estas dependencias. Se usan los globales `git` y
+`Diff` del entorno del gestor (o de `window`), sin importar módulos desde la página cuando están disponibles.
 Si no están disponibles, se conserva la importación bajo demanda desde esm.sh
 como alternativa; esta sí está sujeta a las restricciones de red/CSP del sitio.
-Git es local y no requiere iniciar sesión en GitHub; abrir GitHub no autentica
-ni sincroniza este disco.
+Git local no requiere iniciar sesión en GitHub. La sincronización opcional
+usa `git auth` y push/pull explícitos; abrir GitHub no autentica ni sincroniza
+este disco por sí solo. El nuevo permiso de red solo admite `github.com`.
 No se suben archivos para cargar esas bibliotecas; el sitio y el código que
 ejecuta en su origen siguen formando parte de la frontera de confianza.
 El Shadow DOM no es una barrera de seguridad contra la página anfitriona.
