@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>DV · Visor HTML interactivo</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#18181b;color:#eee}
+body{margin:20px}p{max-width:1000px;line-height:1.5;color:#ccc}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}
+button,select,input{font:inherit}button,select{padding:8px;background:#2563eb;color:#fff;border:1px solid #555;border-radius:5px}
+button:disabled{opacity:.5}iframe{width:100%;height:65vh;background:white;border:1px solid #555}
+#status{color:#93c5fd}a{color:#93c5fd}
+</style>
+</head>
+<body>
+<h1>DV · Visor HTML + JS + CSS locales</h1>
+<p>Selecciona explicitamente una carpeta, elige el HTML y pulsa Abrir.
+Los scripts clasicos y hojas CSS relativos se resuelven en memoria.
+No instala nada, no escribe en la carpeta y no necesita un servidor.</p>
+<p><strong>Solo proyectos revisados.</strong> El iframe permite scripts pero no
+acceso al visor, al chat, formularios, ventanas emergentes ni conexiones fetch.
+No es una garantia de aislamiento para codigo hostil: un bucle infinito puede
+bloquear la pestaña. No selecciones carpetas con secretos.
+No admite modulos ES, scripts async, imports dinamicos, CSS @import, srcset, navegacion entre
+paginas, servidores backend o carga dinamica de archivos.</p>
+<div class="row">
+<label>Carpeta del proyecto <input id="folder" type="file" webkitdirectory multiple></label>
+<label>HTML de entrada <select id="entry" disabled aria-label="HTML de entrada"></select></label>
+<button id="open" disabled>Abrir / Recargar</button>
+<button id="stop" disabled>Cerrar vista previa</button>
+</div>
+<p id="status" role="status" aria-live="polite">Selecciona la carpeta que contiene tu HTML y JS (maximo 20 MB).</p>
+<p>Para leer cambios externos, vuelve a seleccionar la carpeta y abre de nuevo.
+No hay vigilancia automatica ni conexion con OPFS. Desde DV, exporta y extrae
+el proyecto primero; si usas carpeta real, selecciona esa misma carpeta aqui.</p>
+<div id="preview"></div>
+<script src="project-preview.js"></script>
+<script>
+'use strict';
+const ui = Object.fromEntries(['folder', 'entry', 'open', 'stop', 'status', 'preview']
+  .map(id => [id, document.getElementById(id)]));
+let files = new Map(), rendering = null, revision = 0;
+function closePreview() {
+  revision++;
+  ui.preview.replaceChildren();
+  if (rendering) rendering.revoke();
+  rendering = null; ui.stop.disabled = true;
+}
+ui.folder.addEventListener('change', () => {
+  closePreview(); files = new Map(); ui.entry.replaceChildren(); ui.entry.disabled = true; ui.open.disabled = true;
+  try {
+    files = DVProjectPreview.collectFiles(ui.folder.files);
+    const entries = [...files.keys()].filter(path => /\.html?$/i.test(path)).sort();
+    if (!entries.length) throw new Error('No hay archivos HTML en la carpeta.');
+    for (const path of entries) {
+      const option = document.createElement('option'); option.value = path; option.textContent = path; ui.entry.append(option);
+    }
+    if (files.has('index.html')) ui.entry.value = 'index.html';
+    ui.entry.disabled = false; ui.open.disabled = false;
+    ui.status.textContent = files.size + ' archivos seleccionados. Revisa el proyecto y pulsa Abrir.';
+  } catch (error) { ui.status.textContent = 'No se pudo cargar la carpeta: ' + error.message; }
+  finally { ui.folder.value = ''; }
+});
+ui.open.addEventListener('click', async () => {
+  closePreview(); const current = revision;
+  ui.open.disabled = true; ui.status.textContent = 'Preparando recursos locales...';
+  try {
+    const result = await DVProjectPreview.build(files, ui.entry.value, { document, DOMParser, URL, Blob });
+    if (current !== revision) { result.revoke(); return; }
+    rendering = result;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.referrerPolicy = 'no-referrer'; frame.title = 'Proyecto interactivo aislado';
+    frame.src = result.url;
+    ui.preview.append(frame); ui.stop.disabled = false;
+    ui.status.textContent = 'Vista preparada: ' + ui.entry.value + '. JS clasico habilitado; red y acceso al visor bloqueados. Revisa la consola del navegador si el programa falla.';
+  } catch (error) {
+    if (current === revision) ui.status.textContent = 'No se pudo abrir el proyecto: ' + error.message;
+  } finally { ui.open.disabled = files.size === 0 || ui.entry.disabled; }
+});
+ui.stop.addEventListener('click', () => { closePreview(); ui.status.textContent = 'Vista previa cerrada; recursos liberados.'; });
+addEventListener('pagehide', closePreview);
+if (!globalThis.DVProjectPreview) {
+  ui.folder.disabled = true;
+  ui.status.textContent = 'No se cargo project-preview.js. Conserva ambos archivos en la misma carpeta.';
+}
+</script>
+</body>
+</html>

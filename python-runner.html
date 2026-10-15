@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>DV · Python en el navegador</title>
+<style>
+  :root{color-scheme:dark;font:15px system-ui;background:#18181b;color:#eee}
+  body{max-width:1100px;margin:24px auto;padding:0 18px}
+  h1{font-size:1.5rem}p{line-height:1.5;color:#ccc}
+  .row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}
+  button,input,textarea{font:inherit}button{padding:8px 14px;border:1px solid #555;border-radius:6px;background:#2563eb;color:white;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}#stop{background:#9f1239}
+  textarea{box-sizing:border-box;width:100%;min-height:300px;padding:14px;tab-size:4;background:#101014;color:#eee;border:1px solid #555;border-radius:6px;font:14px/1.5 Consolas,monospace}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#09090b;padding:14px;border:1px solid #444;border-radius:6px;min-height:120px;max-height:400px;overflow:auto}
+  #status{color:#93c5fd}input[type=number]{width:70px}label{display:inline-block}
+  a{color:#93c5fd}
+</style>
+</head>
+<body>
+<h1>DV · Python real en el navegador</h1>
+<p>Python se ejecuta con Pyodide en un Worker, no en CMD ni PowerShell.
+La primera carga descarga el runtime WebAssembly de jsDelivr; necesita Internet.
+No instala Python en Windows ni tiene acceso al disco de DV o a tu carpeta real.</p>
+<p><strong>Ejecuta solo codigo que hayas revisado.</strong> Esto no es un sandbox
+de seguridad para codigo hostil: Python puede usar las APIs de red del navegador.
+No cargues secretos. No se envia el programa a un servicio de ejecucion.</p>
+<div class="row">
+  <label>Abrir archivo .py <input id="file" type="file" accept=".py,text/x-python"></label>
+  <button id="download" type="button">Descargar borrador .py</button>
+</div>
+<label for="code">Programa Python (biblioteca estandar; sin paquetes adicionales automaticos)</label>
+<textarea id="code" spellcheck="false">import sys
+print("Hola desde Python real")
+print(sys.version)
+print("Suma:", sum(range(11)))
+</textarea>
+<div class="row">
+  <label for="stdin">Entrada para input(), una respuesta por linea</label>
+</div>
+<textarea id="stdin" style="min-height:70px" aria-label="Entrada estandar" spellcheck="false"></textarea>
+<div class="row">
+  <label>Limite de ejecucion (segundos)
+    <input id="seconds" type="number" min="1" max="120" value="10">
+  </label>
+  <button id="run" type="button">Ejecutar Python</button>
+  <button id="stop" type="button" disabled>Detener</button>
+</div>
+<p id="status" role="status" aria-live="polite">Listo. El runtime se descargara al ejecutar.</p>
+<h2>Salida y errores</h2>
+<pre id="output" tabindex="0" aria-label="Salida y errores"></pre>
+<p>Cada ejecucion empieza con un Worker y sistema de archivos virtual nuevos.
+Los archivos creados por Python son temporales y se pierden al terminar.
+No admite programas de escritorio, procesos nativos, C, ni acceso directo a OPFS.
+La carga tiene un limite separado de 120 segundos; Detener funciona tambien
+durante la descarga. Si tu navegador bloquea Workers desde archivos locales,
+abre esta pagina mediante un servidor local existente.</p>
+<script>
+'use strict';
+const PYODIDE_BASE = 'https://cdn.jsdelivr.net/pyodide/v314.0.7/full/';
+const MAX_FILE_BYTES = 1024 * 1024;
+const MAX_OUTPUT = 100000;
+const ui = Object.fromEntries(['file', 'download', 'code', 'stdin', 'seconds', 'run', 'stop', 'status', 'output']
+  .map(id => [id, document.getElementById(id)]));
+let active = null;
+
+function pythonWorker() {
+  self.onmessage = async ({ data }) => {
+    const send = (type, text = '') => self.postMessage({ type, text });
+    try {
+      const { loadPyodide } = await import(data.base + 'pyodide.mjs');
+      const python = await loadPyodide({ indexURL: data.base });
+      const lines = data.stdin === '' ? [] : data.stdin.replace(/\r\n?/g, '\n').split('\n');
+      let line = 0;
+      python.setStdin({ stdin: () => line < lines.length ? lines[line++] : null });
+      python.setStdout({ batched: text => send('stdout', text) });
+      python.setStderr({ batched: text => send('stderr', text) });
+      python.FS.writeFile('/home/pyodide/main.py', data.source);
+      python.FS.chdir('/home/pyodide');
+      send('ready');
+      await python.runPythonAsync(
+        "import runpy, sys\nsys.argv = ['main.py']\nrunpy.run_path('main.py', run_name='__main__')"
+      );
+      send('done');
+    } catch (error) { send('error', error.message || String(error)); }
+  };
+}
+
+function endRun(state, message) {
+  if (active !== state) return;
+  clearTimeout(state.timer);
+  state.worker?.terminate();
+  if (state.url) URL.revokeObjectURL(state.url);
+  active = null;
+  ui.run.disabled = false;
+  ui.stop.disabled = true;
+  ui.file.disabled = false;
+  ui.code.readOnly = false;
+  ui.status.textContent = message;
+}
+
+function execute() {
+  if (active) return;
+  const seconds = Number(ui.seconds.value);
+  if (!Number.isInteger(seconds) || seconds < 1 || seconds > 120) {
+    ui.status.textContent = 'El limite debe ser un entero entre 1 y 120 segundos.';
+    return;
+  }
+  if (new TextEncoder().encode(ui.code.value).length > MAX_FILE_BYTES) {
+    ui.status.textContent = 'El programa supera 1 MB.';
+    return;
+  }
+  const state = { worker: null, url: null, timer: null, ready: false, chars: 0 };
+  active = state;
+  ui.output.textContent = '';
+  ui.run.disabled = true;
+  ui.stop.disabled = false;
+  ui.file.disabled = true;
+  ui.code.readOnly = true;
+  ui.status.textContent = 'Cargando Python desde jsDelivr... Puedes detener la carga.';
+  try {
+    state.url = URL.createObjectURL(new Blob(['(' + pythonWorker.toString() + ')();'], { type: 'text/javascript' }));
+    state.worker = new Worker(state.url, { type: 'module' });
+    state.timer = setTimeout(() => endRun(state, 'La carga de Python excedio 120 segundos. Revisa la conexion y reintenta.'), 120000);
+    state.worker.onmessage = ({ data }) => {
+      if (active !== state) return;
+      if (data.type === 'ready') {
+        if (state.ready) return;
+        state.ready = true;
+        clearTimeout(state.timer);
+        ui.status.textContent = 'Python en ejecucion...';
+        state.timer = setTimeout(() => endRun(state, 'Ejecucion detenida: limite de tiempo excedido.'), seconds * 1000);
+      } else if (data.type === 'stdout' || data.type === 'stderr' || data.type === 'error') {
+        const text = (data.type === 'stderr' || data.type === 'error' ? '[error] ' : '') + data.text + '\n';
+        const remaining = MAX_OUTPUT - state.chars;
+        ui.output.textContent += text.slice(0, remaining);
+        state.chars += text.length;
+        if (state.chars > MAX_OUTPUT) endRun(state, 'Ejecucion detenida: salida superior a 100000 caracteres.');
+        else if (data.type === 'error') endRun(state, 'Error de carga o ejecucion. Revisa la salida.');
+        ui.output.scrollTop = ui.output.scrollHeight;
+      } else if (data.type === 'done') endRun(state, 'Ejecucion finalizada. Los archivos temporales se han descartado.');
+    };
+    state.worker.onerror = event => {
+      event.preventDefault();
+      if (active !== state) return;
+      ui.output.textContent += '[error] ' + (event.message || 'No se pudo iniciar el Worker; revisa la consola y la politica del navegador.') + '\n';
+      endRun(state, 'Error del Worker. No se completo la ejecucion.');
+    };
+    state.worker.onmessageerror = () => endRun(state, 'Error de comunicacion con el Worker.');
+    state.worker.postMessage({ base: PYODIDE_BASE, source: ui.code.value, stdin: ui.stdin.value });
+  } catch (error) { endRun(state, 'No se pudo iniciar Python: ' + (error.message || String(error))); }
+}
+
+ui.run.addEventListener('click', execute);
+ui.stop.addEventListener('click', () => { if (active) endRun(active, 'Ejecucion cancelada por el usuario.'); });
+ui.file.addEventListener('change', async () => {
+  const file = ui.file.files[0];
+  if (!file || active) return;
+  ui.run.disabled = true;
+  try {
+    if (file.size > MAX_FILE_BYTES) throw new Error('El archivo supera 1 MB.');
+    const source = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer());
+    ui.code.value = source;
+    ui.status.textContent = 'Archivo cargado: ' + file.name + '. Revisa el codigo antes de ejecutar.';
+  } catch (error) { ui.status.textContent = 'No se pudo abrir el archivo: ' + error.message; }
+  finally { ui.run.disabled = false; ui.file.value = ''; }
+});
+ui.download.addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([ui.code.value], { type: 'text/x-python;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url; link.download = 'main.py'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+addEventListener('pagehide', () => { if (active) endRun(active, 'Pagina cerrada.'); });
+</script>
+</body>
+</html>
