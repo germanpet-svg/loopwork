@@ -6,6 +6,10 @@ Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 Versión actual: **1.5.35**. **129 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
+<img width="1000" height="594" alt="loopwork-editor-v1 5 35" src="https://github.com/user-attachments/assets/12dd3e10-85d3-42d8-95d2-9512964f9be1" />
+
+
+
 ## Contenido
 
 - [Qué ofrece](#qué-ofrece)
