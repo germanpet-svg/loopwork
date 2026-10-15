@@ -1,19 +1,16 @@
 # loopwork
 
-**Taller local de archivos y código asistido por IA dentro de DeepSeek.**
+**Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT y Gemini.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.5.35**. **129 pruebas Node** y validaciones aisladas en navegador.
+Versión actual: **1.5.39**. **158 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
-
-<img width="1000" height="594" alt="loopwork-editor-v1 5 35" src="https://github.com/user-attachments/assets/12dd3e10-85d3-42d8-95d2-9512964f9be1" />
-
-
 
 ## Contenido
 
 - [Qué ofrece](#qué-ofrece)
 - [Instalación](#instalación)
+- [Python en el navegador](#python-en-el-navegador)
 - [Primeros pasos](#primeros-pasos)
 - [Idiomas](#idiomas)
 - [Ciclo de corrección con IA](#ciclo-de-corrección-con-ia)
@@ -28,6 +25,16 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 ## Qué ofrece
 
 - Disco virtual local en el almacenamiento privado del sitio (OPFS).
+- **Carpeta real opcional** (botón **Usar carpeta real…**, API `showDirectoryPicker`
+  de Chromium): reemplaza OPFS por una carpeta real de tu PC mientras está
+  conectada, con los mismos comandos, Git y editor. El permiso se guarda en
+  IndexedDB y se reactiva solo si el navegador aún lo recuerda; si no, el panel
+  ofrece **Reconectar carpeta…**. **Volver a OPFS** regresa al almacenamiento
+  privado sin borrar archivos de la carpeta real.
+- **Exportar disco (.zip)… / Importar ZIP…**: respaldo y restauración completos
+  del disco (incluye `.git` y checkpoints) sin dependencias externas; el `.zip`
+  se genera con un escritor propio (store/deflate) y se puede abrir con
+  cualquier gestor de archivos o herramienta ZIP estándar.
 - Panel independiente del chat: ejecutar comandos locales no envía un mensaje al modelo.
 - Importación múltiple desde la PC y descarga de archivos con sus bytes originales.
 - Botones por archivo: **Editar · Ejecutar · Descargar · Eliminar**.
@@ -41,14 +48,56 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 - Git local: commits, staging, diff, lectura histórica y ramas protegidas.
 - Guardado contextual en Git con lista revisable, mensaje editable y confirmación sin escribir comandos.
 - Checkpoints independientes de Git, incluso para archivos sin commit.
-- Vista previa HTML estática y JavaScript de consola aislado.
+- Vista previa HTML con recursos relativos del disco y JavaScript de consola aislado.
 - HTML en pestaña conectada: actualización al guardar, botón Actualizar desde disco y recarga con F5.
 - Interfaz, ayuda, avisos y errores en español, inglés y chino simplificado.
 - Compartir resultados y archivos desde el panel con un clic explícito; `--share` y `--share-file` conservan vista previa y confirmación.
+- **Soporte experimental para ChatGPT** (`chatgpt.com`/`chat.openai.com`): la detección
+  de entrada de chat, botón de enviar y bloques `dv` se adaptó para funcionar ahí también,
+  pero solo se verificó el DOM en una sesión sin iniciar sesión; falta confirmación de
+  un usuario real con el panel instalado.
+- **Soporte experimental para Gemini** (`gemini.google.com`, también con Pro):
+  editor Quill, botón de envío y bloques del asistente. Los comandos `!` de una
+  línea muestran **Ejecutar en DV**, sin confirmación inicial adicional. Como Gemini puede mostrar
+  el lenguaje `dv` como “Code snippet”, los bloques JSON de sus respuestas también
+  ofrecen revisión: solo se habilita si cumplen el esquema de propuesta.
+  Se verificaron el montaje del panel, la entrada Quill y la cancelación/ejecución
+  local de `!ls` desde un bloque real sin iniciar sesión; falta validar con una
+  cuenta Pro.
 
 No instala un motor WASM ni ofrece Python, Node, shell, dependencias, autocomplete
 o validación semántica por lenguaje. El motor de edición verifica candidatos y
 hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#límites-y-recuperación)).
+
+## Python en el navegador
+
+Abre [python-runner.html](./python-runner.html) en una pestaña independiente,
+fuera de Gemini/ChatGPT/DeepSeek. No necesita instalar Python, extensiones,
+servidores ni paquetes de Windows. Descarga Pyodide **314.0.7** desde jsDelivr
+al ejecutar; requiere conexión y puede tardar la primera vez.
+
+1. Desde DV, descarga el archivo `.py` que quieras probar.
+2. En la página independiente, usa **Abrir archivo .py** o pega el código.
+3. Revisa el programa, configura la entrada para `input()` y pulsa
+   **Ejecutar Python**. La salida y los errores aparecen debajo.
+4. **Detener** termina el Worker, incluso durante la carga o un bucle infinito.
+   El límite de ejecución es configurable (1–120 segundos); la descarga tiene
+   un límite separado de 120 segundos.
+
+Ejecuta Python real en WebAssembly, no CMD/PowerShell ni C. Cada ejecución tiene
+un sistema de archivos virtual temporal y empieza desde cero. No hay conexión
+automática con OPFS, carpetas reales, Git ni la página del chat. Usa
+**Descargar borrador .py** para conservar los cambios del editor.
+No se instalan paquetes adicionales automáticamente; las extensiones nativas
+de Windows y los procesos del sistema no son compatibles.
+
+**No es un sandbox para código hostil.** El Worker mantiene la interfaz
+responsiva, pero Python puede acceder a APIs de red mediante la interoperabilidad
+JavaScript de Pyodide. Ejecuta solo código revisado y no incluyas secretos.
+El programa no se envía a un servicio de ejecución: se descargan los componentes
+del runtime y el cálculo ocurre en el navegador. La caché depende del navegador;
+no se garantiza funcionamiento sin conexión. Si tu navegador impide Workers
+desde `file:`, sirve la página con un servidor local que ya tengas disponible.
 
 ## Instalación
 
@@ -58,13 +107,23 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
    [Tampermonkey](https://www.tampermonkey.net/).
 3. Crea un script nuevo y pega completo
    [deepseek-disco.user.js](./deepseek-disco.user.js).
-4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/).
-5. Comprueba que el panel muestra **v1.5.34**.
+4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
+   (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
+   y [gemini.google.com](https://gemini.google.com/app)).
+5. Comprueba que el panel muestra **v1.5.39**.
 
 No hace falta npm para usarlo. Sí hace falta el gestor de userscripts; si el
 navegador exige permisos adicionales para ejecutarlos, concédelos al gestor.
 La compatibilidad con otros navegadores y futuras versiones de DeepSeek no está
 certificada.
+
+Para probar Gemini, actualiza el userscript completo en Tampermonkey y recarga
+Gemini. Pide una respuesta con un bloque de código que contenga únicamente `!ls`:
+debe aparecer **Ejecutar en DV** y, al pulsarlo, mostrar la salida en el
+panel, sin enviar otro mensaje. No requiere API ni clave de Gemini.
+El disco OPFS pertenece a cada origen: Gemini no verá los archivos guardados en
+DeepSeek o ChatGPT. Para trasladarlos, exporta un ZIP en el sitio de origen e
+impórtalo en Gemini.
 
 Si el panel no aparece:
 
@@ -137,6 +196,12 @@ Si el archivo ya existe, `edit` y **Nuevo archivo…** lo abren en el editor nor
 Tras guardar, el editor **sigue abierto** para continuar editando (las propuestas
 del chat sí se cierran al aplicarse).
 
+El editor se puede mover arrastrando su barra de título y redimensionar desde
+la esquina inferior derecha. **Minimizar** conserva el borrador y permite usar
+el chat; **Restaurar** vuelve a mostrarlo. **Ampliar / Reducir** alterna entre
+la ventana completa y el tamaño/posición anteriores, también con la vista
+previa HTML abierta. Minimizar no guarda ni cierra el archivo.
+
 ### Editor integrado
 
 Pensado para no necesitar otro editor:
@@ -147,8 +212,9 @@ Pensado para no necesitar otro editor:
   contador de resultados; ir a línea sin prompt().
 - Cierre automático de paréntesis, comillas y etiquetas HTML; Enter con sangría
   inteligente; Backspace borra pares vacíos.
-- HTML: **Vista previa** en vivo del borrador (sin scripts ni red) y **Pestaña**,
-  que se refresca al guardar (ideal en pantalla dividida).
+- HTML: **Vista previa** en vivo del borrador con CSS/JS del disco y **Pestaña**,
+  que se refresca al guardar el HTML o sus recursos (ideal en pantalla dividida).
+  En Gemini se muestra HTML/CSS con aviso de JavaScript bloqueado por CSP.
 - JSON: **Formatear**. Tamaño de letra A−/A+ (se recuerda), Copiar, Pegar,
   Descargar el borrador, indicador ● de cambios y aviso al cerrar la página.
 - Barra de estado: Ln/Col, selección, líneas, bytes, lenguaje, LF/CRLF.
@@ -239,15 +305,75 @@ del navegador estén respaldados.
 
 ### Ejecutar y descargar
 
+**HTML interactivo con JS/CSS de la misma carpeta:** abre
+[project-preview.html](./project-preview.html) fuera del chat, manteniendo
+[project-preview.js](./project-preview.js) junto a esa página. Selecciona la
+carpeta completa del proyecto, elige su HTML y pulsa **Abrir / Recargar**.
+No requiere instalación ni servidor. Si usas carpeta real en DV, selecciona
+esa carpeta; si usas OPFS, exporta el ZIP y extráelo primero.
+
+Resuelve scripts clásicos `.js`, hojas CSS, imágenes y fuentes relativas
+(incluidas rutas desde CSS) en memoria: scripts/CSS incorporados y recursos
+binarios como URL data dentro de un documento Blob. El iframe usa
+`sandbox="allow-scripts"` sin `allow-same-origin` y una CSP que bloquea fetch,
+Workers, iframes, formularios y recursos externos. Solo se leen los archivos
+seleccionados; no hay escritura ni conexión automática con el disco DV.
+Ejecuta solo proyectos revisados: no es un entorno seguro para código hostil
+ni ofrece límite de CPU; un bucle infinito puede bloquear la pestaña.
+
+No admite módulos ES/importmap, scripts `async`, imports dinámicos, CSS `@import`, `srcset`,
+`fetch` de archivos, navegación entre páginas ni backend. Para esos casos usa
+un servidor local. Los fallos de recursos detectados se muestran antes de
+abrir la vista; los errores del JavaScript del proyecto se consultan en la
+consola del navegador. El máximo de selección es 20 MB. Para recoger cambios
+externos debes volver a seleccionar la carpeta; no hay auto-recarga nativa.
+**Cerrar vista previa** retira el iframe y libera sus recursos Blob.
+
+El visor independiente es opcional. Para archivos que ya están en DV usa
+**Vista previa** en el editor (borrador), **Pestaña** o `run archivo.html` (guardado):
+
 ```text
 !write test.html '<!doctype html><html><body><h1>Hola</h1></body></html>'
 !run test.html
 ```
 
-O pulsa **Ejecutar** en su fila. HTML abre una **pestaña de vista previa conectada**
-sin scripts ni recursos externos; si ya está abierta para ese archivo, se reutiliza.
+O pulsa **Ejecutar** en su fila. HTML abre una **pestaña de vista previa conectada**;
+si ya está abierta para ese archivo, se reutiliza. Ambas vistas resuelven CSS,
+scripts clásicos e imágenes desde el disco activo (virtual o carpeta vinculada),
+sin exportar ni seleccionar otra carpeta. Las rutas pueden incluir subcarpetas;
+CSS `url(...)` se resuelve respecto a su hoja de estilos.
+
+En Gemini solo se muestran HTML, CSS e imágenes: un aviso explica que la CSP
+bloquea JavaScript. En otros sitios se pide autorización para ejecutar scripts
+en `sandbox="allow-scripts"` sin `allow-same-origin`; cancelar mantiene la vista
+estática. La CSP del sitio todavía puede restringir la ejecución. Usa
+`addEventListener` o atributos como `onclick` para los eventos: con JavaScript
+autorizado ambos funcionan en el modal y en la pestaña conectada. Esta conserva
+nonces para los scripts y permite atributos de evento solo en modo interactivo.
+No hay acceso al disco, red, formularios ni
+otros frames. Un bucle infinito puede bloquear la pestaña; usa código revisado.
+
+El ensamblado admite hasta 8 MB. Los recursos inexistentes, externos o las rutas
+hacia metadatos internos muestran un error. No se admiten módulos ES, `async`,
+CSS `@import` ni `srcset`; usa scripts clásicos, hojas `<link>` e imágenes `src`.
+Al guardar CSS/JS/imágenes se actualizan las pestañas que los usan. La vista del
+borrador se reconstruye al editar el HTML o al volver a abrirla; no vigila
+modificaciones externas realizadas fuera del panel.
+
 JavaScript de consola se ejecuta en Worker aislado y muestra logs/errores en el
 panel. Ambos requieren confirmación.
+
+El ejecutor JavaScript carga su iframe aislado mediante una URL Blob, sin
+asignar `srcdoc` desde el chat. Libera la URL y retira el iframe al terminar,
+fallar o agotar el tiempo. Esto evita el destino TrustedHTML de `srcdoc`, pero
+la CSP del sitio todavía puede bloquear la navegación Blob o los Workers.
+En Gemini se comprobó que la CSP heredada bloquea el script de arranque del
+iframe Blob y también los Workers Blob. Por ello `run archivo.js` no está
+disponible allí con este ejecutor; usar Blob no basta para habilitarlo.
+El panel distingue entre falta de señal de arranque del controlador y ausencia
+de respuesta del Worker, e informa del posible bloqueo sin relajar el sandbox.
+Esto no indica necesariamente un error en tu archivo. Para interactividad de
+HTML y JavaScript en Gemini, usa el visor independiente fuera del chat o un servidor local.
 
 Para trabajar lado a lado, arrastra la pestaña a otra ventana y coloca DeepSeek
 en media pantalla y la vista previa en la otra (por ejemplo, con **Win+Izquierda**
@@ -264,6 +390,11 @@ La vista previa:
   pestaña tiene un script propio; los scripts del archivo están desactivados.
   CSS inline e imágenes `data:` funcionan; CSS/JS/imágenes relativas de OPFS
   y recursos de red todavía no se resuelven.
+- En sitios con Trusted Types, como Gemini, el parser inerte y los destinos
+  de vista previa usan la política privada `dv-static-preview`. No se crea
+  una política `default` ni se elimina la limpieza, el sandbox o la CSP.
+  Si el sitio prohíbe crear esa política, se muestra el error sin desactivar
+  sus protecciones; `DOMParser` por sí solo tampoco evita Trusted Types.
 - Requiere mantener la página de DeepSeek abierta. Si la cierras o recargas,
   vuelve a pulsar **Ejecutar** para crear una nueva conexión. Si el archivo falta,
   no es UTF-8 válido o supera 256 KB, muestra un error y retira la vista anterior.
@@ -323,10 +454,18 @@ no comparten un disco accesible al modelo.
    se actualiza mientras llega la respuesta. Al pulsarlo se vuelve a leer
    el bloque y se valida contra el archivo actual. No guarda ni envía mensajes.
 
-   También se reconocen bloques con `!propose 'JSON'` (incluido el prefijo
-   configurado), pero solo con JSON inline: sin archivos, pipes, redirecciones
-   ni `--share`. Otros comandos, incluido `!replace`, no son ejecutables desde
-   este botón. En el panel puedes usar `!propose 'JSON'` como antes.
+   Los bloques del asistente que empiezan con `!` y contienen una sola línea
+   muestran **Ejecutar en DV**. Al pulsarlo, sin un modal de confirmación inicial, se ejecutan
+   localmente y la salida aparece en el panel. Esto incluye `!propose` y
+   `!replace`: usan el mismo flujo de comandos que el panel; no la revisión
+   con checkpoint previo del botón de parche. Las opciones de compartir
+   conservan su confirmación independiente. También se mantienen las
+   confirmaciones de borrado, sobrescritura y ejecución de archivos.
+
+   Los bloques `dv` con JSON y las propuestas que no son comandos `!` de una
+   línea conservan **Revisar parche en DV**. También se reconoce `propose`
+   con el prefijo configurado, pero esta revisión solo admite JSON inline:
+   sin archivos, pipes, redirecciones ni `--share`.
 
    También puedes importar un JSON y ejecutar `!propose propuesta.json`.
    Operaciones: `replace`, `insert-before`, `insert-after`, `append`.
@@ -381,7 +520,7 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `!propose propuesta.json` | Prepara un cambio JSON para el editor |
 | `!replace archivo old new [--all] [--hash SHA256] [--dry-run]` | Literal único o todas las coincidencias no solapadas; diff/aprobación obligatorios |
-| `!run archivo.html` / `!run archivo.js` | HTML estático en pestaña conectada o JS de consola aislado |
+| `!run archivo.html` / `!run archivo.js` | Proyecto HTML con recursos del disco en pestaña conectada o JS de consola aislado |
 | `!edit archivo` | Abre el editor; si no existe, empieza en blanco y lo crea al guardar |
 | `!journal [-n N]` | Consulta el journal con el estado de cada escritura (PREPARED/COMMITTED/ABORTED/CONFLICT) |
 | `!recover` | Revisa escrituras interrumpidas y limpia temporales huérfanos |
@@ -470,38 +609,66 @@ archivo que se llame así, usa `./show`, por ejemplo.
 
 ## Privacidad y almacenamiento
 
-| Acción | Qué se comparte con DeepSeek |
+| Acción | Qué se comparte con el chat del sitio actual |
 |---|---|
 | Comandos locales, importar, editar, ejecutar, descargar | Nada por el canal de compartir del userscript |
 | Revisar parche en DV → aprobar | Nada; revisión, checkpoint y escritura locales |
 | `--share` | Resumen revisado del resultado |
 | Botón Ejecutar + Compartir | Envía directamente el resumen (hasta 1200 caracteres), sin confirmación adicional |
 | `--share-file ruta` | Texto completo del archivo, tras vista previa/confirmación |
-| Selector Compartir archivo → Enviar archivo a DeepSeek | Envía directamente el texto completo del archivo elegido, sin confirmación adicional |
+| Selector Compartir archivo → Enviar archivo al chat | Envía directamente el texto completo del archivo elegido, sin confirmación adicional |
 
 Compartir archivos requiere UTF-8 sin NUL y máximo **65536 bytes (64 KB)**.
 Los mayores aparecen deshabilitados con explicación. El selector se actualiza
 al abrir y tras refresh/importación; otra pestaña puede requerir reabrirlo.
 Un borrador existente del chat no se reemplaza.
-El clic en **Ejecutar + Compartir** autoriza el envío del resumen a DeepSeek.
-En el selector, **Enviar archivo a DeepSeek** autoriza el envío directo del
+El clic en **Ejecutar + Compartir** autoriza el envío del resumen al chat del sitio actual.
+En el selector, **Enviar archivo al chat** autoriza el envío directo del
 archivo elegido; abrir el selector no envía nada.
 Si el comando incluye `--share-file`, se mantiene la vista previa del mensaje
 completo. Las confirmaciones propias de ejecución, edición y borrado no cambian.
 
-**Local-first no significa cero red:** DeepSeek es un servicio remoto y Git/diff
-se cargan bajo demanda desde esm.sh (`isomorphic-git@1.32.1`, `diff@7.0.0`).
+**Local-first no significa cero red:** DeepSeek, ChatGPT y Gemini son servicios remotos.
+Tampermonkey/Violentmonkey descarga y gestiona las bibliotecas Git/diff mediante
+`@require` desde jsDelivr (`isomorphic-git@1.32.1`, `diff@7.0.0`) antes de ejecutar
+el userscript. Actualiza también la cabecera completa y recarga el chat para
+que el gestor procese estas dependencias. Se usan los globales `window.git` y
+`window.Diff`, sin importar módulos desde la página cuando están disponibles.
+Si no están disponibles, se conserva la importación bajo demanda desde esm.sh
+como alternativa; esta sí está sujeta a las restricciones de red/CSP del sitio.
+Git es local y no requiere iniciar sesión en GitHub; abrir GitHub no autentica
+ni sincroniza este disco.
 No se suben archivos para cargar esas bibliotecas; el sitio y el código que
 ejecuta en su origen siguen formando parte de la frontera de confianza.
 El Shadow DOM no es una barrera de seguridad contra la página anfitriona.
 
-OPFS pertenece al **origen de chat.deepseek.com**, no a una conversación ni a
+OPFS pertenece al **origen del sitio actual** (`chat.deepseek.com`, `chatgpt.com`
+o `gemini.google.com`, por ejemplo), no a una conversación ni a
 un usuario del modelo. No hay separación por cuenta implementada. Otro
 navegador/perfil/origen no ve automáticamente esos datos.
 
 **Borrar datos del sitio puede eliminar archivos, Git, journal y checkpoints.**
 El almacenamiento privado/incógnito puede ser temporal y la persistencia no es
 garantizada. Descarga archivos importantes fuera del navegador.
+
+**Carpeta real (opcional).** Al conectar una carpeta con **Usar carpeta real…**,
+el disco deja de ser un sandbox del sitio: los comandos pueden crear, modificar
+y borrar archivos reales de tu PC dentro de esa carpeta, con los mismos
+permisos que tu usuario del sistema operativo. El handle de la carpeta y el
+permiso de escritura se guardan en IndexedDB del origen; "Borrar datos del
+sitio" también borra esa referencia (no los archivos reales). Disponible solo
+en navegadores Chromium con `showDirectoryPicker` (no en Firefox ni Safari).
+Requiere gesto explícito del usuario para conceder o renovar el permiso; el
+navegador puede pedir reconfirmarlo en sesiones nuevas.
+
+**Exportar/Importar ZIP.** El botón **Exportar disco (.zip)…** descarga todo
+el contenido del disco actual (incluidos `.git` y los checkpoints) como un
+único archivo `.zip` generado localmente, sin subir nada a ningún servidor.
+**Importar ZIP…** hace el proceso inverso: escribe cada archivo del `.zip`
+elegido en el disco, reemplazando los que coincidan en nombre sin deshacer
+automático (por eso pide confirmación explícita antes de empezar). Es la
+forma recomendada de sacar una copia completa del disco fuera del navegador,
+independientemente de si estás usando OPFS o una carpeta real conectada.
 
 El aviso **POSIBLE FUGA** correlaciona un intento manual reciente (5 segundos)
 con el comando exacto aparecido fuera del panel. Ignora carga sin intento;
@@ -519,7 +686,8 @@ puede tener falsos positivos/negativos.
 | Vista de resultados en log | 800 caracteres; Ayuda tiene vista completa |
 | Explorador | 50 filas; Eliminar todos incluye todos los archivos de usuario |
 
-HTML no ejecuta scripts, navegación ni assets OPFS relativos. JS no dispone de
+La vista HTML no permite navegación ni red; carga assets relativos del disco y
+puede ejecutar scripts clásicos con autorización fuera de Gemini. JS de consola no dispone de
 DOM, Node, imports/dependencias, red ni OPFS; usa `await` para tareas asíncronas.
 No existe cuota estricta de memoria para el Worker. CSP del sitio puede bloquear
 el entorno; no se degrada a ejecutar en la página principal.
@@ -567,7 +735,7 @@ npm test
 npm run check
 ```
 
-129 pruebas cubren OPFS simulado y Git real, hashes, edición, creación de archivos, escrituras transaccionales y recuperación, sharing, checkpoints,
+135 pruebas cubren OPFS simulado y Git real, hashes, edición, creación de archivos, escrituras transaccionales y recuperación, sharing, checkpoints,
 descarga, checkout protegido, guardado Git con botones y pestañas HTML conectadas. Hay comprobaciones adicionales en OPFS nativo
 en orígenes localhost aislados. Eso no certifica todos los flujos en DeepSeek;
 las pruebas reales reportadas por el usuario se distinguen en el roadmap.

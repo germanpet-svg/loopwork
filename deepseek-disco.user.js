@@ -3,11 +3,16 @@
 // @name:en      DeepSeek Virtual Disk (Dual-Channel OPFS + Git)
 // @name:zh-CN   DeepSeek 虚拟磁盘（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.5.35
+// @version      1.5.39
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
 // @match        https://chat.deepseek.com/*
+// @match        https://chatgpt.com/*
+// @match        https://chat.openai.com/*
+// @match        https://gemini.google.com/*
+// @require      https://cdn.jsdelivr.net/npm/isomorphic-git@1.32.1/index.umd.min.js
+// @require      https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js
 // @grant        none
 // @run-at       document-idle
 // @noframes
@@ -21,9 +26,9 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.5.35',
+    VERSION: '1.5.39',
     ABOUT_URL: 'https://geeknome.com',
-    MAX_RUN_BYTES: 256 * 1024,
+    MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
     MAX_SHARE_FILE_BYTES: 64 * 1024,
     SEND_TIMEOUT_MS: 4000,
@@ -34,10 +39,12 @@
     MAX_FETCH_BYTES: 2 * 1024 ** 3,
     MAX_HASH_BYTES: 512 * 1024 ** 2,
     MAX_WASM_INPUT_BYTES: 1024 ** 3,
+    MAX_ZIP_BYTES: 1024 ** 3,
     WASM_TIMEOUT_MS: 10 * 60 * 1000,
     HISTORY_MAX: 200,
     SETTINGS_KEY: 'dv.settings.v4',
     WELCOME_KEY: 'dv.welcome.v1',
+    LOCAL_FOLDER_CONSENT_KEY: 'dv.localFolder.consent.v1',
     HOST_ID: 'dv-host',
   };
 
@@ -1374,9 +1381,9 @@
       "  For multiline blocks or AI proposals, use propose with a hash and JSON.",
       "  对于多行文本块或 AI 提案，请使用带哈希和 JSON 的 propose。"
     ],
-    "  Chat: bloque dv con JSON puro o !propose inline; Revisar parche en DV abre diff, nunca ejecuta otros comandos.": [
-      "  Chat: dv block with plain JSON or inline !propose; Review patch in DV opens a diff and never runs other commands.",
-      "  聊天：使用包含纯 JSON 的 dv 代码块或内联 !propose；“在 DV 中检查补丁”会打开 diff，绝不会执行其他命令。"
+    "  Chat: JSON dv abre revisión; comandos ! de una línea se ejecutan al pulsar el botón.": [
+      "  Chat: dv JSON opens review; single-line ! commands run when the button is clicked.",
+      "  聊天：dv JSON 打开审查；点击按钮执行单行 ! 命令。"
     ],
     "  Aprobar parche del chat crea checkpoint previo y valida hash; no envía nada ni hace commit.": [
       "  Approving a chat patch creates a prior checkpoint and validates the hash; it sends nothing and does not commit.",
@@ -1638,17 +1645,17 @@
       "there is a chat draft; it was not replaced",
       "聊天中有草稿；未将其替换"
     ],
-    "¿Compartir con DeepSeek ({0} caracteres)?\nVista previa:\n{1}": [
-      "Share with DeepSeek ({0} characters)?\nPreview:\n{1}",
-      "要与 DeepSeek 分享吗（{0} 个字符）？\n预览：\n{1}"
+    "¿Compartir con el chat ({0} caracteres)?\nVista previa:\n{1}": [
+      "Share with the chat ({0} characters)?\nPreview:\n{1}",
+      "要与聊天分享吗（{0} 个字符）？\n预览：\n{1}"
     ],
     "envío cancelado; no se ha compartido nada": [
       "sending canceled; nothing was shared",
       "已取消发送；未分享任何内容"
     ],
-    "📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta de DeepSeek.": [
-      "📤 Chat cleared the input after the send was requested; check DeepSeek's response.",
-      "📤 请求发送后聊天输入框已清空；请检查 DeepSeek 的回复。"
+    "📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta del asistente.": [
+      "📤 Chat cleared the input after the send was requested; check the assistant's response.",
+      "📤 请求发送后聊天输入框已清空；请检查助手的回复。"
     ],
     "⏳ Hay una operación en curso; reintenta al terminar.": [
       "⏳ An operation is in progress; try again when it finishes.",
@@ -1705,6 +1712,30 @@
     "Revisar parche en DV": [
       "Review patch in DV",
       "在 DV 中检查补丁"
+    ],
+    "Ejecutar en DV": [
+      "Run in DV",
+      "在 DV 中执行"
+    ],
+    "¿Ejecutar \"{0}\" en el disco virtual?": [
+      "Run \"{0}\" in the virtual disk?",
+      "在虚拟磁盘中执行“{0}”？"
+    ],
+    "Ejecución cancelada.": [
+      "Execution cancelled.",
+      "执行已取消。"
+    ],
+    "Ejecutando: {0}...": [
+      "Running: {0}...",
+      "正在执行：{0}..."
+    ],
+    "Ejecución finalizada. Revisa el panel.": [
+      "Execution finished. Check the panel.",
+      "执行已结束。请查看面板。"
+    ],
+    "Ejecutar comando local. Se mantienen las confirmaciones propias del comando. Revisa la salida en el panel.": [
+      "Run a local command. Command-specific confirmations still apply. Check the output in the panel.",
+      "执行本地命令。仍保留命令自身的确认。请在面板中查看输出。"
     ],
     "el bloque ya no está en el chat": [
       "block is no longer in the chat",
@@ -1886,9 +1917,9 @@
       "Run",
       "运行"
     ],
-    "Ejecutar y enviar directamente el resumen a DeepSeek, sin vista previa; no reemplaza borradores del chat": [
-      "Run and send the summary directly to DeepSeek without a preview; does not replace chat drafts",
-      "运行并将摘要直接发送给 DeepSeek，不提供预览；不会替换聊天草稿"
+    "Ejecutar y enviar directamente el resumen al chat, sin vista previa; no reemplaza borradores del chat": [
+      "Run and send the summary directly to the chat without a preview; does not replace chat drafts",
+      "运行并将摘要直接发送到聊天，不提供预览；不会替换聊天草稿"
     ],
     "Ejecutar + Compartir": [
       "Run + Share",
@@ -1898,17 +1929,17 @@
       "Maximum 64 KB per file; UTF-8 text only. Larger files are shown disabled.",
       "每个文件最大 64 KB；仅限 UTF-8 文本。较大的文件会显示为禁用状态。"
     ],
-    "Enviar directamente el archivo seleccionado a DeepSeek, sin confirmación adicional; no reemplaza borradores del chat": [
-      "Send the selected file directly to DeepSeek without additional confirmation; does not replace chat drafts",
-      "无需额外确认，直接将选定文件发送给 DeepSeek；不会替换聊天草稿"
+    "Enviar directamente el archivo seleccionado al chat, sin confirmación adicional; no reemplaza borradores del chat": [
+      "Send the selected file directly to the chat without additional confirmation; does not replace chat drafts",
+      "无需额外确认，直接将选定文件发送到聊天；不会替换聊天草稿"
     ],
     "Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.": [
       "Select a file up to 64 KB; for a larger file, share a summary with head.",
       "请选择不超过 64 KB 的文件；对于较大的文件，请使用 head 分享摘要。"
     ],
-    "Enviar archivo a DeepSeek": [
-      "Send file to DeepSeek",
-      "将文件发送给 DeepSeek"
+    "Enviar archivo al chat": [
+      "Send file to chat",
+      "将文件发送到聊天"
     ],
     "Selecciona archivo a compartir:": [
       "Select a file to share:",
@@ -1922,9 +1953,9 @@
       " — exceeds 64 KB; share a summary",
       " — 超过 64 KB；请分享摘要"
     ],
-    "Enviar archivo a DeepSeek comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 \"archivo\" --share.": [
-      "Send file to DeepSeek shares the full text directly, without additional confirmation. Maximum 64 KB; UTF-8 only. Larger files are disabled. For a summary: head -n 30 \"file\" --share.",
-      "“将文件发送给 DeepSeek”会直接分享完整文本，无需额外确认。最大 64 KB；仅限 UTF-8。较大的文件会被禁用。要分享摘要，请使用：head -n 30 \"文件\" --share。"
+    "Enviar archivo al chat comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 \"archivo\" --share.": [
+      "Send file to chat shares the full text directly, without additional confirmation. Maximum 64 KB; UTF-8 only. Larger files are disabled. For a summary: head -n 30 \"file\" --share.",
+      "“将文件发送到聊天”会直接分享完整文本，无需额外确认。最大 64 KB；仅限 UTF-8。较大的文件会被禁用。要分享摘要，请使用：head -n 30 \"文件\" --share。"
     ],
     "Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 \"archivo\" --share.": [
       "All files exceed 64 KB. They are not hidden: share a summary with head -n 30 \"file\" --share.",
@@ -2329,6 +2360,18 @@
     'limite de salida excedido': ['output limit exceeded', '超出输出限制'],
     'tiempo limite de 3 segundos excedido': ['3-second time limit exceeded', '超过 3 秒时间限制'],
     'error de sintaxis o arranque del Worker': ['Worker syntax or startup error', 'Worker 语法或启动错误'],
+    'El controlador JavaScript aislado no arrancó. El sitio puede bloquear scripts o iframes Blob con su CSP (comprobado en Gemini). No se pudo iniciar el archivo; pruébalo fuera del chat.': [
+      'The isolated JavaScript controller did not start. The site may block scripts or Blob iframes through CSP (confirmed on Gemini). The file could not be started; test it outside the chat.',
+      '隔离的 JavaScript 控制器未启动。网站的 CSP 可能阻止脚本或 Blob iframe（已在 Gemini 验证）。无法启动文件；请在聊天之外测试。'
+    ],
+    'El Worker no respondió dentro del límite. Puede estar bloqueado por CSP/Trusted Types o haber agotado el tiempo; revisa la consola del navegador o prueba fuera del chat.': [
+      'The Worker did not respond within the time limit. CSP/Trusted Types may block it, or it may have timed out; check the browser console or test outside the chat.',
+      'Worker 未在时限内响应。可能被 CSP/Trusted Types 阻止或已超时；请检查浏览器控制台或在聊天之外测试。'
+    ],
+    'El Worker no pudo arrancar: posible error de sintaxis o bloqueo CSP/Trusted Types. Revisa la consola del navegador o prueba fuera del chat.': [
+      'The Worker could not start: possible syntax error or CSP/Trusted Types restriction. Check the browser console or test outside the chat.',
+      'Worker 无法启动：可能存在语法错误或 CSP/Trusted Types 限制。请检查浏览器控制台或在聊天之外测试。'
+    ],
     '[valor no serializable]': ['[non-serializable value]', '[无法序列化的值]'],
     'Binary files {0} and {1} differ ({2} -> {3} B)': ['Binary files {0} and {1} differ ({2} -> {3} B)', '二进制文件 {0} 与 {1} 不同（{2} -> {3} B）'],
     'Checkpoint: {0}\nArchivo: {1}\nFecha: {2}\nEtiqueta: {3}\nBytes: {4}\nSHA256: {5}':
@@ -2362,16 +2405,85 @@
     'Reducir': ['Reduce', '缩小'],
     'Contraer': ['Collapse', '收起'],
     'Reducir panel': ['Reduce panel', '缩小面板'],
+    'Minimizar': ['Minimize', '最小化'],
+    'Restaurar': ['Restore', '还原'],
+    'Minimizar editor': ['Minimize editor', '最小化编辑器'],
+    'Restaurar editor': ['Restore editor', '还原编辑器'],
+    'Ampliar editor': ['Expand editor', '展开编辑器'],
+    'Reducir editor': ['Reduce editor', '缩小编辑器'],
+    'Arrastra la barra para mover el editor': ['Drag the title bar to move the editor', '拖动标题栏以移动编辑器'],
+    'HTML y CSS del disco · Gemini bloquea JavaScript por CSP': ['Disk HTML and CSS · Gemini blocks JavaScript through CSP', '磁盘 HTML 和 CSS · Gemini 的 CSP 阻止 JavaScript'],
+    'HTML, CSS y JS del disco · scripts aislados, sin red': ['Disk HTML, CSS and JS · isolated scripts, no network', '磁盘 HTML、CSS 和 JS · 隔离脚本，无网络'],
+    'HTML y CSS del disco · JavaScript desactivado': ['Disk HTML and CSS · JavaScript disabled', '磁盘 HTML 和 CSS · JavaScript 已禁用'],
+    '¿Habilitar JavaScript del proyecto en la vista previa aislada? Solo código revisado; sin acceso al disco ni red. Un bucle infinito puede bloquear la pestaña. Cancelar mantiene HTML y CSS sin scripts.': [
+      'Enable project JavaScript in the isolated preview? Reviewed code only; no disk or network access. An infinite loop can freeze the tab. Cancel keeps HTML and CSS without scripts.',
+      '在隔离预览中启用项目 JavaScript？仅运行已审查的代码；无法访问磁盘或网络。无限循环可能冻结标签页。取消将仅显示 HTML 和 CSS。'
+    ],
+    'Recurso de vista previa no permitido: {0}': ['Preview resource not allowed: {0}', '不允许的预览资源：{0}'],
+    'La vista previa y sus recursos superan 8 MB.': ['The preview and its resources exceed 8 MB.', '预览及其资源超过 8 MB。'],
+    'CSS @import no admitido; usa link stylesheet en el HTML.': ['CSS @import is not supported; use link stylesheet in HTML.', '不支持 CSS @import；请在 HTML 中使用 link stylesheet。'],
+    'Hoja de estilos sin ruta.': ['Stylesheet path is missing.', '缺少样式表路径。'],
+    'La vista previa admite scripts clásicos sin async; módulos ES requieren un servidor.': ['Preview supports classic scripts without async; ES modules require a server.', '预览支持不带 async 的经典脚本；ES 模块需要服务器。'],
+    'Script sin ruta.': ['Script path is missing.', '缺少脚本路径。'],
+    'srcset no admitido; usa imágenes con src.': ['srcset is not supported; use images with src.', '不支持 srcset；请使用带 src 的图片。'],
+    '¿Abrir "{0}" con sus recursos del disco en una pestaña de vista previa?\nSin red; requiere mantener el panel abierto.': [
+      'Open "{0}" with its disk resources in a preview tab?\nNo network; keep the panel open.',
+      '在预览标签页中打开“{0}”及其磁盘资源？\n无网络；请保持面板打开。'
+    ],
+    'Vista previa del disco abierta: {0}.': ['Disk preview opened: {0}.', '已打开磁盘预览：{0}。'],
 
-  // Editor: búsqueda, reemplazo y Ctrl+D
-  'Descargar': ['Download', '下载'],
-  'Reemplazar todos': ['Replace all', '全部替换'],
-  'Sin coincidencias.': ['No matches.', '没有匹配项。'],
-  'Coincidencia en línea {0}': ['Match on line {0}', '在第 {0} 行找到匹配项'],
-  'Siguiente coincidencia en línea {0}': ['Next occurrence on line {0}', '下一个匹配项在第 {0} 行'],
-  'No hay más coincidencias.': ['No more occurrences.', '没有更多匹配项。'],
-  'Mostrar u ocultar reemplazar (Ctrl+H)': ['Toggle replace (Ctrl+H)', '显示或隐藏替换（Ctrl+H）'],
-  'Ctrl+D: seleccionar la siguiente coincidencia': ['Ctrl+D: select next occurrence', 'Ctrl+D：选择下一个匹配项'],
+    // Editor: búsqueda, reemplazo y Ctrl+D
+    'Descargar': ['Download', '下载'],
+    'Reemplazar todos': ['Replace all', '全部替换'],
+    'Sin coincidencias.': ['No matches.', '没有匹配项。'],
+    'Coincidencia en línea {0}': ['Match on line {0}', '在第 {0} 行找到匹配项'],
+    'Siguiente coincidencia en línea {0}': ['Next occurrence on line {0}', '下一个匹配项在第 {0} 行'],
+    'No hay más coincidencias.': ['No more occurrences.', '没有更多匹配项。'],
+    'Mostrar u ocultar reemplazar (Ctrl+H)': ['Toggle replace (Ctrl+H)', '显示或隐藏替换（Ctrl+H）'],
+    'Ctrl+D: seleccionar la siguiente coincidencia': ['Ctrl+D: select next occurrence', 'Ctrl+D：选择下一个匹配项'],
+
+    // Carpeta real (File System Access API)
+    'Carpeta real: {0}': ['Real folder: {0}', '真实文件夹：{0}'],
+    'Explorador OPFS (privado)': ['OPFS explorer (private)', 'OPFS 浏览器（私有）'],
+    'Carpeta real reactivada: {0}': ['Real folder reactivated: {0}', '真实文件夹已重新激活：{0}'],
+    'No se pudo comprobar la carpeta real guardada: {0}': ['Could not check the saved real folder: {0}', '无法检查已保存的真实文件夹：{0}'],
+    'Tu navegador no admite carpetas reales (usa Chrome, Edge u otro Chromium reciente)': ['Your browser does not support real folders (use Chrome, Edge, or another recent Chromium browser)', '你的浏览器不支持真实文件夹（请使用 Chrome、Edge 或其他较新的 Chromium 浏览器）'],
+    'Vas a conectar una carpeta real de tu PC. Mientras esté activa, los comandos de este panel podrán crear, modificar y borrar archivos dentro de ella. ¿Continuar?': ['You are about to connect a real folder on your PC. While it is active, this panel\'s commands can create, modify, and delete files inside it. Continue?', '你即将连接电脑上的一个真实文件夹。启用后，此面板的命令可以在其中创建、修改和删除文件。是否继续？'],
+    'Conexión de carpeta cancelada': ['Folder connection cancelled', '文件夹连接已取消'],
+    'Permiso de escritura denegado para la carpeta': ['Write permission for the folder was denied', '文件夹的写入权限被拒绝'],
+    'No hay carpeta real guardada para reconectar': ['There is no saved real folder to reconnect', '没有可重新连接的已保存真实文件夹'],
+    'Usar carpeta real…': ['Use real folder…', '使用真实文件夹…'],
+    'Conectar una carpeta real de tu PC; reemplaza OPFS como almacenamiento mientras esté activa': ['Connect a real folder on your PC; it replaces OPFS as storage while active', '连接电脑上的真实文件夹；启用期间它将替代 OPFS 作为存储'],
+    'Carpeta real conectada: {0}': ['Real folder connected: {0}', '真实文件夹已连接：{0}'],
+    'Reconectar carpeta…': ['Reconnect folder…', '重新连接文件夹…'],
+    'La carpeta real guardada perdió el permiso de escritura; reconéctala para seguir usándola': ['The saved real folder lost its write permission; reconnect it to keep using it', '已保存的真实文件夹失去了写入权限；请重新连接以继续使用'],
+    'Carpeta real reconectada: {0}': ['Real folder reconnected: {0}', '真实文件夹已重新连接：{0}'],
+    'Volver a OPFS': ['Switch back to OPFS', '切换回 OPFS'],
+    '¿Volver a OPFS? La carpeta real deja de usarse, pero sus archivos no se borran ni se desconecta el permiso del sistema operativo.': ['Switch back to OPFS? The real folder stops being used, but its files are not deleted and the OS permission is not revoked.', '切换回 OPFS？真实文件夹将不再使用，但其文件不会被删除，操作系统权限也不会被撤销。'],
+    'Carpeta real desconectada; usando OPFS de nuevo.': ['Real folder disconnected; using OPFS again.', '真实文件夹已断开；重新使用 OPFS。'],
+    '⚠️ Carpeta REAL de tu PC. ': ['⚠️ REAL folder on your PC. ', '⚠️ 电脑上的真实文件夹。 '],
+    '❌ Carpeta real: {0}': ['❌ Real folder: {0}', '❌ 真实文件夹：{0}'],
+
+    // Exportar/importar disco completo como ZIP
+    'Exportar disco (.zip)…': ['Export disk (.zip)…', '导出磁盘（.zip）…'],
+    'Descarga todo el disco (incluye .git y checkpoints) como un .zip; nada se envía al chat': ['Download the whole disk (includes .git and checkpoints) as a .zip; nothing is sent to the chat', '将整个磁盘（含 .git 和检查点）下载为 .zip；不会发送到聊天'],
+    'Importar ZIP…': ['Import ZIP…', '导入 ZIP…'],
+    'Restaura un backup .zip exportado desde aquí (o un .zip con la misma estructura); reemplaza archivos existentes': ['Restore a .zip backup exported from here (or a .zip with the same structure); replaces existing files', '恢复从这里导出的 .zip 备份（或结构相同的 .zip）；会替换已存在的文件'],
+    'Seleccionar archivo .zip para restaurar en el disco virtual': ['Select a .zip file to restore into the virtual disk', '选择要恢复到虚拟磁盘的 .zip 文件'],
+    '⏳ Hay una operación en curso; reintenta exportar al terminar.': ['⏳ An operation is in progress; retry exporting once it finishes.', '⏳ 有操作正在进行；完成后请重试导出。'],
+    'el disco está vacío; no hay nada que exportar': ['the disk is empty; there is nothing to export', '磁盘为空；没有可导出的内容'],
+    'Exportado: {0} archivo(s), {1} originales, {2} en el .zip. Incluye .git y checkpoints; nada enviado al chat.': ['Exported: {0} file(s), {1} original, {2} in the .zip. Includes .git and checkpoints; nothing sent to the chat.', '已导出：{0} 个文件，原始 {1}，压缩包 {2}。包含 .git 和检查点；未发送到聊天。'],
+    '❌ Exportar ZIP: {0}': ['❌ Export ZIP: {0}', '❌ 导出 ZIP：{0}'],
+    'no se encontró el final del archivo ZIP (EOCD); ¿archivo corrupto o no es un .zip?': ['could not find the ZIP end-of-central-directory (EOCD); is the file corrupted or not a .zip?', '找不到 ZIP 文件的目录结束标记（EOCD）；文件是否损坏或不是 .zip？'],
+    'estructura del ZIP inesperada en el directorio central': ['unexpected ZIP structure in the central directory', 'ZIP 中央目录结构异常'],
+    'método de compresión no soportado ({0}); usa un .zip con store o deflate': ['unsupported compression method ({0}); use a .zip with store or deflate', '不支持的压缩方式（{0}）；请使用 store 或 deflate 格式的 .zip'],
+    '⏳ Hay una operación en curso; reintenta importar el ZIP al terminar.': ['⏳ An operation is in progress; retry importing the ZIP once it finishes.', '⏳ 有操作正在进行；完成后请重试导入 ZIP。'],
+    'Vas a restaurar un backup .zip: los archivos con el mismo nombre serán reemplazados sin deshacer (incluye .git y checkpoints si el ZIP los trae). ¿Continuar?': ['You are about to restore a .zip backup: files with the same name will be replaced with no undo (includes .git and checkpoints if the ZIP has them). Continue?', '你即将恢复一个 .zip 备份：同名文件将被替换且无法撤销（如果 ZIP 中包含 .git 和检查点也会恢复）。是否继续？'],
+    'Importación de ZIP cancelada; no se ha modificado nada': ['ZIP import cancelled; nothing was modified', 'ZIP 导入已取消；未做任何修改'],
+    'ZIP demasiado grande: máximo {0}': ['ZIP too large: maximum {0}', 'ZIP 过大：最大 {0}'],
+    'CRC inválido en {0}; el ZIP podría estar corrupto': ['invalid CRC in {0}; the ZIP might be corrupted', '{0} 的 CRC 校验无效；ZIP 可能已损坏'],
+    'ZIP restaurado: {0} archivo(s) escritos, {1} carpeta(s) omitidas. Nada enviado al chat.': ['ZIP restored: {0} file(s) written, {1} folder entries skipped. Nothing sent to the chat.', 'ZIP 已恢复：写入 {0} 个文件，跳过 {1} 个文件夹条目。未发送到聊天。'],
+    '❌ Importar ZIP: {0}. {1} archivo(s) ya escritos se conservan.': ['❌ Import ZIP: {0}. {1} file(s) already written are kept.', '❌ 导入 ZIP：{0}。已写入的 {1} 个文件予以保留。'],
   };
   const LANGUAGES = ['es', 'en', 'zh-CN'];
   let language = 'es';
@@ -2402,7 +2514,7 @@
     settings.language = next;
   }
 
-  let refreshChatCodeActions = () => {};
+  let refreshChatCodeActions = () => { };
 
   const dvLog = (...a) => console.log('[DV]', ...a);
 
@@ -2413,7 +2525,7 @@
 
   async function waitFor(fn, timeout = 3000, step = 100) {
     const t0 = Date.now();
-    for (;;) {
+    for (; ;) {
       const v = fn();
       if (v) return v;
       if (Date.now() - t0 > timeout) return null;
@@ -2484,6 +2596,123 @@
     try { await navigator.storage.persist?.(); } catch { /* */ }
     dvLog(t('OPFS listo'));
     return true;
+  }
+
+  // ============================================================
+  // CARPETA REAL (File System Access API, opcional sobre OPFS)
+  // ============================================================
+  // rootDir es un FileSystemDirectoryHandle igual en ambos casos; el resto
+  // del código (getHandle, walk, writeBytes, makeFs/Git, etc.) no distingue
+  // entre OPFS y una carpeta real: solo cambia qué handle apunta ahí.
+  let storageMode = 'opfs'; // 'opfs' | 'local'
+  let localDirName = '';
+  let hasStoredLocalHandle = false;
+  const HANDLE_DB_NAME = 'dv-fs-handles';
+  const HANDLE_STORE_NAME = 'handles';
+  const HANDLE_KEY = 'root';
+
+  function openHandleDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(HANDLE_DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(HANDLE_STORE_NAME); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbGetHandle() {
+    let db;
+    try { db = await openHandleDB(); } catch { return null; }
+    return new Promise((resolve) => {
+      const tx = db.transaction(HANDLE_STORE_NAME, 'readonly');
+      const req = tx.objectStore(HANDLE_STORE_NAME).get(HANDLE_KEY);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  async function idbSetHandle(handle) {
+    const db = await openHandleDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(HANDLE_STORE_NAME, 'readwrite');
+      tx.objectStore(HANDLE_STORE_NAME).put(handle, HANDLE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function idbDeleteHandle() {
+    const db = await openHandleDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(HANDLE_STORE_NAME, 'readwrite');
+      tx.objectStore(HANDLE_STORE_NAME).delete(HANDLE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  function storageModeLabel() {
+    return storageMode === 'local' ? t`Carpeta real: ${localDirName}` : t('Explorador OPFS (privado)');
+  }
+
+  // Comprueba al arrancar si hay una carpeta real guardada; solo la reactiva
+  // sin preguntar si el permiso sigue concedido (queryPermission no requiere
+  // gesto del usuario). Si el permiso expiró, deja hasStoredLocalHandle=true
+  // para que el panel ofrezca un botón "Reconectar".
+  async function restoreLocalFolderOnBoot() {
+    const handle = await idbGetHandle();
+    if (!handle) return;
+    hasStoredLocalHandle = true;
+    try {
+      const perm = await handle.queryPermission({ mode: 'readwrite' });
+      if (perm === 'granted') {
+        rootDir = handle;
+        storageMode = 'local';
+        localDirName = handle.name;
+        dvLog(t`Carpeta real reactivada: ${handle.name}`);
+      }
+    } catch (e) { dvLog(t`No se pudo comprobar la carpeta real guardada: ${e.message}`); }
+  }
+
+  async function connectLocalFolder() {
+    if (typeof window.showDirectoryPicker !== 'function') {
+      throw new Error(t('Tu navegador no admite carpetas reales (usa Chrome, Edge u otro Chromium reciente)'));
+    }
+    let consented = false;
+    try { consented = localStorage.getItem(CFG.LOCAL_FOLDER_CONSENT_KEY) === 'yes'; } catch { /* */ }
+    if (!consented) {
+      if (!confirm(t('Vas a conectar una carpeta real de tu PC. Mientras esté activa, los comandos de este panel podrán crear, modificar y borrar archivos dentro de ella. ¿Continuar?'))) {
+        throw new Error(t('Conexión de carpeta cancelada'));
+      }
+      try { localStorage.setItem(CFG.LOCAL_FOLDER_CONSENT_KEY, 'yes'); } catch { /* */ }
+    }
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'dv-local-folder' });
+    const perm = await handle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') throw new Error(t('Permiso de escritura denegado para la carpeta'));
+    await idbSetHandle(handle);
+    rootDir = handle;
+    storageMode = 'local';
+    localDirName = handle.name;
+    hasStoredLocalHandle = true;
+  }
+
+  async function reconnectLocalFolder() {
+    const handle = await idbGetHandle();
+    if (!handle) throw new Error(t('No hay carpeta real guardada para reconectar'));
+    const perm = await handle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') throw new Error(t('Permiso de escritura denegado para la carpeta'));
+    rootDir = handle;
+    storageMode = 'local';
+    localDirName = handle.name;
+    hasStoredLocalHandle = true;
+  }
+
+  async function disconnectLocalFolder() {
+    await idbDeleteHandle();
+    hasStoredLocalHandle = false;
+    storageMode = 'opfs';
+    localDirName = '';
+    rootDir = await navigator.storage.getDirectory();
   }
 
   function splitPath(p) {
@@ -2601,7 +2830,7 @@
     if (move) {
       const currentSource = await (await requireFile(sourcePath)).getFile();
       if (currentSource.size !== sourceFile.size ||
-          await computeSha256(await currentSource.arrayBuffer()) !== sourceHash) {
+        await computeSha256(await currentSource.arrayBuffer()) !== sourceHash) {
         throw new Error(t('el origen cambió durante la copia; no se ha borrado y el destino contiene la versión copiada'));
       }
       try { await removePath(sourcePath, false); }
@@ -2627,7 +2856,7 @@
     }
     const copiedFile = await (await requireFile(targetPath)).getFile();
     if (copiedFile.size !== sourceFile.size ||
-        await computeSha256(await copiedFile.arrayBuffer()) !== sourceHash) {
+      await computeSha256(await copiedFile.arrayBuffer()) !== sourceHash) {
       throw new Error(t`verificación de copia fallida: ${targetPath}; el origen se conserva`);
     }
     return sourceHash;
@@ -2673,7 +2902,7 @@
     if (gz) {
       const cs = new CompressionStream('gzip');
       pipe = cs.readable.pipeTo(ws);
-      pipe.catch(() => {});
+      pipe.catch(() => { });
       gzWriter = cs.writable.getWriter();
       target = gzWriter;
     }
@@ -2758,8 +2987,10 @@
       try {
         await writeBytes(tmpPath, candidateBytes);
         if (await pathHash(tmpPath) !== candidateHash) throw new Error(t('Integridad de temporal comprometida.'));
-        await appendJournal({ type: 'atomic_write', txId, path, tmp: tmpPath, prevHash, newHash: candidateHash,
-          bytes: candidateBytes.length, status: 'PREPARED' }, { required: true });
+        await appendJournal({
+          type: 'atomic_write', txId, path, tmp: tmpPath, prevHash, newHash: candidateHash,
+          bytes: candidateBytes.length, status: 'PREPARED'
+        }, { required: true });
       } catch (e) { await discardTmp(); throw e; }
 
       let touched = false;
@@ -2779,8 +3010,10 @@
         throw new Error(t`${e.message} Copia verificada conservada para recuperación (transacción ${txId.slice(0, 8)}).`);
       }
 
-      if (await appendJournal({ type: 'atomic_write', txId, path, prevHash, newHash: candidateHash,
-        bytes: candidateBytes.length, status: 'COMMITTED' })) await discardTmp();
+      if (await appendJournal({
+        type: 'atomic_write', txId, path, prevHash, newHash: candidateHash,
+        bytes: candidateBytes.length, status: 'COMMITTED'
+      })) await discardTmp();
       return { hash: candidateHash, bytes: candidateBytes.length, txId };
     });
   }
@@ -2816,8 +3049,10 @@
         }
       }
       async function recoverOne(tx, tmpOk) {
-        const close = (status, extra = {}) => appendJournal({ type: 'atomic_write', txId: tx.txId, path: tx.path,
-          prevHash: tx.prevHash, newHash: tx.newHash, status, recovered: true, ...extra }, { required: true });
+        const close = (status, extra = {}) => appendJournal({
+          type: 'atomic_write', txId: tx.txId, path: tx.path,
+          prevHash: tx.prevHash, newHash: tx.newHash, status, recovered: true, ...extra
+        }, { required: true });
         let target;
         try {
           if (!tmpOk || isInternalPath(tx.path) || !splitPath(tx.path).length) throw new Error(t('entrada de registro no válida'));
@@ -2934,7 +3169,7 @@
       async rmdir(path) { await removePath(path, false); },
       async readlink() { throw Object.assign(new Error(t('no symlinks')), { code: 'ENOSYS' }); },
       async symlink() { throw Object.assign(new Error(t('no symlinks')), { code: 'ENOSYS' }); },
-      async chmod() {}, async utimes() {}, async fsync() {}
+      async chmod() { }, async utimes() { }, async fsync() { }
     };
     const p = {};
     for (const [name, fn] of Object.entries(raw)) {
@@ -2951,15 +3186,25 @@
   async function getGit() {
     if (gitInstance) return { git: gitInstance, fs: gitFs };
     uiLog(t('Cargando isomorphic-git...'), 'info');
-    const mod = await import('https://esm.sh/isomorphic-git@1.32.1');
-    gitInstance = mod.default || mod;
+    if (typeof window.git !== 'undefined') {
+      gitInstance = window.git;
+    } else {
+      const mod = await import('https://esm.sh/isomorphic-git@1.32.1');
+      gitInstance = mod.default || mod;
+    }
     gitFs = makeFs();
     return { git: gitInstance, fs: gitFs };
   }
 
   let diffInstance = null;
   async function getDiff() {
-    if (!diffInstance) diffInstance = await import('https://esm.sh/diff@7.0.0');
+    if (!diffInstance) {
+      if (typeof window.Diff !== 'undefined') {
+        diffInstance = window.Diff;
+      } else {
+        diffInstance = await import('https://esm.sh/diff@7.0.0');
+      }
+    }
     return diffInstance;
   }
 
@@ -3068,12 +3313,14 @@
       if (!ready.changes.some(c => c.head !== c.stage)) {
         throw new Error(t('la versión actual coincide con HEAD; staging actualizado, no hay cambios para un commit'));
       }
-      const oid = await git.commit({ fs, dir: '.', message: message.trim(),
-        author: { name: 'DV User', email: 'user@local.lan' } });
+      const oid = await git.commit({
+        fs, dir: '.', message: message.trim(),
+        author: { name: 'DV User', email: 'user@local.lan' }
+      });
       if (await gitHeadOid(git, fs) !== oid) throw new Error(t`commit ${oid} creado, pero HEAD cambió; revisa git log y git status`);
       const commit = await git.readCommit({ fs, dir: '.', oid });
       if ((review.head && !commit.commit.parent.includes(review.head)) ||
-          !review.head && commit.commit.parent.length) throw new Error(t`commit ${oid} creado con historial inesperado; revisa git log`);
+        !review.head && commit.commit.parent.length) throw new Error(t`commit ${oid} creado con historial inesperado; revisa git log`);
       if (JSON.stringify(await gitBlobOids(git, fs, git.TREE({ ref: oid }))) !== JSON.stringify(ready.stagedOids)) {
         throw new Error(t`commit ${oid} creado, pero su contenido no coincide con el staging revisado; revisa git show`);
       }
@@ -3123,8 +3370,10 @@
         if (f.size > CFG.MAX_HASH_BYTES) throw new Error(t('checkout: archivo demasiado grande para verificar'));
         hashes.push([f.path, await computeSha256(await (await (await requireFile(f.path)).getFile()).arrayBuffer())]);
       }
-      return JSON.stringify({ head: await gitHeadOid(git, fs),
-        branch: await git.currentBranch({ fs, dir: '.' }), hashes });
+      return JSON.stringify({
+        head: await gitHeadOid(git, fs),
+        branch: await git.currentBranch({ fs, dir: '.' }), hashes
+      });
     };
     const before = await inspect();
     if (await git.currentBranch({ fs, dir: '.' }) === ref) return t`Ya estás en la rama ${ref}; working tree limpio.`;
@@ -3138,8 +3387,8 @@
       await git.checkout({ fs, dir: '.', ref, force: false });
       const matrix = await git.statusMatrix({ fs, dir: '.' });
       if (await git.currentBranch({ fs, dir: '.' }) !== ref ||
-          await gitHeadOid(git, fs) !== oid ||
-          matrix.some(([path, head, work, stage]) => !isInternalPath(path) && (head !== work || work !== stage))) {
+        await gitHeadOid(git, fs) !== oid ||
+        matrix.some(([path, head, work, stage]) => !isInternalPath(path) && (head !== work || work !== stage))) {
         throw new Error(t('estado final no coincide con la rama o no está limpio'));
       }
     } catch (e) {
@@ -3228,8 +3477,10 @@
       } catch (e) { if (e.name !== 'TypeError') throw e; }
     }
     if (text !== null && original !== null) {
-      ctx.openEditor({ snapshot: { path, text: original, hash: current.hash }, candidate: text,
-        checkpointBeforeSave: true, checkpointLabel: t`Antes de git restore desde ${label}` });
+      ctx.openEditor({
+        snapshot: { path, text: original, hash: current.hash }, candidate: text,
+        checkpointBeforeSave: true, checkpointLabel: t`Antes de git restore desde ${label}`
+      });
       return t`Restauración Git preparada: ${path} desde ${label}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.`;
     }
     if (!confirm(t`¿Restaurar "${path}" desde ${label} (${bytes.length} B)?\n${current ? t('Binario/no UTF-8: sin diff de texto. Se guardará checkpoint de la versión actual.') : t('Archivo ausente: se creará con los bytes guardados.')}\nSHA256: ${hash}`)) {
@@ -3294,7 +3545,7 @@
       total += oldBytes.length + newBytes.length;
       if (total > CFG.MAX_COLLECT_CHARS) throw new Error(t('diff demasiado grande para procesar en memoria'));
       if (oldPresent === newPresent && oldBytes.length === newBytes.length &&
-          oldBytes.every((b, i) => b === newBytes[i])) continue;
+        oldBytes.every((b, i) => b === newBytes[i])) continue;
       const oldName = oldPresent ? `a/${path}` : '/dev/null';
       const newName = newPresent ? `b/${path}` : '/dev/null';
       const decode = (bytes) => {
@@ -3329,7 +3580,7 @@
     const reader = stream.getReader();
     let tail = '';
     try {
-      for (;;) {
+      for (; ;) {
         const { value, done } = await reader.read();
         if (done) break;
         tail += dec.decode(value, { stream: true });
@@ -3428,6 +3679,202 @@
     }
   }
 
+  // ============================================================
+  // ZIP MINIMO (store/deflate), sin dependencias externas
+  // ============================================================
+  const ZIP_CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+
+  function zipCrc32(bytes) {
+    let crc = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) crc = ZIP_CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  async function zipDeflate(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  async function zipInflate(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  function zipDosDateTime(date) {
+    const d = (date instanceof Date && !Number.isNaN(+date)) ? date : new Date();
+    const year = Math.max(1980, d.getFullYear());
+    const time = ((d.getHours() & 0x1f) << 11) | ((d.getMinutes() & 0x3f) << 5) | ((d.getSeconds() >> 1) & 0x1f);
+    const dateVal = (((year - 1980) & 0x7f) << 9) | (((d.getMonth() + 1) & 0xf) << 5) | (d.getDate() & 0x1f);
+    return { time, dateVal };
+  }
+
+  function zipWriteFields(fields) {
+    const size = fields.reduce((sum, [, len]) => sum + len, 0);
+    const buf = new Uint8Array(size);
+    const view = new DataView(buf.buffer);
+    let off = 0;
+    for (const [value, len] of fields) {
+      if (len === 2) view.setUint16(off, value, true);
+      else view.setUint32(off, value, true);
+      off += len;
+    }
+    return buf;
+  }
+
+  function zipLocalHeader({ nameLen, method, crc, compSize, rawSize, time, dateVal }) {
+    return zipWriteFields([
+      [0x04034b50, 4], [20, 2], [0x0800, 2], [method, 2], [time, 2], [dateVal, 2],
+      [crc, 4], [compSize, 4], [rawSize, 4], [nameLen, 2], [0, 2],
+    ]);
+  }
+
+  function zipCentralHeader({ nameLen, method, crc, compSize, rawSize, time, dateVal, offset }) {
+    return zipWriteFields([
+      [0x02014b50, 4], [20, 2], [20, 2], [0x0800, 2], [method, 2], [time, 2], [dateVal, 2],
+      [crc, 4], [compSize, 4], [rawSize, 4], [nameLen, 2], [0, 2], [0, 2], [0, 2], [0, 2], [0, 4], [offset, 4],
+    ]);
+  }
+
+  function zipEndRecord({ count, centralSize, centralOffset }) {
+    return zipWriteFields([
+      [0x06054b50, 4], [0, 2], [0, 2], [count, 2], [count, 2], [centralSize, 4], [centralOffset, 4], [0, 2],
+    ]);
+  }
+
+  async function exportDiskAsZip() {
+    if (busy) { uiLog(t('⏳ Hay una operación en curso; reintenta exportar al terminar.'), 'err'); return; }
+    setBusy(true);
+    let url = null, link = null;
+    try {
+      const encoder = new TextEncoder();
+      const localChunks = [], centralChunks = [];
+      let offset = 0, fileCount = 0, rawTotal = 0;
+      for await (const e of walk(rootDir)) {
+        if (e.kind !== 'file') continue;
+        const file = await e.handle.getFile();
+        const rawBytes = new Uint8Array(await file.arrayBuffer());
+        const crc = zipCrc32(rawBytes);
+        let method = 0, data = rawBytes;
+        if (rawBytes.length) {
+          const deflated = await zipDeflate(rawBytes);
+          if (deflated.length < rawBytes.length) { method = 8; data = deflated; }
+        }
+        const nameBytes = encoder.encode(e.path);
+        const { time, dateVal } = zipDosDateTime(new Date(file.lastModified));
+        const fields = { nameLen: nameBytes.length, method, crc, compSize: data.length, rawSize: rawBytes.length, time, dateVal };
+        const header = zipLocalHeader(fields);
+        localChunks.push(header, nameBytes, data);
+        centralChunks.push(zipCentralHeader({ ...fields, offset }), nameBytes);
+        offset += header.length + nameBytes.length + data.length;
+        fileCount++; rawTotal += rawBytes.length;
+      }
+      if (!fileCount) throw new Error(t('el disco está vacío; no hay nada que exportar'));
+      const centralOffset = offset;
+      const centralSize = centralChunks.reduce((sum, c) => sum + c.length, 0);
+      const endRecord = zipEndRecord({ count: fileCount, centralSize, centralOffset });
+      const blob = new Blob([...localChunks, ...centralChunks, endRecord], { type: 'application/zip' });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      url = URL.createObjectURL(blob);
+      link = document.createElement('a');
+      link.href = url;
+      link.download = `disco-${stamp}.zip`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      const pendingUrl = url;
+      setTimeout(() => URL.revokeObjectURL(pendingUrl), 60000);
+      url = null;
+      uiLog(t`Exportado: ${fileCount} archivo(s), ${fmtBytes(rawTotal)} originales, ${fmtBytes(blob.size)} en el .zip. Incluye .git y checkpoints; nada enviado al chat.`, 'info');
+    } catch (e) {
+      uiLog(t`❌ Exportar ZIP: ${e.message}`, 'err');
+    } finally {
+      link?.remove();
+      if (url) URL.revokeObjectURL(url);
+      setBusy(false);
+    }
+  }
+
+  function parseZipEntries(bytes) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const EOCD_SIG = 0x06054b50;
+    const minPos = Math.max(0, bytes.length - 22 - 65535);
+    let eocdOffset = -1;
+    for (let i = bytes.length - 22; i >= minPos; i--) {
+      if (view.getUint32(i, true) === EOCD_SIG) { eocdOffset = i; break; }
+    }
+    if (eocdOffset < 0) throw new Error(t('no se encontró el final del archivo ZIP (EOCD); ¿archivo corrupto o no es un .zip?'));
+    const entryCount = view.getUint16(eocdOffset + 10, true);
+    const centralOffset = view.getUint32(eocdOffset + 16, true);
+    const decoder = new TextDecoder('utf-8');
+    const entries = [];
+    let pos = centralOffset;
+    for (let i = 0; i < entryCount; i++) {
+      if (pos + 46 > bytes.length || view.getUint32(pos, true) !== 0x02014b50) {
+        throw new Error(t('estructura del ZIP inesperada en el directorio central'));
+      }
+      const method = view.getUint16(pos + 10, true);
+      const crc = view.getUint32(pos + 16, true);
+      const compSize = view.getUint32(pos + 20, true);
+      const rawSize = view.getUint32(pos + 24, true);
+      const nameLen = view.getUint16(pos + 28, true);
+      const extraLen = view.getUint16(pos + 30, true);
+      const commentLen = view.getUint16(pos + 32, true);
+      const localOffset = view.getUint32(pos + 42, true);
+      const name = decoder.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
+      entries.push({ name, method, crc, compSize, rawSize, localOffset });
+      pos += 46 + nameLen + extraLen + commentLen;
+    }
+    return entries;
+  }
+
+  async function readZipEntryData(bytes, entry) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const nameLen = view.getUint16(entry.localOffset + 26, true);
+    const extraLen = view.getUint16(entry.localOffset + 28, true);
+    const dataStart = entry.localOffset + 30 + nameLen + extraLen;
+    const raw = bytes.subarray(dataStart, dataStart + entry.compSize);
+    if (entry.method === 0) return raw;
+    if (entry.method === 8) return zipInflate(raw);
+    throw new Error(t`método de compresión no soportado (${entry.method}); usa un .zip con store o deflate`);
+  }
+
+  async function importZipFile(file) {
+    if (busy) { uiLog(t('⏳ Hay una operación en curso; reintenta importar el ZIP al terminar.'), 'err'); return; }
+    if (!confirm(t('Vas a restaurar un backup .zip: los archivos con el mismo nombre serán reemplazados sin deshacer (incluye .git y checkpoints si el ZIP los trae). ¿Continuar?'))) {
+      uiLog(t('Importación de ZIP cancelada; no se ha modificado nada'), 'info');
+      return;
+    }
+    setBusy(true);
+    let restored = 0, skipped = 0;
+    try {
+      if (file.size > CFG.MAX_ZIP_BYTES) throw new Error(t`ZIP demasiado grande: máximo ${fmtBytes(CFG.MAX_ZIP_BYTES)}`);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const entries = parseZipEntries(bytes);
+      for (const entry of entries) {
+        if (entry.name.endsWith('/')) { skipped++; continue; }
+        const parts = splitPath(entry.name);
+        const data = await readZipEntryData(bytes, entry);
+        if (zipCrc32(data) !== entry.crc) throw new Error(t`CRC inválido en ${entry.name}; el ZIP podría estar corrupto`);
+        await writeBytes(parts.join('/'), data);
+        restored++;
+      }
+      uiLog(t`ZIP restaurado: ${restored} archivo(s) escritos, ${skipped} carpeta(s) omitidas. Nada enviado al chat.`, 'info');
+    } catch (e) {
+      uiLog(t`❌ Importar ZIP: ${e.message}. ${restored} archivo(s) ya escritos se conservan.`, 'err');
+    } finally {
+      setBusy(false);
+      await ui?.refresh();
+    }
+  }
+
   function parseSharing(raw) {
     const tokens = tokenize(raw), clean = [];
     let share = false, file = null, literal = false, command = true, redirectTarget = false;
@@ -3510,9 +3957,11 @@
   // ============================================================
   const REG = new Map();
   function def(name, group, usage, desc, run) {
-    REG.set(name, { name, group,
+    REG.set(name, {
+      name, group,
       get usage() { return I18N[usage] || EXTRA_I18N[usage] ? t(usage) : usage; },
-      get desc() { return I18N[desc] || EXTRA_I18N[desc] ? t(desc) : desc; }, run });
+      get desc() { return I18N[desc] || EXTRA_I18N[desc] ? t(desc) : desc; }, run
+    });
   }
 
   let lastResult = '';
@@ -3571,8 +4020,10 @@
     const id = crypto.randomUUID();
     const base = `.dv/checkpoints/${id}`;
     if (await getHandle(`${base}.bin`) || await getHandle(`${base}.json`)) throw new Error(t('checkpoint: ID ya existe; no se reemplazó la copia'));
-    const metadata = { version: 1, id, path: snapshot.path, hash: snapshot.hash,
-      size: snapshot.bytes.length, created: new Date().toISOString(), label };
+    const metadata = {
+      version: 1, id, path: snapshot.path, hash: snapshot.hash,
+      size: snapshot.bytes.length, created: new Date().toISOString(), label
+    };
     await writeBytes(`${base}.bin`, snapshot.bytes);
     const stored = await (await requireFile(`${base}.bin`)).getFile();
     if (stored.size !== metadata.size || await computeSha256(await stored.arrayBuffer()) !== metadata.hash) {
@@ -3590,12 +4041,12 @@
     if (manifest.size > 8192) throw new Error(t('checkpoint: metadatos demasiado grandes'));
     const metadata = JSON.parse(await manifest.text());
     if (!metadata || metadata.version !== 1 || metadata.id !== id ||
-        typeof metadata.path !== 'string' || !splitPath(metadata.path).length || isInternalPath(metadata.path) ||
-        splitPath(metadata.path).join('/') !== metadata.path ||
-        typeof metadata.hash !== 'string' || !/^[a-f0-9]{64}$/.test(metadata.hash) ||
-        !Number.isInteger(metadata.size) || metadata.size < 0 || metadata.size > CFG.MAX_RUN_BYTES ||
-        typeof metadata.created !== 'string' || !Number.isFinite(Date.parse(metadata.created)) ||
-        typeof metadata.label !== 'string' || metadata.label.length > 200) throw new Error(t('checkpoint: metadatos no válidos'));
+      typeof metadata.path !== 'string' || !splitPath(metadata.path).length || isInternalPath(metadata.path) ||
+      splitPath(metadata.path).join('/') !== metadata.path ||
+      typeof metadata.hash !== 'string' || !/^[a-f0-9]{64}$/.test(metadata.hash) ||
+      !Number.isInteger(metadata.size) || metadata.size < 0 || metadata.size > CFG.MAX_RUN_BYTES ||
+      typeof metadata.created !== 'string' || !Number.isFinite(Date.parse(metadata.created)) ||
+      typeof metadata.label !== 'string' || metadata.label.length > 200) throw new Error(t('checkpoint: metadatos no válidos'));
     const file = await (await requireFile(`${base}.bin`)).getFile();
     if (file.size !== metadata.size) throw new Error(t('checkpoint: tamaño de copia incorrecto'));
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -3683,7 +4134,7 @@
       const deleting = pos[0] === 'delete';
       checkFlags(deleting ? [] : ['keep', 'older-than']);
       if (deleting ? pos.length !== 2 : pos.length !== 1 ||
-          (flags.keep === undefined) === (flags['older-than'] === undefined)) {
+        (flags.keep === undefined) === (flags['older-than'] === undefined)) {
         throw new Error(t('uso: checkpoint delete ID | checkpoint prune <--keep N|--older-than Nd>'));
       }
       const records = await checkpointInventory();
@@ -3731,8 +4182,10 @@
       } catch (e) { if (e.name !== 'TypeError') throw e; }
     }
     if (text !== null && original !== null) {
-      ctx.openEditor({ snapshot: { path: current.path, text: original, hash: current.hash },
-        candidate: text, checkpointBeforeSave: true });
+      ctx.openEditor({
+        snapshot: { path: current.path, text: original, hash: current.hash },
+        candidate: text, checkpointBeforeSave: true
+      });
       return t`Restauración preparada: ${metadata.path}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.`;
     }
     if (!confirm(t`¿Restaurar "${metadata.path}" desde checkpoint ${metadata.id} (${metadata.size} B)?\n${current ? t('Binario/no UTF-8: sin diff de texto. Se guardará checkpoint de la versión actual.') : t('Archivo ausente: se creará con los bytes guardados.')}\nSHA256: ${metadata.hash}`)) {
@@ -3784,7 +4237,7 @@
       throw new Error(t('propuesta requiere path y hash SHA256 completo en minúsculas'));
     }
     if (!['replace', 'insert-before', 'insert-after', 'append'].includes(value.operation) ||
-        typeof value.new !== 'string' || value.new.includes('\0')) throw new Error(t('operation/new no válidos'));
+      typeof value.new !== 'string' || value.new.includes('\0')) throw new Error(t('operation/new no válidos'));
     const parts = splitPath(value.path);
     if (!parts.length || isInternalPath(value.path)) throw new Error(t('ruta de propuesta no permitida'));
     if (value.operation === 'append') {
@@ -3911,12 +4364,12 @@
   LEXERS.js = lexRules([
     ['comment', String.raw`\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)`],
     [(value, text, end) => /^\s*:/.test(text.slice(end, end + 30)) ? 'prop' : 'string',
-      EDITOR_STRING + '|' + String.raw`\`(?:[^\`\\]|\\[\s\S])*\`?`],
+    EDITOR_STRING + '|' + String.raw`\`(?:[^\`\\]|\\[\s\S])*\`?`],
     ['number', EDITOR_NUMBER],
     [wordType('break case catch class const continue debugger default delete do else export extends finally for from ' +
       'function if import in instanceof let new of return static super switch throw try typeof var void while with yield ' +
       'async await get set as interface type enum implements private public protected readonly declare namespace',
-    'true false null undefined NaN Infinity this'), String.raw`[A-Za-z_$][\w$]*`]
+      'true false null undefined NaN Infinity this'), String.raw`[A-Za-z_$][\w$]*`]
   ]);
   LEXERS.json = LEXERS.js;
   LEXERS.css = lexRules([
@@ -3925,9 +4378,9 @@
     [(value, text, end, state) => { state.depth = Math.max(0, state.depth + (value === '{' ? 1 : -1)); return ''; }, '[{}]'],
     ['keyword', String.raw`@[\w-]+|!important\b`],
     [(value, text, end, state) => value[0] === '#' && !state.depth ? 'tag' : 'number',
-      String.raw`#[\da-fA-F]{3,8}\b|-?(?:\d+\.?\d*|\.\d+)(?:%|[a-zA-Z]+)?`],
+    String.raw`#[\da-fA-F]{3,8}\b|-?(?:\d+\.?\d*|\.\d+)(?:%|[a-zA-Z]+)?`],
     [(value, text, end, state) => !state.depth ? 'tag' : /^\s*:/.test(text.slice(end, end + 30)) ? 'prop' : '',
-      String.raw`[A-Za-z_-][\w-]*`]
+    String.raw`[A-Za-z_-][\w-]*`]
   ]);
   LEXERS.py = lexRules([
     ['comment', '#[^\\n]*'],
@@ -4071,8 +4524,10 @@
       total += delta;
       return line;
     }).join('\n');
-    return { from: lineStart, to: lineEnd, text: next,
-      selStart: Math.max(lineStart, start + first), selEnd: Math.max(lineStart, end + total) };
+    return {
+      from: lineStart, to: lineEnd, text: next,
+      selStart: Math.max(lineStart, start + first), selEnd: Math.max(lineStart, end + total)
+    };
   }
 
   function editorCommentStyle(text, pos, lang) {
@@ -4205,7 +4660,9 @@
       const isHTML = /\.html?$/i.test(path);
       const host = h('div', { id: 'dv-code-editor' });
       const shadow = host.attachShadow({ mode: 'closed' });
-      let saving = false, approvedCandidate = null;
+      let saving = false, approvedCandidate = null, minimized = false, maximized = false;
+      let floatingRect = null, drag = null;
+      let fitEditor = () => {};
       const timers = new Set();
       const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); return id; };
       const debounce = (fn, ms) => {
@@ -4230,8 +4687,8 @@
       let activeProposal = proposal;
       const candidate = () => activeProposal && code.value === initialDraft ? activeProposal.candidate :
         code.value === baseline ? snapshot.text :
-        snapshot.text.includes('\r\n') && !snapshot.text.replace(/\r\n/g, '').includes('\n')
-          ? code.value.replace(/\n/g, '\r\n') : code.value;
+          snapshot.text.includes('\r\n') && !snapshot.text.replace(/\r\n/g, '').includes('\n')
+            ? code.value.replace(/\n/g, '\r\n') : code.value;
       const isDirty = () => candidate() !== snapshot.text;
       const diff = h('pre', { class: 'diff', 'aria-label': t('Diferencias propuestas') });
       diff.style.display = 'none';
@@ -4516,15 +4973,31 @@
 
       const live = isHTML ? h('div', { class: 'live' }) : null;
       const liveFrame = isHTML ? h('iframe', { sandbox: '', referrerpolicy: 'no-referrer', title: t('Vista previa HTML aislada') }) : null;
-      if (live) { live.append(h('div', { class: 'live-bar' }, t('Vista previa en vivo del borrador · sin scripts ni red')), liveFrame); live.style.display = 'none'; }
-      const renderLive = () => {
+      const liveLabel = isHTML ? h('div', { class: 'live-bar' }, diskPreviewMode(false)) : null;
+      let liveRevision = 0, liveScripts = false;
+      if (live) { live.append(liveLabel, liveFrame); live.style.display = 'none'; }
+      const renderLive = async () => {
         if (!liveOpen) return;
-        try { liveFrame.srcdoc = staticPreviewDocument(code.value); } catch (e) { report(e.message, true); }
+        const revision = ++liveRevision;
+        try {
+          const result = await diskPreviewDocument(code.value, path, liveScripts);
+          if (revision !== liveRevision || !liveOpen || !host.isConnected) return;
+          liveFrame.setAttribute('sandbox', liveScripts ? 'allow-scripts' : '');
+          liveFrame.srcdoc = previewHTML(result.html);
+          liveLabel.textContent = diskPreviewMode(liveScripts);
+        } catch (e) {
+          if (revision !== liveRevision || !liveOpen || !host.isConnected) return;
+          liveFrame.removeAttribute('srcdoc'); report(e.message, true);
+        }
       };
-      const scheduleLive = debounce(renderLive, 350);
+      const scheduleLiveDebounced = debounce(renderLive, 350);
+      const scheduleLive = () => { liveRevision++; scheduleLiveDebounced(); };
       const liveButton = isHTML ? h('button', { class: 'ghost', 'aria-pressed': 'false', 'aria-label': t('Vista previa en vivo') }, t('Vista previa')) : null;
       liveButton?.addEventListener('click', () => {
+        if (!liveOpen) liveScripts = requestPreviewScripts();
         liveOpen = !liveOpen;
+        liveRevision++;
+        if (!liveOpen) liveFrame.removeAttribute('srcdoc');
         live.style.display = liveOpen ? 'flex' : 'none';
         liveButton.setAttribute('aria-pressed', String(liveOpen));
         liveButton.classList.toggle('on', liveOpen);
@@ -4698,18 +5171,24 @@
         if (typeof raf === 'function') raf(() => setTimeout(resolve, 0)); else setTimeout(resolve, 0);
       });
       const beforeUnload = (e) => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } };
+      let stopFocusTrap = null;
       release = () => {
         for (const id of timers) clearTimeout(id);
         timers.clear();
         window.removeEventListener?.('beforeunload', beforeUnload);
+        window.removeEventListener?.('resize', fitEditor);
+        liveRevision++;
         if (liveFrame) liveFrame.removeAttribute?.('srcdoc');
+        stopFocusTrap?.();
         host.remove(); editorOpen = false; ui?.updateState?.();
       };
-      const close = h('button', { class: 'ghost', onclick: () => {
-        if (saving) return;
-        if (isDirty() && !confirm(t('¿Descartar el borrador sin guardar?'))) return;
-        release();
-      } }, t('Cerrar'));
+      const close = h('button', {
+        class: 'ghost', onclick: () => {
+          if (saving) return;
+          if (isDirty() && !confirm(t('¿Descartar el borrador sin guardar?'))) return;
+          release();
+        }
+      }, t('Cerrar'));
       apply.addEventListener('click', async () => {
         const created = snapshot.isNew;
         if (created) {
@@ -4765,10 +5244,19 @@
         ...(isHTML ? [liveButton, tabButton] : []),
         h('button', { class: 'ghost', 'aria-label': t('Atajos de teclado'), onclick: () => toggleHelp() }, '⌨')
       ];
+      const minimize = h('button', { class: 'ghost', 'aria-label': t('Minimizar editor'), 'aria-expanded': 'true' }, t('Minimizar'));
+      const maximize = h('button', { class: 'ghost', 'aria-label': t('Ampliar editor'), 'aria-pressed': 'false' }, t('Ampliar'));
+      const windowBar = h('div', { class: 'window-bar', title: t('Arrastra la barra para mover el editor') },
+        h('strong', { class: 'title' }, title, dirtyMark), minimize, maximize, close);
 
       shadow.append(h('style', {}, `
         :host{all:initial}
-        .editor{position:fixed;inset:2.5%;z-index:1000001;background:#1e1e1e;color:#ddd;border:1px solid #555;border-radius:10px;box-shadow:0 15px 60px #0009;display:flex;flex-direction:column;font:13px system-ui,sans-serif;overflow:hidden}
+        .editor{position:fixed;left:5vw;top:5vh;width:min(1100px,90vw);height:85dvh;min-width:min(480px,96vw);min-height:180px;max-width:100vw;max-height:100dvh;box-sizing:border-box;resize:both;z-index:1000001;background:#1e1e1e;color:#ddd;border:1px solid #555;border-radius:10px;box-shadow:0 15px 60px #0009;display:flex;flex-direction:column;font:13px system-ui,sans-serif;overflow:hidden}
+        .window-bar{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#181818;cursor:move;touch-action:none;user-select:none}
+        .window-bar .title{flex:1;max-width:none;min-width:0}
+        .editor.maximized{left:0!important;top:0!important;width:100vw!important;height:100dvh!important;resize:none;border-radius:0}
+        .editor.minimized{height:auto!important;min-height:0;resize:none}
+        .editor.minimized>:not(.window-bar){display:none!important}
         .bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:#252526;border-bottom:1px solid #333}
         .title{margin-right:auto;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42%}
         .dirty{color:#e2c08d;margin-left:6px}
@@ -4810,10 +5298,69 @@
       `));
       source.append(gutter, h('div', { class: 'wrap' }, hl, code), minimap, findBox, gotoBox, helpBox);
       const dialog = h('section', { class: 'editor', role: 'dialog', 'aria-label': snapshot.isNew ? t`Nuevo archivo · ${path}` : t`Editor de ${path}` },
-        h('div', { class: 'bar' }, h('strong', { class: 'title' }, title, dirtyMark), ...tools, preview, apply, close),
+        windowBar, h('div', { class: 'bar' }, ...tools, preview, apply),
         h('div', { class: 'main' }, source, ...(live ? [live] : [])),
         diff, h('div', { class: 'statusbar' }, status, position, info));
+      const setRect = (rect) => {
+        for (const key of ['left', 'top', 'width', 'height']) dialog.style[key] = rect[key] + 'px';
+      };
+      fitEditor = () => {
+        if (maximized) return;
+        const rect = dialog.getBoundingClientRect();
+        const width = Math.min(rect.width, window.innerWidth), height = Math.min(rect.height, window.innerHeight);
+        dialog.style.left = Math.max(0, Math.min(rect.left, window.innerWidth - width)) + 'px';
+        dialog.style.top = Math.max(0, Math.min(rect.top, window.innerHeight - height)) + 'px';
+        if (!minimized) { dialog.style.width = width + 'px'; dialog.style.height = height + 'px'; }
+      };
+      const showWindow = () => {
+        dialog.classList.toggle('minimized', minimized);
+        dialog.classList.toggle('maximized', maximized && !minimized);
+        minimize.textContent = minimized ? t('Restaurar') : t('Minimizar');
+        minimize.setAttribute('aria-label', minimized ? t('Restaurar editor') : t('Minimizar editor'));
+        minimize.setAttribute('aria-expanded', String(!minimized));
+        maximize.textContent = maximized ? t('Reducir') : t('Ampliar');
+        maximize.setAttribute('aria-label', maximized ? t('Reducir editor') : t('Ampliar editor'));
+        maximize.setAttribute('aria-pressed', String(maximized));
+        if (!minimized) code.focus?.();
+        fitEditor();
+      };
+      minimize.addEventListener('click', () => {
+        if (!minimized && !maximized) {
+          const rect = dialog.getBoundingClientRect();
+          floatingRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        }
+        minimized = !minimized;
+        if (!minimized && !maximized && floatingRect) setRect(floatingRect);
+        showWindow();
+      });
+      maximize.addEventListener('click', () => {
+        if (!maximized && !minimized) {
+          const rect = dialog.getBoundingClientRect();
+          floatingRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        }
+        minimized = false; maximized = !maximized;
+        if (!maximized && floatingRect) setRect(floatingRect);
+        showWindow();
+      });
+      windowBar.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || maximized || e.target.closest('button')) return;
+        e.preventDefault();
+        const rect = dialog.getBoundingClientRect();
+        drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+        windowBar.setPointerCapture?.(e.pointerId);
+      });
+      windowBar.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        const rect = dialog.getBoundingClientRect();
+        const left = Math.max(0, Math.min(e.clientX - drag.dx, window.innerWidth - rect.width));
+        const top = Math.max(0, Math.min(e.clientY - drag.dy, window.innerHeight - rect.height));
+        dialog.style.left = left + 'px'; dialog.style.top = top + 'px';
+        if (minimized && floatingRect) floatingRect = { ...floatingRect, left, top };
+      });
+      const stopDrag = () => { drag = null; };
+      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) windowBar.addEventListener(type, stopDrag);
       dialog.addEventListener('keydown', (e) => {
+        if (minimized) return;
         const mod = e.ctrlKey || e.metaKey, key = String(e.key || '').toLowerCase();
         if (mod && !e.altKey && key === 's') {
           e.preventDefault();
@@ -4838,7 +5385,9 @@
       });
       shadow.append(dialog);
       for (const type of ['keydown', 'keyup', 'keypress']) host.addEventListener(type, (e) => e.stopPropagation());
+      stopFocusTrap = installFocusTrap(host, dialog, code, () => editorOpen && !minimized);
       window.addEventListener?.('beforeunload', beforeUnload);
+      window.addEventListener?.('resize', fitEditor);
       document.body.append(host);
       applyFont(); sync();
       report(snapshot.isNew ? t`Archivo nuevo ${path} · pega o escribe el código · Ctrl+S crea · Tab sangra · Esc cierra` :
@@ -4885,7 +5434,8 @@
       }
       if (!paths.length) { uiLog(t('No hay archivos de usuario para eliminar.'), 'info'); return; }
       const preview = paths.slice(0, 15).join('\n') + (paths.length > 15 ? t`\n... y ${paths.length - 15} más` : '');
-      if (!confirm(t`¿Eliminar ${paths.length} archivo(s) de usuario?\n${preview}\nSe conservan .git, .dv y .dv_tmp. No hay deshacer automático.`)) {
+      const realFolderWarning = storageMode === 'local' ? t('⚠️ Carpeta REAL de tu PC. ') : '';
+      if (!confirm(realFolderWarning + t`¿Eliminar ${paths.length} archivo(s) de usuario?\n${preview}\nSe conservan .git, .dv y .dv_tmp. No hay deshacer automático.`)) {
         uiLog(t('Borrado cancelado; no se ha eliminado nada.'), 'info');
         return;
       }
@@ -4904,10 +5454,24 @@
     }
   }
 
-  function staticPreviewDocument(source) {
+  function createPreviewHTMLConverter() {
+    let policy;
+    return (source) => {
+      if (!window.trustedTypes) return source;
+      if (!policy) {
+        // Private sink adapter, not a sanitizer: only inert parsing and sandboxed previews use it.
+        policy = window.trustedTypes.createPolicy('dv-static-preview', { createHTML: (html) => html });
+      }
+      return policy.createHTML(source);
+    };
+  }
+
+  const previewHTML = createPreviewHTMLConverter();
+
+  function staticPreviewDocument(source, { allowScripts = false, scriptNonce = '' } = {}) {
     const template = document.createElement('template');
-    template.innerHTML = source;
-    template.content.querySelectorAll('script, iframe, frame, object, embed, base, meta[http-equiv], link').forEach((el) => el.remove());
+    template.innerHTML = previewHTML(source);
+    template.content.querySelectorAll((allowScripts ? '' : 'script, ') + 'iframe, frame, object, embed, base, meta[http-equiv], link').forEach((el) => el.remove());
     template.content.querySelectorAll('a, area, form').forEach((el) => {
       el.removeAttribute('href');
       el.removeAttribute('action');
@@ -4915,10 +5479,132 @@
     const doc = document.implementation.createHTMLDocument(t('Vista previa estática'));
     const policy = doc.createElement('meta');
     policy.httpEquiv = 'Content-Security-Policy';
-    policy.content = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'";
+    policy.content = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'" +
+      (allowScripts ? `; script-src ${scriptNonce ? "'nonce-" + scriptNonce + "'" : "'unsafe-inline'"}; script-src-attr 'unsafe-inline'; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'` : '');
     doc.head.prepend(policy);
     doc.body.append(template.content);
     return '<!doctype html>\n' + doc.documentElement.outerHTML;
+  }
+
+  function previewBlockedBySite() {
+    return window.location?.hostname === 'gemini.google.com';
+  }
+
+  function diskPreviewMode(interactive) {
+    return previewBlockedBySite() ?
+      t('HTML y CSS del disco · Gemini bloquea JavaScript por CSP') :
+      interactive ? t('HTML, CSS y JS del disco · scripts aislados, sin red') :
+        t('HTML y CSS del disco · JavaScript desactivado');
+  }
+
+  function requestPreviewScripts() {
+    return !previewBlockedBySite() && confirm(t('¿Habilitar JavaScript del proyecto en la vista previa aislada? Solo código revisado; sin acceso al disco ni red. Un bucle infinito puede bloquear la pestaña. Cancelar mantiene HTML y CSS sin scripts.'));
+  }
+
+  function previewResourcePath(base, reference) {
+    const value = reference.trim();
+    if (!value || value.startsWith('#')) return null;
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value)) throw new Error(t`Recurso de vista previa no permitido: ${value}`);
+    const pathname = decodeURIComponent(value.split(/[?#]/)[0]);
+    if (/[\\\u0000-\u001f]/.test(pathname)) throw new Error(t`Recurso de vista previa no permitido: ${value}`);
+    const parts = pathname.startsWith('/') ? [] : splitPath(base).slice(0, -1);
+    for (const part of pathname.split('/')) {
+      if (!part || part === '.') continue;
+      if (part === '..') {
+        if (!parts.length) throw new Error(t`Recurso de vista previa no permitido: ${value}`);
+        parts.pop();
+      } else parts.push(part);
+    }
+    const path = splitPath(parts.join('/')).join('/');
+    if (!path || isInternalPath(path)) throw new Error(t`Recurso de vista previa no permitido: ${value}`);
+    return path;
+  }
+
+  async function diskPreviewDocument(source, path, interactive = false, scriptNonce = '') {
+    interactive = interactive && !previewBlockedBySite();
+    const dependencies = new Set();
+    let total = new TextEncoder().encode(source).length;
+    if (total > 8 * 1024 * 1024) throw new Error(t('La vista previa y sus recursos superan 8 MB.'));
+    const read = async (target) => {
+      dependencies.add(target);
+      const file = await (await requireFile(target)).getFile();
+      total += file.size;
+      if (total > 8 * 1024 * 1024) throw new Error(t('La vista previa y sus recursos superan 8 MB.'));
+      return new Uint8Array(await file.arrayBuffer());
+    };
+    const text = async (target) => new TextDecoder('utf-8', { fatal: true }).decode(await read(target));
+    const assetCache = new Map();
+    const asset = async (base, value) => {
+      if (value.trim().startsWith('data:')) return value;
+      const target = previewResourcePath(base, value);
+      if (!target) return value;
+      if (!assetCache.has(target)) {
+        const bytes = await read(target);
+        let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+        const type = /\.png$/i.test(target) ? 'image/png' : /\.jpe?g$/i.test(target) ? 'image/jpeg' :
+          /\.svg$/i.test(target) ? 'image/svg+xml' : /\.gif$/i.test(target) ? 'image/gif' :
+            /\.webp$/i.test(target) ? 'image/webp' : /\.woff2$/i.test(target) ? 'font/woff2' :
+              /\.woff$/i.test(target) ? 'font/woff' : 'application/octet-stream';
+        assetCache.set(target, 'data:' + type + ';base64,' + btoa(binary));
+      }
+      return assetCache.get(target);
+    };
+    const css = async (value, base) => {
+      if (/@import\b/i.test(value)) throw new Error(t('CSS @import no admitido; usa link stylesheet en el HTML.'));
+      const pattern = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]*))\s*\)/gi;
+      let result = '', end = 0;
+      for (const match of value.matchAll(pattern)) {
+        result += value.slice(end, match.index) + 'url("' + await asset(base, match[1] ?? match[2] ?? match[3]) + '")';
+        end = match.index + match[0].length;
+      }
+      return result + value.slice(end);
+    };
+    const template = document.createElement('template');
+    template.innerHTML = previewHTML(source);
+    const root = template.content;
+    const resolvedStyles = new WeakSet();
+    for (const link of root.querySelectorAll('link')) {
+      if (link.rel.toLowerCase() !== 'stylesheet') { link.remove(); continue; }
+      const target = previewResourcePath(path, link.getAttribute('href') || '');
+      if (!target) throw new Error(t('Hoja de estilos sin ruta.'));
+      const style = document.createElement('style');
+      style.textContent = await css(await text(target), target);
+      resolvedStyles.add(style);
+      link.replaceWith(style);
+    }
+    for (const style of root.querySelectorAll('style')) {
+      if (!resolvedStyles.has(style)) style.textContent = await css(style.textContent, path);
+    }
+    for (const script of root.querySelectorAll('script')) {
+      const type = script.type.trim().toLowerCase();
+      if (!interactive) {
+        if (script.hasAttribute('src')) {
+          const target = previewResourcePath(path, script.getAttribute('src'));
+          if (target) { dependencies.add(target); await requireFile(target); }
+        }
+        script.remove(); continue;
+      }
+      if (type === 'module' || type === 'importmap' || script.hasAttribute('async')) {
+        throw new Error(t('La vista previa admite scripts clásicos sin async; módulos ES requieren un servidor.'));
+      }
+      if (script.hasAttribute('src')) {
+        const target = previewResourcePath(path, script.getAttribute('src'));
+        if (!target) throw new Error(t('Script sin ruta.'));
+        const encoded = JSON.stringify(await text(target)).replace(/</g, '\\u003c');
+        const install = `const node=document.createElement('script');node.nonce=${JSON.stringify(scriptNonce)};node.textContent=${encoded};document.head.append(node);node.remove();`;
+        script.textContent = script.hasAttribute('defer') ?
+          `addEventListener('DOMContentLoaded',()=>{${install}},{once:true});` : `{${install}}`;
+        for (const name of ['src', 'defer', 'integrity', 'crossorigin']) script.removeAttribute(name);
+      }
+      if (scriptNonce) script.setAttribute('nonce', scriptNonce);
+    }
+    for (const el of root.querySelectorAll('*')) {
+      if (el.hasAttribute('style')) el.setAttribute('style', await css(el.getAttribute('style'), path));
+      if (el.hasAttribute('srcset')) throw new Error(t('srcset no admitido; usa imágenes con src.'));
+      if (el.tagName === 'IMG' && el.hasAttribute('src')) el.setAttribute('src', await asset(path, el.getAttribute('src')));
+    }
+    return { html: staticPreviewDocument(template.innerHTML, { allowScripts: interactive, scriptNonce }), dependencies };
   }
 
   const htmlPreviews = new Map();
@@ -4935,7 +5621,8 @@
   function notifyHTMLPreviews(path) {
     for (const entry of htmlPreviews.values()) {
       if (entry.tab.closed) { closeHTMLPreview(entry); continue; }
-      if (entry.path !== path && !entry.path.startsWith(path + '/')) continue;
+      if (entry.path !== path && !entry.path.startsWith(path + '/') &&
+          ![...(entry.dependencies || [])].some(dep => dep === path || dep.startsWith(path + '/'))) continue;
       clearTimeout(entry.timer);
       entry.timer = setTimeout(() => updateHTMLPreview(entry), 150);
     }
@@ -4947,9 +5634,10 @@
     const revision = ++entry.revision;
     try {
       const snapshot = await editorSnapshot(entry.path);
-      const html = staticPreviewDocument(snapshot.text);
+      const result = await diskPreviewDocument(snapshot.text, entry.path, entry.interactive, entry.scriptNonce);
       if (htmlPreviews.get(entry.path) !== entry || revision !== entry.revision) return;
-      entry.channel.postMessage({ type: 'render', html, hash: snapshot.hash });
+      entry.dependencies = result.dependencies;
+      entry.channel.postMessage({ type: 'render', html: result.html, hash: snapshot.hash });
     } catch (e) {
       if (htmlPreviews.get(entry.path) !== entry || revision !== entry.revision) return;
       entry.channel.postMessage({ type: 'error', text: e.message });
@@ -4959,7 +5647,7 @@
 
   function previewStrings() {
     return {
-      refresh: t('Actualizar desde disco'), mode: t('HTML estático · sin scripts ni red'),
+      refresh: t('Actualizar desde disco'), mode: diskPreviewMode(false), interactiveMode: diskPreviewMode(true),
       connecting: t('Conectando con el panel...'), frame: t('Vista previa HTML aislada'),
       reading: t('Leyendo la versión guardada en OPFS...'),
       offline: t('El panel no responde. Mantén DeepSeek abierto. Si lo recargaste, vuelve a pulsar Ejecutar allí.'),
@@ -4970,11 +5658,11 @@
     };
   }
 
-  function htmlPreviewShell(path, channelName, nonce) {
+  function htmlPreviewShell(path, channelName, nonce, interactive = false) {
     const encode = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
     const text = previewStrings();
     return `<!doctype html><html lang="${language}"><head><meta charset="utf-8">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; frame-src about:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; script-src-attr ${interactive ? "'unsafe-inline'" : "'none'"}; style-src 'unsafe-inline'; frame-src about:; connect-src 'none'; base-uri 'none'; form-action 'none'">
       <meta name="referrer" content="no-referrer"><title>DV</title>
       <style>html,body{height:100%;margin:0;font:13px system-ui;background:#18181b;color:#f4f4f5}
       body{display:flex;flex-direction:column}header{padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -4982,15 +5670,16 @@
       button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
       #status{padding:0 10px 8px;overflow-wrap:anywhere}iframe{flex:1;width:100%;border:0;background:white;min-height:0}</style></head>
       <body><header><strong id="path"></strong><button id="refresh" type="button">${t('Actualizar desde disco')}</button>
-      <span>${t('HTML estático · sin scripts ni red')}</span></header><div id="status" role="status" aria-live="polite">${t('Conectando con el panel...')}</div>
-      <iframe sandbox="" referrerpolicy="no-referrer" title="${t('Vista previa HTML aislada')}"></iframe>
+      <span>${diskPreviewMode(interactive)}</span></header><div id="status" role="status" aria-live="polite">${t('Conectando con el panel...')}</div>
+      <iframe sandbox="${interactive ? 'allow-scripts' : ''}" referrerpolicy="no-referrer" title="${t('Vista previa HTML aislada')}"></iframe>
       <script nonce="${nonce}">
       'use strict';
-      const path = ${encode(path)}, name = ${encode(channelName)};
+      const path = ${encode(path)}, name = ${encode(channelName)}, interactive = ${interactive};
       let text = ${encode(text)}, locale = ${encode(language)};
       document.title = 'DV · ' + path;
       document.getElementById('path').textContent = path;
       const status = document.getElementById('status'), frame = document.querySelector('iframe');
+      const previewHTML = (${createPreviewHTMLConverter.toString()})();
       let channel, timer;
       const request = () => {
         clearTimeout(timer);
@@ -5010,12 +5699,17 @@
             locale = data.locale; text = data.text;
             document.documentElement.lang = locale;
             document.getElementById('refresh').textContent = text.refresh;
-            document.querySelector('header span').textContent = text.mode;
+            document.querySelector('header span').textContent = interactive ? text.interactiveMode : text.mode;
             frame.title = text.frame;
           } else if (data.type === 'render' && typeof data.html === 'string' && /^[a-f0-9]{64}$/.test(data.hash)) {
             clearTimeout(timer);
-            frame.srcdoc = data.html;
-            status.textContent = text.updated + new Date().toLocaleTimeString(locale) + ' · SHA256 ' + data.hash.slice(0, 8) + text.saved;
+            try {
+              frame.srcdoc = previewHTML(data.html);
+              status.textContent = text.updated + new Date().toLocaleTimeString(locale) + ' · SHA256 ' + data.hash.slice(0, 8) + text.saved;
+            } catch (error) {
+              frame.removeAttribute('srcdoc');
+              status.textContent = text.error + error.message;
+            }
           } else if (data.type === 'error' && typeof data.text === 'string') {
             clearTimeout(timer); frame.removeAttribute('srcdoc');
             status.textContent = text.error + data.text;
@@ -5032,7 +5726,7 @@
 
   async function openHTMLPreview(path) {
     path = splitPath(path).join('/');
-    if (!confirm(t`¿Abrir "${path}" en una pestaña de vista previa HTML estática?\nSin scripts, red ni recursos externos. Se actualizará al guardar; requiere mantener DeepSeek abierto.`)) {
+    if (!confirm(t`¿Abrir "${path}" con sus recursos del disco en una pestaña de vista previa?\nSin red; requiere mantener el panel abierto.`)) {
       throw new Error(t('ejecución cancelada'));
     }
     if (typeof BroadcastChannel !== 'function') throw new Error(t('el navegador no admite BroadcastChannel para conectar la vista previa'));
@@ -5043,17 +5737,18 @@
       return t`Vista previa HTML actualizada en su pestaña: ${path}.`;
     }
     if (previous) closeHTMLPreview(previous);
+    const interactive = requestPreviewScripts();
     let entry = null, channel = null, url = null, tab = null;
     try {
       const channelName = t('dv-preview-') + crypto.randomUUID();
       channel = new BroadcastChannel(channelName);
       const nonce = crypto.randomUUID().replaceAll('-', '');
-      url = URL.createObjectURL(new Blob([htmlPreviewShell(path, channelName, nonce)], { type: 'text/html;charset=utf-8' }));
+      url = URL.createObjectURL(new Blob([htmlPreviewShell(path, channelName, nonce, interactive)], { type: 'text/html;charset=utf-8' }));
       // Navigate in the initial trusted click; detaching opener first prevents later navigation.
       tab = window.open(url, '_blank');
       if (!tab) throw new Error(t('el navegador bloqueó la pestaña; permite ventanas emergentes para DeepSeek y reintenta'));
       tab.opener = null;
-      entry = { path, tab, channel, url, revision: 0, timer: null, watch: null };
+      entry = { path, tab, channel, url, interactive, scriptNonce: nonce, dependencies: new Set(), revision: 0, timer: null, watch: null };
       htmlPreviews.set(path, entry);
       channel.onmessage = ({ data }) => {
         if (data?.type === 'refresh') return updateHTMLPreview(entry);
@@ -5062,7 +5757,7 @@
       entry.watch = setInterval(() => {
         if (tab.closed) closeHTMLPreview(entry);
       }, 5000);
-      return t`Vista previa HTML abierta en pestaña: ${path}. Actualización automática al guardar y botón Actualizar desde disco; F5 vuelve a leer OPFS mientras el panel siga abierto. Sin scripts, red ni recursos OPFS relativos.`;
+      return t`Vista previa del disco abierta: ${path}.` + ' ' + diskPreviewMode(interactive);
     } catch (e) {
       if (entry) closeHTMLPreview(entry, { closeTab: true });
       else { channel?.close(); if (url) URL.revokeObjectURL(url); tab?.close(); }
@@ -5073,7 +5768,7 @@
   function consoleRunnerDocument(source, token) {
     const messages = {
       unserializable: t('[valor no serializable]'), output: t('limite de salida excedido'),
-      startup: t('error de sintaxis o arranque del Worker'), timeout: t('tiempo limite de 3 segundos excedido')
+      startup: t('El Worker no pudo arrancar: posible error de sintaxis o bloqueo CSP/Trusted Types. Revisa la consola del navegador o prueba fuera del chat.'), timeout: t('tiempo limite de 3 segundos excedido')
     };
     const encode = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
     const workerSource = `
@@ -5102,6 +5797,7 @@
       const emit = data => parent.postMessage({token, ...data}, '*');
       let worker, timer, url;
       const stop = () => { clearTimeout(timer); if(worker) worker.terminate(); if(url) URL.revokeObjectURL(url); };
+      emit({type:'started'});
       try {
         url = URL.createObjectURL(new Blob([${encoded}], {type:'text/javascript'}));
         worker = new Worker(url);
@@ -5135,18 +5831,22 @@
     const token = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       const output = [];
-      let count = 0, chars = 0;
+      let count = 0, chars = 0, finished = false, runnerUrl = null, started = false;
       const finish = (error) => {
+        if (finished) return;
+        finished = true;
         clearTimeout(timer);
         window.removeEventListener('message', receive);
         frame.remove();
+        if (runnerUrl) URL.revokeObjectURL(runnerUrl);
         if (error) reject(new Error(`${path}: ${error}\n${output.join('\n')}`));
         else resolve(`Ejecutado: ${path}\n${output.join('\n') || t('(sin salida)')}\n[fin]`);
       };
       const receive = (event) => {
-        if (event.source !== frame.contentWindow || event.data?.token !== token) return;
+        if (finished || event.source !== frame.contentWindow || event.data?.token !== token) return;
         const data = event.data;
-        if (data.type === 'log' && typeof data.text === 'string') {
+        if (data.type === 'started') started = true;
+        else if (data.type === 'log' && typeof data.text === 'string') {
           if (++count > 100 || (chars += data.text.length) > 21000) { finish(t('limite de salida excedido')); return; }
           const text = data.text.slice(0, 4100);
           output.push(text);
@@ -5154,10 +5854,16 @@
         } else if (data.type === 'error') finish(String(data.text).slice(0, 4000));
         else if (data.type === 'done') finish();
       };
-      const timer = setTimeout(() => finish(t('no respondió el entorno aislado dentro del límite')), CFG.RUN_TIMEOUT_MS + 1500);
+      const timer = setTimeout(() => finish(started ?
+        t('El Worker no respondió dentro del límite. Puede estar bloqueado por CSP/Trusted Types o haber agotado el tiempo; revisa la consola del navegador o prueba fuera del chat.') :
+        t('El controlador JavaScript aislado no arrancó. El sitio puede bloquear scripts o iframes Blob con su CSP (comprobado en Gemini). No se pudo iniciar el archivo; pruébalo fuera del chat.')), CFG.RUN_TIMEOUT_MS + 1500);
       window.addEventListener('message', receive);
-      frame.srcdoc = consoleRunnerDocument(source, token);
-      document.body.append(frame);
+      try {
+        const runnerBlob = new Blob([consoleRunnerDocument(source, token)], { type: 'text/html;charset=utf-8' });
+        runnerUrl = URL.createObjectURL(runnerBlob);
+        frame.src = runnerUrl;
+        document.body.append(frame);
+      } catch (error) { finish(error.message || String(error)); }
     });
   }
 
@@ -5390,7 +6096,7 @@
       t('  replace archivo "old" "new": bloque literal único; --all reemplaza todas las coincidencias no solapadas.'),
       t('  replace siempre prepara sin guardar (también --dry-run); --hash SHA256 exige esa versión.'),
       t('  Para bloques multilínea o propuestas IA usa propose con hash y JSON.'),
-      t('  Chat: bloque dv con JSON puro o !propose inline; Revisar parche en DV abre diff, nunca ejecuta otros comandos.'),
+      t('  Chat: JSON dv abre revisión; comandos ! de una línea se ejecutan al pulsar el botón.'),
       t('  Aprobar parche del chat crea checkpoint previo y valida hash; no envía nada ni hace commit.'),
       t('  Compartir archivo incluye SHA256 y protocolo dv; no comparte archivos automáticamente.'),
       t('  grep [-i] [-n] [-F] patrón [archivo]: regex/literal, números de línea y pipes.'),
@@ -5444,7 +6150,7 @@
     try {
       const segs = parsePipeline(Array.isArray(raw) ? raw : tokenize(raw.trim()));
       if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && seg.argv[1]?.toLowerCase() === 'checkout') &&
-          (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
+        (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
       const editorCommand = segs.find((seg) => ['propose', 'replace', 'checkpoint', 'restore', 'edit', 'recover'].includes(seg.argv[0].toLowerCase()));
       if (editorCommand && (segs.length !== 1 || segs[0].redirect)) {
         throw new Error(t`${editorCommand.argv[0]} no admite pipes ni redirecciones`);
@@ -5462,8 +6168,10 @@
       for (const seg of segs) {
         const cmd = REG.get(seg.argv[0].toLowerCase());
         if (!cmd) throw new Error(t`comando no reconocido: ${seg.argv[0]}`);
-        const ctx = { args: seg.argv.slice(1), stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
-          openEditor: (proposal) => { editorRequest = proposal; } };
+        const ctx = {
+          args: seg.argv.slice(1), stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
+          openEditor: (proposal) => { editorRequest = proposal; }
+        };
         stream = normalize(await cmd.run(ctx));
       }
       let text;
@@ -5515,18 +6223,57 @@
     !b.classList?.contains('ds-button--disabled');
   const normalizeChatText = (text) => text.replace(/\r\n?/g, '\n');
 
+  // Selectores conocidos de otros sitios de chat (no solo DeepSeek), usados como
+  // atajo antes de caer en la heurística genérica; si no coinciden con nada no afectan.
+  const KNOWN_SEND_SELECTOR = '[data-testid="send-button"], [data-composer-submit], ' +
+    'button[aria-label="Send message"], button[aria-label="Send prompt"], ' +
+    '.send-button-container .send-button button, button.send-button';
+
   const adapter = {
     getInput() {
-      const all = [...document.querySelectorAll('textarea')].filter(visible);
-      return all[0] || document.querySelector('textarea');
+      const gemini = [...document.querySelectorAll('rich-textarea .ql-editor[contenteditable="true"]')].find(visible);
+      if (gemini) return gemini;
+      // Prioriza <textarea> (DeepSeek y la mayoría de sitios); si no hay ninguna
+      // visible, cae a un contenteditable (p. ej. editores tipo ProseMirror).
+      const pick = (sel) => [...document.querySelectorAll(sel)].filter(visible);
+      let all = pick('textarea');
+      if (!all.length) all = pick('[contenteditable="true"]');
+      return all[0] || document.querySelector('textarea') || document.querySelector('[contenteditable="true"]');
     },
-    getText: (el) => el.value ?? '',
+    getText(el) {
+      if (el.matches?.('rich-textarea .ql-editor')) {
+        const lines = [...el.querySelectorAll('p, li')];
+        const read = (node) => {
+          if (node.nodeName === 'BR') return '\n';
+          return node.childNodes.length ? [...node.childNodes].map(read).join('') : node.textContent;
+        };
+        if (lines.length) return lines.map((line) =>
+          line.childNodes.length === 1 && line.firstChild.nodeName === 'BR' ? '' : read(line)).join('\n');
+      }
+      return el.value !== undefined ? (el.value ?? '') : (el.textContent ?? '');
+    },
     setText(el, text) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-      setter.call(el, text);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
+      if (el.value !== undefined || el.tagName === 'TEXTAREA') {
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+        setter.call(el, text);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      // contenteditable: execCommand sigue siendo la forma fiable de que editores
+      // tipo ProseMirror/Lexical registren el cambio en su propio estado interno.
+      el.focus();
+      document.execCommand('selectAll');
+      document.execCommand(text === '' ? 'delete' : 'insertText', false, text);
+      if (this.getText(el) !== text) {
+        el.textContent = text;
+        el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+      }
     },
     findSend(input) {
+      const known = [...document.querySelectorAll(KNOWN_SEND_SELECTOR)].find(visible);
+      if (known) return known;
+      // Heurística genérica (sirve para DeepSeek y cualquier sitio sin selectores
+      // conocidos): sube por los ancestros y toma el último botón visible con icono.
       let n = input.parentElement;
       for (let d = 0; n && d < 8; d++, n = n.parentElement) {
         const btns = [...n.querySelectorAll('button, [role="button"]')].filter((b) => b.querySelector('svg') && visible(b));
@@ -5599,11 +6346,11 @@
     const input = adapter.getInput();
     if (!input || !visible(input)) throw new Error(t('no se encontró una entrada de chat visible'));
     if (adapter.getText(input) !== '') throw new Error(t('hay un borrador en el chat; no se ha reemplazado'));
-    if (confirmSend && !confirm(t`¿Compartir con DeepSeek (${message.length} caracteres)?\nVista previa:\n${truncate(message, CFG.ATTACH_PREVIEW_CHARS)}`)) {
+    if (confirmSend && !confirm(t`¿Compartir con el chat (${message.length} caracteres)?\nVista previa:\n${truncate(message, CFG.ATTACH_PREVIEW_CHARS)}`)) {
       throw new Error(t('envío cancelado; no se ha compartido nada'));
     }
     await adapter.sendToChat(message);
-    uiLog(t('📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta de DeepSeek.'), 'info');
+    uiLog(t('📤 El chat vació la entrada tras solicitar el envío; comprueba la respuesta del asistente.'), 'info');
   }
 
   async function shareFile(path) {
@@ -5703,7 +6450,7 @@
       const segs = parsePipeline(tokenize(text.slice(prefix.length)));
       const seg = segs[0];
       if (segs.length !== 1 || seg.redirect || seg.argv.length !== 2 || seg.argv[0] !== 'propose' ||
-          !seg.argv[1].trim().startsWith('{')) throw new Error(t('chat: solo propose con un JSON inline, sin pipes, archivos ni opciones'));
+        !seg.argv[1].trim().startsWith('{')) throw new Error(t('chat: solo propose con un JSON inline, sin pipes, archivos ni opciones'));
       json = seg.argv[1];
     }
     let value;
@@ -5725,7 +6472,8 @@
       if (cls) return cls.slice(9).toLowerCase();
       if (el.getAttribute('data-language')) return el.getAttribute('data-language').toLowerCase();
     }
-    const label = pre.closest('.md-code-block')?.querySelector('.md-code-block-banner span');
+    const label = pre.closest('.md-code-block')?.querySelector('.md-code-block-banner span') ||
+      pre.closest('code-block')?.querySelector('.code-block-decoration span');
     return label ? label.textContent.trim().toLowerCase() : '';
   }
 
@@ -5741,11 +6489,15 @@
         if (isInsidePanel(pre)) continue;
         const code = pre.querySelector('code') || pre;
         const text = code.textContent.trim();
-        const userMessage = code.closest('[data-message-role="user"], [data-role="user"]');
-        const assistantMessage = code.closest('[data-message-role="assistant"], [data-role="assistant"], .ds-markdown');
+        const userMessage = code.closest('[data-message-role="user"], [data-role="user"], [data-message-author-role="user"], user-query');
+        const assistantMessage = code.closest(
+          '[data-message-role="assistant"], [data-role="assistant"], [data-message-author-role="assistant"], .ds-markdown, model-response');
         const marked = chatCodeLanguage(pre, code) === 'dv';
-        const command = [settings.prefix, '!'].some((prefix) => text.startsWith(prefix + 'propose'));
-        const eligible = !userMessage && assistantMessage && (marked || command);
+        const isPropose = [settings.prefix, '!'].some((prefix) => text.startsWith(prefix + 'propose'));
+        const isRunCommand = text.startsWith('!') && !text.includes('\n');
+        // Gemini renders unknown fence languages (including dv) as "Code snippet".
+        const geminiJson = code.closest('model-response') && code.closest('code-block') && text.startsWith('{');
+        const eligible = !userMessage && assistantMessage && (marked || isPropose || isRunCommand || geminiJson);
         let action = actions.get(pre);
         if (action && (action.code !== code || !action.bar.isConnected)) {
           action.bar.remove(); actions.delete(pre); action = null;
@@ -5759,12 +6511,12 @@
           bar.style.cssText = 'display:flex;align-items:center;gap:8px;margin:6px 0;font:12px system-ui;flex-wrap:wrap';
           const button = document.createElement('button');
           button.type = 'button';
-          button.textContent = t('Revisar parche en DV');
+          button.textContent = isRunCommand ? t('Ejecutar en DV') : t('Revisar parche en DV');
           button.style.cssText = 'padding:6px 10px;background:#047857;color:white;border:1px solid #065f46;border-radius:5px;cursor:pointer';
           const status = document.createElement('span');
           status.setAttribute('role', 'status');
           bar.append(button, status);
-          (pre.closest('.md-code-block') || pre).before(bar);
+          (pre.closest('.md-code-block, code-block') || pre).before(bar);
           action = { bar, button, status, code, text: null, pending: false };
           actions.set(pre, action);
           button.addEventListener('click', async (e) => {
@@ -5773,6 +6525,13 @@
             action.pending = true; button.disabled = true;
             try {
               if (!code.isConnected) throw new Error(t('el bloque ya no está en el chat'));
+              const content = code.textContent.trim();
+              if (content.startsWith('!') && !content.includes('\n')) {
+                status.textContent = t`Ejecutando: ${content.slice(0, 40)}...`;
+                await handleExecution(content.slice(1), { origin: 'chat' });
+                status.textContent = t('Ejecución finalizada. Revisa el panel.');
+                return;
+              }
               const proposal = await prepareChatProposal(code.textContent);
               status.textContent = t`Propuesta: ${proposal.snapshot.path}. Revisa el diff; aún no guardada.`;
               uiLog(t`Parche desde chat: ${proposal.snapshot.path}. Archivo intacto; aprobación y checkpoint requeridos.`, 'info');
@@ -5787,11 +6546,17 @@
             }
           });
         }
-        action.button.textContent = t('Revisar parche en DV');
+        action.button.textContent = isRunCommand ? t('Ejecutar en DV') : t('Revisar parche en DV');
         if (action.pending || action.text === text) continue;
         const changed = action.text !== null;
         action.text = text;
         try {
+          if (isRunCommand) {
+            action.button.disabled = false;
+            action.button.title = t('Ejecutar comando local. Se mantienen las confirmaciones propias del comando. Revisa la salida en el panel.');
+            if (changed || !action.status.textContent) action.status.textContent = action.button.title;
+            continue;
+          }
           parseChatProposal(text);
           action.button.disabled = false;
           action.button.title = t('Abrir diff local; al aprobar se crea checkpoint. No ejecuta código ni envía mensajes.');
@@ -5808,7 +6573,7 @@
       const relevant = mutations.some((m) => {
         const target = m.target.nodeType === Node.ELEMENT_NODE ? m.target : m.target.parentElement;
         if (!target || isInsidePanel(target) || target.closest('.dv-chat-patch-actions')) return false;
-        return target.closest('pre') || (m.type === 'attributes' && target.querySelector('pre')) ||
+        return target.closest('pre, code-block, .md-code-block') || (m.type === 'attributes' && target.querySelector('pre')) ||
           [...(m.addedNodes || []), ...(m.removedNodes || [])].some((n) =>
             n.nodeType === Node.ELEMENT_NODE && (n.matches('pre, code') || n.querySelector('pre')));
       });
@@ -5816,8 +6581,10 @@
       scheduled = true;
       setTimeout(() => { scheduled = false; scan(); }, 150);
     });
-    observer.observe(document.body, { childList: true, characterData: true, subtree: true,
-      attributes: true, attributeFilter: ['class', 'data-language', 'data-role', 'data-message-role'] });
+    observer.observe(document.body, {
+      childList: true, characterData: true, subtree: true,
+      attributes: true, attributeFilter: ['class', 'data-language', 'data-role', 'data-message-role', 'data-message-author-role']
+    });
     refreshChatCodeActions = () => {
       for (const action of actions.values()) { action.text = null; action.status.textContent = ''; }
       scan();
@@ -5828,6 +6595,7 @@
   function installInterceptors() {
     if (!document.body) throw new Error(t('no hay document.body; no se pueden instalar interceptores ni detector'));
     let attempted = null;
+    const isInputTarget = (input, target) => input && (input === target || input.contains?.(target));
     const rememberAttempt = (input) => {
       const text = normalizeChatText(adapter.getText(input)).trim();
       attempted = isRegisteredCommand(text) ? { text, expires: Date.now() + 5000 } : null;
@@ -5851,10 +6619,10 @@
       if (!e.isTrusted || e.key !== 'Enter' || e.shiftKey) return;
       if (e.isComposing || e.keyCode === 229) return;
       const input = adapter.getInput();
-      if (!input || e.target !== input) return;
+      if (!isInputTarget(input, e.target)) return;
       rememberAttempt(input);
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if (input && e.target === input && checkAndSubmit(input)) {
+      if (checkAndSubmit(input)) {
         e.preventDefault();
         e.stopImmediatePropagation();
       }
@@ -5881,7 +6649,7 @@
     }, true);
 
     document.addEventListener('input', (e) => {
-      if (e.isTrusted && e.target === adapter.getInput()) attempted = null;
+      if (e.isTrusted && isInputTarget(adapter.getInput(), e.target)) attempted = null;
     }, true);
 
     const observer = new MutationObserver((mutations) => {
@@ -5897,8 +6665,8 @@
             if (isInsidePanel(n) || (host && n.contains(host))) continue;
             const candidates = [n, ...(n.querySelectorAll?.('*') || [])];
             if (candidates.some((candidate) => !isInsidePanel(candidate) &&
-                normalizeChatText(candidate.textContent || '').trim() === attempted.text &&
-                candidate !== adapter.getInput())) {
+              normalizeChatText(candidate.textContent || '').trim() === attempted.text &&
+              candidate !== adapter.getInput())) {
               const text = attempted.text;
               attempted = null;
               uiLog(
@@ -5919,6 +6687,30 @@
   // ============================================================
   let ui = null;
   const uiLog = (m, c) => { if (ui) ui.log(m, c); };
+
+  // Algunos chats (p. ej. ChatGPT) reenfocan su propio composer ante cualquier
+  // evento cuando el foco "visible" de la página no es un campo reconocible; un
+  // host de shadow DOM cerrado no lo es (document.activeElement ve el host, no
+  // el control interno), así que el foco puede escapar del diálogo sin que el
+  // usuario haga nada. Este guardia lo recupera: sigue el último control
+  // enfocado dentro de `scopeEl` y, si el foco sale del `host` mientras
+  // `isActive()` sea verdadero, lo devuelve ahí.
+  function installFocusTrap(host, scopeEl, initial, isActive) {
+    let last = initial;
+    const onInnerFocus = (e) => { last = e.target; };
+    scopeEl.addEventListener('focusin', onInnerFocus);
+    const onOuterFocus = (e) => {
+      if (!isActive()) return;
+      const path = e.composedPath ? e.composedPath() : [e.target];
+      if (path.includes(host)) return;
+      last?.focus?.();
+    };
+    document.addEventListener('focusin', onOuterFocus, true);
+    return () => {
+      scopeEl.removeEventListener('focusin', onInnerFocus);
+      document.removeEventListener('focusin', onOuterFocus, true);
+    };
+  }
 
   function h(tag, props = {}, ...kids) {
     const el = document.createElement(tag);
@@ -6027,13 +6819,17 @@
         if (files.length) await importLocalFiles(files);
       }
     });
-    const btnImport = h('button', { class: 'btn btn-secondary', title: t('Elegir archivos de la PC y copiarlos al disco local; no se comparten'), onclick: () => {
-      if (busy) { uiLog(t('⏳ Hay una operación en curso; espera antes de importar.'), 'err'); return; }
-      localFileInput.click();
-    } }, t('Explorar / Importar archivos…'));
+    const btnImport = h('button', {
+      class: 'btn btn-secondary', title: t('Elegir archivos de la PC y copiarlos al disco local; no se comparten'), onclick: () => {
+        if (busy) { uiLog(t('⏳ Hay una operación en curso; espera antes de importar.'), 'err'); return; }
+        localFileInput.click();
+      }
+    }, t('Explorar / Importar archivos…'));
     // Inline form instead of prompt(): some browsers and embedded views block native dialogs.
-    const newFileName = h('input', { type: 'text', class: 'new-file-name', spellcheck: 'false',
-      'aria-label': t('Nombre del archivo (puede incluir carpeta, ej. web/index.html):'), placeholder: 'pagina.html' });
+    const newFileName = h('input', {
+      type: 'text', class: 'new-file-name', spellcheck: 'false',
+      'aria-label': t('Nombre del archivo (puede incluir carpeta, ej. web/index.html):'), placeholder: 'pagina.html'
+    });
     const hideNewFile = () => { newFileForm.style.display = 'none'; };
     const submitNewFile = async () => {
       if (await createFileFromPanel(newFileName.value)) { hideNewFile(); newFileName.value = ''; }
@@ -6054,8 +6850,10 @@
       if (!newFileName.value) newFileName.value = 'pagina.html';
       newFileName.focus(); newFileName.select?.();
     };
-    const btnNewFile = h('button', { class: 'btn btn-secondary', title: t('Crear un archivo en blanco y abrirlo en el editor para pegar código'),
-      onclick: showNewFile }, t('Nuevo archivo…'));
+    const btnNewFile = h('button', {
+      class: 'btn btn-secondary', title: t('Crear un archivo en blanco y abrirlo en el editor para pegar código'),
+      onclick: showNewFile
+    }, t('Nuevo archivo…'));
     const cmdInput = h('textarea', {
       class: 'input-cmd',
       'aria-label': t('Comando local'),
@@ -6075,8 +6873,10 @@
           languageSelect.value = language;
           uiLog(t`No se pudo guardar el idioma: ${e.message}`, 'err'); return;
         }
-        const state = { draft: cmdInput.value, logs: [...logEl.childNodes], histIdx, collapsed, expanded,
-          panelStyle: panel.style.cssText };
+        const state = {
+          draft: cmdInput.value, logs: [...logEl.childNodes], histIdx, collapsed, expanded,
+          panelStyle: panel.style.cssText
+        };
         host.remove();
         ui = buildPanel(state);
         refreshChatCodeActions();
@@ -6087,8 +6887,8 @@
         }
       }
     }, h('option', { value: 'es' }, 'Español'),
-    h('option', { value: 'en' }, 'English'),
-    h('option', { value: 'zh-CN' }, '简体中文'));
+      h('option', { value: 'en' }, 'English'),
+      h('option', { value: 'zh-CN' }, '简体中文'));
     languageSelect.value = language;
     const stateEl = h('span', { class: 'badge-local', role: 'status', 'aria-live': 'polite' }, t('Listo · local'));
     let gitState = null, gitReview = null, gitLoading = false, refreshGeneration = 0;
@@ -6139,7 +6939,8 @@
         if (gitReview) gitMessage.focus(); else btnGitClose.focus();
       }
     };
-    const btnGitSave = h('button', { class: 'btn git-save', disabled: true,
+    const btnGitSave = h('button', {
+      class: 'btn git-save', disabled: true,
       title: t('Revisar todos los cambios y confirmar un commit Git local; no sube archivos ni elimina comandos'),
       onclick: async () => {
         if (busy || editorOpen || gitLoading) { uiLog(t('Espera o cierra el editor antes de versionar.'), 'err'); return; }
@@ -6156,33 +6957,39 @@
         await loadGitReview();
       }
     }, t('Guardar cambios en Git'));
-    const btnGitDiff = h('button', { class: 'btn btn-secondary', disabled: true, onclick: async () => {
-      await loadGitReview();
-      if (gitReview) await showGitDiff();
-    } }, t('Ver cambios'));
-    const btnGitRevert = h('button', { class: 'btn btn-secondary', disabled: true,
+    const btnGitDiff = h('button', {
+      class: 'btn btn-secondary', disabled: true, onclick: async () => {
+        await loadGitReview();
+        if (gitReview) await showGitDiff();
+      }
+    }, t('Ver cambios'));
+    const btnGitRevert = h('button', {
+      class: 'btn btn-secondary', disabled: true,
       title: t('Elige en la lista qué archivo volver a la versión del último commit'),
       onclick: async () => {
         await loadGitReview();
         if (gitReview) gitNotice.textContent = t('Pulsa Revertir junto al archivo que quieres volver a la versión del último commit. Verás el diff antes de escribir y se creará un checkpoint.');
         gitPaths.querySelector('.git-revert')?.focus?.();
-      } }, t('Revertir…'));
+      }
+    }, t('Revertir…'));
     async function revertGitFile(path) {
       if (busy || gitLoading) return;
       gitOverlay.style.display = 'none'; panel.inert = false; gitReview = null; updateState();
       await handleExecution(`git restore --source HEAD ${quoteCommandPath(path)}`, { origin: 'panel', forceShare: false });
     }
-    const confirmGit = h('button', { class: 'btn', disabled: true, onclick: async () => {
-      try {
-        const oid = await saveGitChanges(gitReview, gitMessage.value);
-        gitNotice.textContent = t`Commit local verificado: ${oid.slice(0, 7)}.`;
-        gitReview = null; gitOverlay.style.display = 'none'; panel.inert = false; btnGitSave.focus();
-      } catch (e) {
-        gitNotice.textContent = t`No se completó el guardado: ${e.message}`;
-        uiLog(t`Git: ${e.message}`, 'err');
-        gitReview = null;
-      } finally { updateState(); }
-    } }, t('Confirmar commit local'));
+    const confirmGit = h('button', {
+      class: 'btn', disabled: true, onclick: async () => {
+        try {
+          const oid = await saveGitChanges(gitReview, gitMessage.value);
+          gitNotice.textContent = t`Commit local verificado: ${oid.slice(0, 7)}.`;
+          gitReview = null; gitOverlay.style.display = 'none'; panel.inert = false; btnGitSave.focus();
+        } catch (e) {
+          gitNotice.textContent = t`No se completó el guardado: ${e.message}`;
+          uiLog(t`Git: ${e.message}`, 'err');
+          gitReview = null;
+        } finally { updateState(); }
+      }
+    }, t('Confirmar commit local'));
     gitMessage.addEventListener('input', () => updateState());
     const btnGitRefresh = h('button', { class: 'btn btn-secondary', onclick: loadGitReview }, t('Actualizar lista'));
     const btnGitReviewDiff = h('button', { class: 'btn btn-secondary', onclick: () => showGitDiff() }, t('Ver diferencias'));
@@ -6216,6 +7023,7 @@
       }
     });
     for (const type of ['keyup', 'keypress']) gitOverlay.addEventListener(type, (e) => e.stopPropagation());
+    installFocusTrap(host, gitOverlay, gitMessage, () => gitOverlay.style.display === 'flex');
     const toggleEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Contraer panel'), 'aria-expanded': 'true' }, t('Contraer'));
     const expandEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Ampliar panel'), 'aria-pressed': 'false' }, t('Ampliar'));
     const headerEl = h('div', { id: 'header' },
@@ -6261,21 +7069,23 @@
 
     const btnExec = h('button', { class: 'btn', title: t('Ejecutar el comando en el navegador sin enviarlo a la IA'), onclick: () => submitPanel() }, t('Ejecutar'));
 
-    const btnShare = h('button', { class: 'btn btn-share', title: t('Ejecutar y enviar directamente el resumen a DeepSeek, sin vista previa; no reemplaza borradores del chat'), onclick: () => submitPanel(true) }, t('Ejecutar + Compartir'));
+    const btnShare = h('button', { class: 'btn btn-share', title: t('Ejecutar y enviar directamente el resumen al chat, sin vista previa; no reemplaza borradores del chat'), onclick: () => submitPanel(true) }, t('Ejecutar + Compartir'));
 
     // DIÁLOGO INTEGRADO PARA COMPARTIR ARCHIVO
     const fileSelect = h('select', { 'aria-label': t('Archivo a compartir') });
     const shareNotice = h('div', { style: 'font-size:11px; margin:6px 0;' },
       t('Máximo 64 KB por archivo; solo texto UTF-8. Los archivos mayores se muestran deshabilitados.'));
-    const confirmFileShare = h('button', { class: 'btn btn-share', title: t('Enviar directamente el archivo seleccionado a DeepSeek, sin confirmación adicional; no reemplaza borradores del chat'), onclick: async () => {
-      const path = fileSelect.value;
-      if (!path || fileSelect.selectedOptions[0]?.disabled) {
-        uiLog(t('Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.'), 'err');
-        return;
+    const confirmFileShare = h('button', {
+      class: 'btn btn-share', title: t('Enviar directamente el archivo seleccionado al chat, sin confirmación adicional; no reemplaza borradores del chat'), onclick: async () => {
+        const path = fileSelect.value;
+        if (!path || fileSelect.selectedOptions[0]?.disabled) {
+          uiLog(t('Selecciona un archivo de hasta 64 KB; para uno mayor comparte un resumen con head.'), 'err');
+          return;
+        }
+        fileDialog.style.display = 'none';
+        await shareFile(path);
       }
-      fileDialog.style.display = 'none';
-      await shareFile(path);
-    } }, t('Enviar archivo a DeepSeek'));
+    }, t('Enviar archivo al chat'));
     const fileDialog = h('div', { class: 'file-dialog' },
       h('div', { style: 'font-size:11px; margin-bottom:4px;' }, t('Selecciona archivo a compartir:')),
       fileSelect, shareNotice,
@@ -6286,35 +7096,37 @@
     );
 
     function populateShareFiles(files) {
-        const previous = fileSelect.value;
-        fileSelect.replaceChildren();
-        if (!files.length) {
-          fileDialog.style.display = 'none';
-          uiLog(t('No hay archivos de usuario para compartir.'), 'err');
-          return;
-        }
-        for (const f of files) {
-          const oversized = f.size > CFG.MAX_SHARE_FILE_BYTES;
-          fileSelect.append(h('option', { value: f.path, disabled: oversized },
-            `${f.path} (${fmtBytes(f.size)}, ${f.size} B)${oversized ? t(' — supera 64 KB; comparte un resumen') : ''}`));
-        }
-        const available = files.find((f) => f.path === previous && f.size <= CFG.MAX_SHARE_FILE_BYTES) ||
-          files.find((f) => f.size <= CFG.MAX_SHARE_FILE_BYTES);
-        fileSelect.value = available?.path || '';
-        confirmFileShare.disabled = !available;
-        shareNotice.textContent = available
-          ? t('Enviar archivo a DeepSeek comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 "archivo" --share.')
-          : t('Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 "archivo" --share.');
-        fileDialog.style.display = 'block';
+      const previous = fileSelect.value;
+      fileSelect.replaceChildren();
+      if (!files.length) {
+        fileDialog.style.display = 'none';
+        uiLog(t('No hay archivos de usuario para compartir.'), 'err');
+        return;
+      }
+      for (const f of files) {
+        const oversized = f.size > CFG.MAX_SHARE_FILE_BYTES;
+        fileSelect.append(h('option', { value: f.path, disabled: oversized },
+          `${f.path} (${fmtBytes(f.size)}, ${f.size} B)${oversized ? t(' — supera 64 KB; comparte un resumen') : ''}`));
+      }
+      const available = files.find((f) => f.path === previous && f.size <= CFG.MAX_SHARE_FILE_BYTES) ||
+        files.find((f) => f.size <= CFG.MAX_SHARE_FILE_BYTES);
+      fileSelect.value = available?.path || '';
+      confirmFileShare.disabled = !available;
+      shareNotice.textContent = available
+        ? t('Enviar archivo al chat comparte directamente el texto completo, sin confirmación adicional. Máximo 64 KB; solo UTF-8. Los mayores aparecen deshabilitados. Para un resumen: head -n 30 "archivo" --share.')
+        : t('Todos los archivos superan 64 KB. No se ocultan: comparte un resumen con head -n 30 "archivo" --share.');
+      fileDialog.style.display = 'block';
     }
 
-    const btnOpenShareDialog = h('button', { class: 'btn btn-secondary', onclick: async () => {
-      try {
-        populateShareFiles((await listFiles()).filter((f) => !isInternalPath(f.path)));
-      } catch (e) {
-        uiLog(t`❌ No se pudieron listar archivos: ${e.message}`, 'err');
+    const btnOpenShareDialog = h('button', {
+      class: 'btn btn-secondary', onclick: async () => {
+        try {
+          populateShareFiles((await listFiles()).filter((f) => !isInternalPath(f.path)));
+        } catch (e) {
+          uiLog(t`❌ No se pudieron listar archivos: ${e.message}`, 'err');
+        }
       }
-    } }, t('Compartir archivo...'));
+    }, t('Compartir archivo...'));
 
     const helpText = h('pre', { style: 'white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; font:11px monospace;' });
     const helpDialog = h('div', {
@@ -6324,13 +7136,15 @@
       helpText,
       h('button', { class: 'btn btn-secondary', onclick: () => { helpDialog.style.display = 'none'; } }, t('Cerrar ayuda'))
     );
-    const btnHelp = h('button', { class: 'btn btn-secondary', onclick: async () => {
-      try {
-        helpText.textContent = await REG.get('help').run();
-        helpDialog.style.display = 'block';
-        helpDialog.scrollIntoView({ block: 'nearest' });
-      } catch (e) { uiLog(t`❌ No se pudo mostrar ayuda: ${e.message}`, 'err'); }
-    } }, t('Ayuda'));
+    const btnHelp = h('button', {
+      class: 'btn btn-secondary', onclick: async () => {
+        try {
+          helpText.textContent = await REG.get('help').run();
+          helpDialog.style.display = 'block';
+          helpDialog.scrollIntoView({ block: 'nearest' });
+        } catch (e) { uiLog(t`❌ No se pudo mostrar ayuda: ${e.message}`, 'err'); }
+      }
+    }, t('Ayuda'));
 
     const prepareExample = (command) => {
       if (cmdInput.value && !confirm(t('¿Reemplazar el comando que estás preparando?'))) return;
@@ -6349,11 +7163,13 @@
         h('button', { class: 'btn btn-secondary', title: t('Preparar consulta del estado Git; requiere git init previo'), onclick: () => prepareExample('!git status') }, t('Estado: !git status')),
         h('button', { class: 'btn btn-secondary', title: t('Preparar el comando de ayuda, sin ejecutarlo'), onclick: () => prepareExample('!help') }, t('Comandos: !help'))),
       h('p', {}, t('Editar → revisar diff → aprobar. Descarga copias importantes: borrar datos del sitio también elimina el disco y Git.')),
-      h('button', { class: 'btn', onclick: () => {
-        welcome.style.display = 'none';
-        try { localStorage.setItem(CFG.WELCOME_KEY, 'seen'); }
-        catch (e) { uiLog(t`No se pudo guardar la preferencia de bienvenida: ${e.message}`, 'err'); }
-      } }, t('Entendido'))
+      h('button', {
+        class: 'btn', onclick: () => {
+          welcome.style.display = 'none';
+          try { localStorage.setItem(CFG.WELCOME_KEY, 'seen'); }
+          catch (e) { uiLog(t`No se pudo guardar la preferencia de bienvenida: ${e.message}`, 'err'); }
+        }
+      }, t('Entendido'))
     );
     const showWelcome = () => {
       welcome.style.display = 'block';
@@ -6362,28 +7178,103 @@
     const btnWelcome = h('button', { class: 'btn btn-secondary', onclick: showWelcome }, t('Primeros pasos'));
     helpDialog.append(h('button', { class: 'btn btn-secondary', onclick: showWelcome }, t('Ver introducción')));
 
-    const btnAboutClose = h('button', { class: 'btn btn-secondary', onclick: () => {
-      aboutDialog.style.display = 'none'; btnAbout.setAttribute('aria-expanded', 'false'); btnAbout.focus();
-    } }, t('Cerrar'));
+    const btnAboutClose = h('button', {
+      class: 'btn btn-secondary', onclick: () => {
+        aboutDialog.style.display = 'none'; btnAbout.setAttribute('aria-expanded', 'false'); btnAbout.focus();
+      }
+    }, t('Cerrar'));
     const aboutDialog = h('section', { class: 'file-dialog about-dialog', role: 'region', 'aria-label': t('Acerca de este proyecto') },
       h('strong', {}, t('Un proyecto de Geeknome · División de Informática')),
       h('blockquote', {}, t('“La IA propone, el usuario ejecuta, ambos observan en vivo.”')),
-      h('p', {}, h('a', { href: CFG.ABOUT_URL, target: '_blank', rel: 'noopener noreferrer',
-        title: t('Visitar Geeknome (se abre en una pestaña nueva)') }, 'geeknome.com')),
+      h('p', {}, h('a', {
+        href: CFG.ABOUT_URL, target: '_blank', rel: 'noopener noreferrer',
+        title: t('Visitar Geeknome (se abre en una pestaña nueva)')
+      }, 'geeknome.com')),
       h('p', {}, t`Autor: ${'Germán Peña'}`, ' · © 2026 Geeknome'),
       h('div', { style: 'display:flex;justify-content:flex-end;' }, btnAboutClose));
-    const btnAbout = h('button', { class: 'about-btn', 'aria-label': t('Acerca de'), 'aria-expanded': 'false', onclick: () => {
-      const open = aboutDialog.style.display !== 'block';
-      aboutDialog.style.display = open ? 'block' : 'none';
-      btnAbout.setAttribute('aria-expanded', String(open));
-      if (open) { aboutDialog.scrollIntoView({ block: 'nearest' }); btnAboutClose.focus(); }
-    } }, 'ⓘ');
+    const btnAbout = h('button', {
+      class: 'about-btn', 'aria-label': t('Acerca de'), 'aria-expanded': 'false', onclick: () => {
+        const open = aboutDialog.style.display !== 'block';
+        aboutDialog.style.display = open ? 'block' : 'none';
+        btnAbout.setAttribute('aria-expanded', String(open));
+        if (open) { aboutDialog.scrollIntoView({ block: 'nearest' }); btnAboutClose.focus(); }
+      }
+    }, 'ⓘ');
+
+    const storageLabelEl = h('span', { style: 'color:#a1a1aa; font-size:11px;' }, storageModeLabel());
+    const btnConnectFolder = h('button', {
+      class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;',
+      title: t('Conectar una carpeta real de tu PC; reemplaza OPFS como almacenamiento mientras esté activa'),
+      onclick: async () => {
+        if (busy) return;
+        setBusy(true);
+        try { await connectLocalFolder(); uiLog(t`Carpeta real conectada: ${localDirName}`, 'info'); }
+        catch (e) { uiLog(t`❌ Carpeta real: ${e.message}`, 'err'); }
+        finally { setBusy(false); updateStorageUI(); await ui?.refresh(); }
+      }
+    }, t('Usar carpeta real…'));
+    const btnReconnectFolder = h('button', {
+      class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;',
+      title: t('La carpeta real guardada perdió el permiso de escritura; reconéctala para seguir usándola'),
+      onclick: async () => {
+        if (busy) return;
+        setBusy(true);
+        try { await reconnectLocalFolder(); uiLog(t`Carpeta real reconectada: ${localDirName}`, 'info'); }
+        catch (e) { uiLog(t`❌ Carpeta real: ${e.message}`, 'err'); }
+        finally { setBusy(false); updateStorageUI(); await ui?.refresh(); }
+      }
+    }, t('Reconectar carpeta…'));
+    const btnDisconnectFolder = h('button', {
+      class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;',
+      onclick: async () => {
+        if (busy) return;
+        if (!confirm(t('¿Volver a OPFS? La carpeta real deja de usarse, pero sus archivos no se borran ni se desconecta el permiso del sistema operativo.'))) return;
+        setBusy(true);
+        try { await disconnectLocalFolder(); uiLog(t('Carpeta real desconectada; usando OPFS de nuevo.'), 'info'); }
+        catch (e) { uiLog(t`❌ Carpeta real: ${e.message}`, 'err'); }
+        finally { setBusy(false); updateStorageUI(); await ui?.refresh(); }
+      }
+    }, t('Volver a OPFS'));
+    function updateStorageUI() {
+      storageLabelEl.textContent = storageModeLabel();
+      const canPickFolder = typeof window.showDirectoryPicker === 'function';
+      btnConnectFolder.style.display = storageMode === 'local' || !canPickFolder ? 'none' : '';
+      btnReconnectFolder.style.display = storageMode === 'opfs' && hasStoredLocalHandle && canPickFolder ? '' : 'none';
+      btnDisconnectFolder.style.display = storageMode === 'local' ? '' : 'none';
+    }
+
+    const zipFileInput = h('input', {
+      type: 'file', accept: '.zip,application/zip', hidden: true,
+      'aria-label': t('Seleccionar archivo .zip para restaurar en el disco virtual'),
+      onchange: async () => {
+        const [file] = zipFileInput.files;
+        zipFileInput.value = '';
+        if (file) await importZipFile(file);
+      }
+    });
+    const btnExportZip = h('button', {
+      class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;',
+      title: t('Descarga todo el disco (incluye .git y checkpoints) como un .zip; nada se envía al chat'),
+      onclick: () => exportDiskAsZip()
+    }, t('Exportar disco (.zip)…'));
+    const btnImportZip = h('button', {
+      class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;',
+      title: t('Restaura un backup .zip exportado desde aquí (o un .zip con la misma estructura); reemplaza archivos existentes'),
+      onclick: () => {
+        if (busy) { uiLog(t('⏳ Hay una operación en curso; espera antes de importar.'), 'err'); return; }
+        zipFileInput.click();
+      }
+    }, t('Importar ZIP…'));
 
     const bodyEl = h('div', { id: 'body' },
-      h('div', { style: 'display:flex; justify-content:space-between; margin-bottom:4px;' },
-        h('span', { style: 'color:#a1a1aa; font-size:11px;' }, t('Explorador OPFS')),
-        h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => deleteUserFiles() }, t('Eliminar todos')),
-        h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, t('Limpiar log'))
+      h('div', { style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;' },
+        storageLabelEl,
+        h('div', { class: 'row', style: 'gap:4px;' },
+          btnConnectFolder, btnReconnectFolder, btnDisconnectFolder,
+          btnExportZip, btnImportZip, zipFileInput,
+          h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => deleteUserFiles() }, t('Eliminar todos')),
+          h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, t('Limpiar log'))
+        )
       ),
       h('div', { class: 'row' }, btnNewFile, btnImport, btnHelp, btnWelcome, localFileInput),
       newFileForm,
@@ -6500,7 +7391,7 @@
         gitBadge.style.color = state.changes.length ? '#facc15' : '#6ee7b7';
         btnGitSave.textContent = !state.initialized ? t('Inicializar Git local') :
           state.changes.length === 0 ? t('Todo guardado en Git') :
-          state.changes.length === 1 ? t`Guardar ${state.changes[0].path} en Git` : t`Guardar ${state.changes.length} cambios en Git`;
+            state.changes.length === 1 ? t`Guardar ${state.changes[0].path} en Git` : t`Guardar ${state.changes.length} cambios en Git`;
         updateState();
       } catch (e) {
         if (generation !== refreshGeneration) return;
@@ -6513,7 +7404,7 @@
     const updateState = () => {
       stateEl.textContent = busy ? t('Operación en curso') : editorOpen ? t('Editor abierto') : t('Listo · local');
       panel.setAttribute('aria-busy', String(busy));
-      for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog]) button.disabled = busy;
+      for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog, btnConnectFolder, btnReconnectFolder, btnDisconnectFolder, btnExportZip, btnImportZip]) button.disabled = busy;
       btnNewFile.disabled = busy || editorOpen;
       btnGitSave.disabled = busy || editorOpen || gitLoading || gitState?.initialized && !gitState.changes.length;
       btnGitDiff.disabled = busy || editorOpen || gitLoading || !gitState?.initialized;
@@ -6527,6 +7418,7 @@
       languageSelect.disabled = busy || editorOpen || gitLoading || gitOverlay.style.display === 'flex';
     };
     updateState();
+    updateStorageUI();
     try { if (localStorage.getItem(CFG.WELCOME_KEY) !== 'seen') welcome.style.display = 'block'; }
     catch (e) {
       welcome.style.display = 'block';
@@ -6551,6 +7443,7 @@
       });
       loadSettings();
       if (!(await initOPFS())) throw new Error(t('OPFS no está disponible; no se puede montar el panel'));
+      await restoreLocalFolderOnBoot();
       const body = await waitFor(() => document.body, 20000, 200);
       if (!body) throw new Error(t('no se encontró document.body; no se puede montar el panel'));
       ui = buildPanel();

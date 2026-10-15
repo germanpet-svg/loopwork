@@ -93,6 +93,140 @@ Las pruebas de index.html NO se integran automaticamente en el userscript.
 Su test E2E contiene siete pasos, pero releer archivos no equivale a cerrar
 y reabrir el navegador. No dar ese criterio por certificado.
 
+## Carpeta real opcional via File System Access API (1.5.36)
+
+- Boton **Usar carpeta real...** en el panel: abre `showDirectoryPicker`,
+  pide permiso readwrite, guarda el `FileSystemDirectoryHandle` en IndexedDB
+  (`dv-fs-handles`) y lo usa como `rootDir` en lugar de OPFS mientras este
+  conectado.
+- Sin cambios en getHandle/walk/writeBytes/makeFs (Git): todo opera sobre la
+  misma interfaz `FileSystemDirectoryHandle`/`FileSystemFileHandle`, asi que
+  Git, checkpoints, editor y el protocolo `dv` funcionan igual sobre la
+  carpeta real.
+- Al reabrir, `queryPermission` reactiva la carpeta sin pedir nada si el
+  navegador aun recuerda el permiso; si no, aparece **Reconectar carpeta...**
+  (requiere gesto del usuario, sin volver a elegir carpeta).
+- **Volver a OPFS** limpia el handle guardado y regresa al almacenamiento
+  privado sin tocar los archivos de la carpeta real.
+- Confirmacion explicita antes de conectar (advierte que los comandos podran
+  escribir/borrar en esa carpeta) y aviso reforzado en "Eliminar todos"
+  cuando el modo activo es carpeta real.
+- Solo disponible en navegadores Chromium con `showDirectoryPicker`; el boton
+  se oculta si la API no existe.
+- 1.5.37: el confirm() de advertencia al conectar solo se muestra la primera
+  vez (persistido en localStorage `dv.localFolder.consent.v1`); conexiones
+  siguientes van directo al picker nativo + permiso, que ya es la barrera
+  real de seguridad.
+
+## Exportar/Importar disco completo como ZIP (1.5.38)
+
+- Botones **Exportar disco (.zip)...** / **Importar ZIP...** en el panel,
+  junto a los de carpeta real.
+- Escritor y lector ZIP propios (sin dependencias externas): CRC32 manual,
+  `CompressionStream('deflate-raw')`/`DecompressionStream('deflate-raw')`
+  nativos para el metodo deflate, y metodo store (0) quando deflate no
+  reduce el tamano o el archivo esta vacio. Formato estandar, abrible con
+  cualquier gestor de archivos o herramienta ZIP.
+- Exportar recorre `walk(rootDir)` completo, incluyendo `.git` y `.dv`
+  (checkpoints): es un respaldo real del disco, no una exportacion parcial
+  para compartir con el chat.
+- Importar pide confirmacion explicita una sola vez (reemplaza archivos
+  existentes sin deshacer), valida tamano maximo (`MAX_ZIP_BYTES`, 1 GiB),
+  verifica el CRC32 de cada entrada antes de escribirla y usa `splitPath`
+  (ya validado contra path traversal) para resolver cada ruta dentro de
+  `rootDir`.
+- Funciona igual en modo OPFS o carpeta real conectada, porque opera sobre
+  la misma interfaz generica de `rootDir`.
+- Cubierto por 2 tests nuevos (round-trip con archivos binarios/vacios/
+  internos, y errores: disco vacio, busy, confirm cancelado, ZIP demasiado
+  grande, EOCD invalido, CRC corrupto).
+
+## Soporte experimental para ChatGPT (1.5.38)
+
+Primer paso del punto "funciona con otros chats" del roadmap: el protocolo
+`dv` (path + hash + replace) nunca dependio de DeepSeek, solo el adaptador
+de sitio que lee la entrada de chat y detecta bloques de codigo. Cambios:
+
+- `@match` ampliado a `https://chatgpt.com/*` y `https://chat.openai.com/*`
+  ademas de `chat.deepseek.com`.
+- `adapter.getInput()` prioriza `<textarea>` visible (igual que antes) y
+  ahora cae a `[contenteditable="true"]` si no hay ninguna (cubre futuros
+  composers tipo ProseMirror/Lexical). Verificado en vivo: la version
+  anonima de chatgpt.com sigue usando `<textarea>`, por lo que el deteccion
+  original ya funcionaba sin cambios.
+- `adapter.getText`/`setText` distinguen por duck-typing (`el.value !==
+  undefined`) en vez de por `tagName`, para soportar tanto textarea como
+  contenteditable sin romper mocks de test.
+- `adapter.findSend(input)` probaba antes "el ultimo boton visible con
+  icono subiendo hasta 8 ancestros" desde el input; en ChatGPT eso devolvia
+  el boton equivocado (p.ej. "Add files and more"), porque el boton real de
+  enviar vive varios niveles mas arriba que otros iconos visibles. Ahora se
+  intenta primero una lista de selectores conocidos de otros sitios
+  (`[data-testid="send-button"]`, `[data-composer-submit]`, `aria-label`
+  "Send message"/"Send prompt") y solo si ninguno aparece se usa la
+  heuristica generica (que sigue siendo la que resuelve DeepSeek).
+- Deteccion de rol de mensaje (usuario vs. asistente) en
+  `installChatCodeActions` ampliada con `[data-message-author-role="user"
+  /"assistant"]` (DOM real de ChatGPT, confirmado via busqueda), sin tocar
+  los selectores existentes de DeepSeek (`data-message-role`, `data-role`,
+  `.ds-markdown`).
+- Verificado abriendo chatgpt.com (sesion anonima) e inspeccionando el DOM
+  real del composer y el boton de enviar; no se pudo probar una conversacion
+  logueada real (requiere cuenta del usuario), asi que el deteccion de
+  bloques `dv` en respuestas del asistente y el flujo logueado completo
+  quedan pendientes de confirmar por el usuario con Tampermonkey instalado.
+- Sin cambios de `@grant`/permisos adicionales; Tampermonkey pedira
+  confirmar el nuevo dominio al actualizar el script.
+- Cubierto por 3 tests nuevos: deteccion de bloques `dv` con marcado
+  `data-message-author-role`, preferencia del selector de envio conocido
+  sobre la heuristica generica (reproduce el bug encontrado en ChatGPT), y
+  fallback a contenteditable cuando no hay textarea visible.
+- Pendiente (no incluido aqui): genericizar los textos de UI que dicen
+  "DeepSeek" explicitamente (botones, confirmaciones, mensajes de log); hoy
+  son cosmeticos y no afectan la funcionalidad en otros sitios.
+
+## Guardia de foco para el editor y el modal de Git (1.5.39)
+
+Bug reportado por el usuario en ChatGPT: al abrir el editor de codigo (o el
+modal "Guardar cambios en Git") y escribir, el texto aparecia en el chat de
+ChatGPT en vez de en el campo del panel.
+
+- Causa raiz: el editor y el panel viven en un `host.attachShadow({ mode:
+  'closed' })`; `document.activeElement`, visto desde fuera del shadow DOM,
+  siempre devuelve el elemento host (nunca el control interno realmente
+  enfocado), sin importar el navegador. Algunos sitios de chat reenfocan su
+  propio composer apenas detectan que el foco "visible" de la pagina no es
+  un campo reconocible (input/textarea/contenteditable) ante cualquier
+  evento; como el host nunca lo es, le ganan el foco al editor sin que el
+  usuario haga nada, y las teclas siguientes caen en su propio chat.
+- Verificado en vivo en chatgpt.com (sesion anonima): un `<textarea>`
+  insertado normalmente en `document.body` nunca pierde el foco al escribir,
+  pero uno dentro de un `attachShadow({mode:'closed'})` hace que
+  `document.activeElement` reporte el host en vez del textarea, aunque la
+  escritura real siga llegando bien a ese textarea (el navegador conserva el
+  foco interno real); el robo de foco exacto de la sesion logueada del
+  usuario no se pudo reproducir sin su cuenta, pero el mecanismo general
+  (host cerrado != campo reconocible para el DOM externo) es la causa mas
+  probable y la correccion aplicada lo cubre de forma generica.
+- Arreglo: `installFocusTrap(host, scopeEl, initial, isActive)`, una
+  utilidad nueva que seguir el ultimo control enfocado dentro del shadow DOM
+  (via un listener `focusin` interno, sin retargeting) y, si el foco sale
+  del `host` mientras `isActive()` siga siendo verdadero (un `focusin`
+  global en `document` con `composedPath()` que no incluye al host), lo
+  devuelve de inmediato a ese ultimo control.
+- Aplicado al dialogo del editor de codigo (activo mientras `editorOpen` es
+  verdadero; limpiado en `release()`, incluyendo los cierres por error) y al
+  overlay de "Guardar cambios en Git" del panel (activo mientras esta
+  visible; se instala una sola vez junto con el panel, de vida larga como el
+  propio panel).
+- No cambia el comportamiento del panel principal (persistente, no modal):
+  el usuario sigue pudiendo hacer clic libremente entre el panel y el chat
+  para enviar mensajes; el guardia solo actua dentro de los dos dialogos que
+  realmente se comportan como modales de pantalla completa.
+- Cubierto por 1 test nuevo que simula un `focusin` global fuera del host
+  mientras el editor esta abierto y comprueba que el foco vuelve al textarea
+  del editor. 135/135 pruebas pasando.
+
 ## Avance verificado - userscript 1.5.26
 
 Checklist tachado = implementacion y evidencia indicada abajo.
