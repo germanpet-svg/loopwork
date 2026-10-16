@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://geeknome.com/sitemap.xml

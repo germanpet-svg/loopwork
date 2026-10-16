@@ -1,0 +1,17 @@
+SEO de Loopwork — instrucciones de publicación
+
+Archivos:
+- index_seo.html: página con metadatos SEO, Open Graph, Twitter Cards y datos estructurados JSON-LD.
+- robots.txt: permite el rastreo y anuncia el sitemap.
+- sitemap.xml: declara la URL pública de Loopwork.
+
+IMPORTANTE: el HTML original no especificaba la URL pública de esta página. Para entregar una versión lista, se ha inferido https://geeknome.com/loopwork/ a partir del enlace a Geeknome que aparece en el footer.
+ANTES DE PUBLICAR:
+1. Confirma que la URL real sea https://geeknome.com/loopwork/. Si la página vive en otra URL, cambia la URL en el canonical, og:url, JSON-LD, robots.txt y sitemap.xml.
+2. Publica index_seo.html como index.html (reemplazando el archivo de la página).
+3. Coloca robots.txt y sitemap.xml en la raíz del dominio (por ejemplo, https://geeknome.com/robots.txt y https://geeknome.com/sitemap.xml). Si ya existen, integra estas entradas sin borrar las demás URLs.
+4. Comprueba que la página responda con HTTP 200, no requiera iniciar sesión y no tenga una etiqueta noindex ni un bloqueo de rastreo.
+5. En Google Search Console, verifica el dominio, inspecciona la URL canónica y pulsa “Solicitar indexación”. Después envía https://geeknome.com/sitemap.xml.
+6. Asegúrate de que manual.md, README.md, roadmap.md y deepseek-disco.user.js existan en las rutas enlazadas; los enlaces rotos perjudican la experiencia.
+
+No se puede garantizar la indexación inmediata. Google decide cuándo rastrear e indexar; el marcado estructurado ayuda a interpretar la página, pero no garantiza un resultado enriquecido.
