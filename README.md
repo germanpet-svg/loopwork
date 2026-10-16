@@ -12,7 +12,7 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 ## En 60 segundos
 
 1. Instala [Tampermonkey](https://www.tampermonkey.net/) y pega
-   [deepseek-disco.user.js](./deepseek-disco.user.js) en un script nuevo.
+   [loopwork.js](./loopwork.js) en un script nuevo.
 2. Abre DeepSeek (o ChatGPT / Gemini / Claude, experimentales): aparece el panel flotante.
 3. **Nuevo archivo…** → pega tu código → **Compartir archivo…** → pide un cambio.
 4. En la respuesta pulsa **Revisar parche en DV**, mira el diff y **Aplicar cambios**.
@@ -98,7 +98,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 2. Instala un gestor de userscripts como
    [Tampermonkey](https://www.tampermonkey.net/).
 3. Crea un script nuevo y pega completo
-   [deepseek-disco.user.js](./deepseek-disco.user.js).
+   [loopwork.js](./loopwork.js).
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
@@ -678,7 +678,7 @@ No hay garantía de reversibilidad total:
 
 Archivos principales:
 
-- [deepseek-disco.user.js](./deepseek-disco.user.js): implementación.
+- [loopwork.js](./loopwork.js): implementación.
 - [tests/userscript.test.cjs](./tests/userscript.test.cjs): regresiones Node.
 - [manual.md](./manual.md): manual del usuario.
 - [index.html](./index.html): portada del proyecto (apta para GitHub Pages).
