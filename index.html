@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>loopwork: la IA propone, tú decides</title>
+<meta name="description" content="Taller local de archivos y código dentro de DeepSeek, ChatGPT, Gemini y Claude. Cada cambio de la IA llega como un diff que tú revisas y apruebas. Todo en tu navegador, con Git local.">
+<meta property="og:title" content="loopwork: la IA propone, tú decides">
+<meta property="og:description" content="Disco virtual, editor, Git local y checkpoints dentro del chat de tu IA. Nada se escribe sin tu aprobación.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#f2f4f1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2317201b'/%3E%3Cpath d='M9 11h9a5 5 0 010 10H9' fill='none' stroke='%236fd59a' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M12 8l-3 3 3 3' fill='none' stroke='%23f2f4f1' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f2f4f1;
+  --panel: #ffffff;
+  --ink: #17201b;
+  --muted: #55625a;
+  --rule: #d3dad4;
+  --add: #1b7447;
+  --add-bg: #ddf1e4;
+  --del: #a3301f;
+  --del-bg: #f7dcd7;
+  --accent: #3338c9;
+  --on-ink: #f2f4f1;
+  --code-bg: #101512;
+  --code-ink: #e6ebe7;
+  --code-add: #6fd59a;
+  --code-add-bg: #14301f;
+  --code-del: #f08c80;
+  --code-del-bg: #3a1a17;
+  --code-dim: #8a978f;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --text: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0d110f;
+    --panel: #151b17;
+    --ink: #e8ede9;
+    --muted: #9aa79f;
+    --rule: #28322b;
+    --add: #6fd59a;
+    --add-bg: #14301f;
+    --del: #f08c80;
+    --del-bg: #3a1a17;
+    --accent: #9a9dff;
+    --on-ink: #0d110f;
+    --code-bg: #0a0d0b;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+code, kbd { font-family: var(--mono); font-size: .9em; }
+:not(pre) > code { background: color-mix(in srgb, var(--ink) 8%, transparent); padding: .1em .35em; border-radius: 4px; }
+
+/* ---------- barra superior ---------- */
+.top { padding: 18px 0; }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { font: 800 1.35rem/1 var(--display); letter-spacing: -.02em; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 10px; }
+.brand svg { width: 28px; height: 28px; }
+.top nav { display: flex; gap: 22px; flex-wrap: wrap; }
+.top nav a { color: var(--ink); text-decoration: none; font-weight: 500; font-size: .98rem; }
+.top nav a:hover { text-decoration: underline; text-underline-offset: 5px; }
+
+/* ---------- hero ---------- */
+.hero { padding: clamp(24px, 5vw, 64px) 0 clamp(48px, 7vw, 88px); }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(32px, 4vw, 56px); align-items: center; }
+h1 {
+  font: 800 clamp(2.4rem, 5.6vw, 4.5rem)/1 var(--display);
+  letter-spacing: -.035em;
+  margin: 0 0 24px;
+  text-wrap: balance;
+}
+.lead { font-size: clamp(1.1rem, 1.6vw, 1.3rem); line-height: 1.55; color: var(--muted); max-width: 34em; margin: 0 0 32px; }
+.lead strong { color: var(--ink); font-weight: 600; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 0 22px; border-radius: 10px;
+  font: 600 1rem/1 var(--text); text-decoration: none; cursor: pointer;
+  border: 2px solid var(--ink); background: var(--ink); color: var(--on-ink);
+}
+.btn:hover { background: transparent; color: var(--ink); }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.ghost:hover { background: var(--ink); color: var(--on-ink); }
+.hero small { display: block; margin-top: 18px; color: var(--muted); font-size: .92rem; max-width: 34em; }
+
+/* ---------- demo del parche ---------- */
+.patch { background: var(--code-bg); color: var(--code-ink); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 0 var(--rule), 0 24px 48px -28px rgba(0,0,0,.45); }
+.patch-head { display: flex; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #26302a; font: 500 .82rem/1.3 var(--mono); color: var(--code-dim); flex-wrap: wrap; }
+.patch-head b { color: var(--code-ink); font-weight: 500; }
+.diff { margin: 0; padding: 14px 0; font: 400 .92rem/1.75 var(--mono); overflow-x: auto; }
+.row { display: grid; grid-template-columns: 3.2ch 3.2ch 2ch 1fr; white-space: pre; padding-right: 18px; }
+.row i { font-style: normal; color: var(--code-dim); text-align: right; padding-right: 1ch; user-select: none; }
+.row .m { text-align: center; user-select: none; }
+.row.hunk { color: var(--code-dim); }
+.row.del { background: var(--code-del-bg); color: var(--code-del); }
+.row.add { background: var(--code-add-bg); color: var(--code-add); }
+.row.gone { display: none; }
+.patch[data-state="applied"] .row.del { display: none; }
+.patch[data-state="applied"] .row.add { background: transparent; color: var(--code-ink); }
+.patch[data-state="rejected"] .row.add { display: none; }
+.patch[data-state="rejected"] .row.del { background: transparent; color: var(--code-ink); }
+.patch-foot { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid #26302a; flex-wrap: wrap; }
+.patch-foot button {
+  min-height: 44px; padding: 0 18px; border-radius: 9px; cursor: pointer;
+  font: 600 .95rem/1 var(--text); border: 2px solid var(--code-add); background: var(--code-add); color: #0a0d0b;
+}
+.patch-foot button.no { background: transparent; color: var(--code-ink); border-color: #4a5750; }
+.patch-foot button:hover { filter: brightness(1.1); }
+.patch-foot button.no:hover { border-color: var(--code-ink); filter: none; }
+.patch-foot button:focus-visible { outline-color: #b7bcff; }
+.patch-foot [hidden] { display: none; }
+.status { flex-basis: 100%; margin: 0; padding: 0 18px 16px; font: 400 .88rem/1.5 var(--text); color: var(--code-dim); min-height: 3.1em; }
+.status b { color: var(--code-ink); font-weight: 600; }
+
+/* ---------- secciones ---------- */
+section { padding: clamp(48px, 7vw, 96px) 0; }
+section + section { border-top: 1px solid var(--rule); }
+h2 { font: 700 clamp(1.8rem, 3.6vw, 2.8rem)/1.05 var(--display); letter-spacing: -.03em; margin: 0 0 16px; text-wrap: balance; max-width: 18em; }
+.intro { color: var(--muted); max-width: 38em; margin: 0 0 48px; }
+
+/* el ciclo: una secuencia real */
+.cycle { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; counter-reset: s; }
+.cycle li { counter-increment: s; padding: 0 22px 0 0; position: relative; }
+.cycle li::before {
+  content: counter(s);
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--ink); color: var(--on-ink); font: 700 .95rem/1 var(--display); margin-bottom: 16px; position: relative; z-index: 1;
+}
+.cycle li:not(:last-child)::after { content: ""; position: absolute; top: 17px; left: 34px; right: 0; height: 2px; background: var(--rule); }
+.cycle h3 { font: 700 1.2rem/1.2 var(--display); margin: 0 0 6px; letter-spacing: -.015em; }
+.cycle p { margin: 0; color: var(--muted); font-size: .98rem; line-height: 1.5; }
+.who { font-weight: 600; color: var(--ink); }
+.cycle-note { margin: 40px 0 0; padding: 18px 20px; border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); max-width: 46em; }
+
+/* qué incluye: lista de definiciones en dos columnas */
+.feat { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(32px, 6vw, 88px); margin: 0; }
+.feat > div { padding: 22px 0; border-top: 1px solid var(--rule); }
+.feat dt { font: 700 1.25rem/1.2 var(--display); letter-spacing: -.015em; margin: 0 0 6px; }
+.feat dd { margin: 0; color: var(--muted); }
+.feat .wide { grid-column: 1 / -1; }
+
+/* privacidad */
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; }
+caption { text-align: left; color: var(--muted); padding-bottom: 12px; }
+th, td { text-align: left; padding: 14px 16px 14px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; width: 46%; }
+td { color: var(--muted); }
+td.no { color: var(--add); font-weight: 600; }
+.warn { margin-top: 28px; max-width: 46em; }
+
+/* sitios */
+.sites { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.site { padding: 22px; background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; }
+.site h3 { font: 700 1.15rem/1.2 var(--display); margin: 0 0 4px; }
+.site .host { font: 400 .85rem/1.4 var(--mono); color: var(--muted); margin: 0 0 14px; }
+.site p { margin: 0; font-size: .98rem; }
+.tag { display: inline-block; font: 600 .82rem/1 var(--text); padding: 6px 10px; border-radius: 99px; margin-bottom: 14px; }
+.tag.ok { background: var(--add-bg); color: var(--add); }
+.tag.exp { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
+/* instalar */
+.install { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 88px); align-items: start; }
+.install ol { margin: 0 0 28px; padding-left: 1.3em; }
+.install li { margin-bottom: 12px; }
+.docs { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.docs li { border-top: 1px solid var(--rule); }
+.docs li:last-child { border-bottom: 1px solid var(--rule); }
+.docs a { display: block; padding: 18px 0; text-decoration: none; color: var(--ink); }
+.docs a strong { display: block; font: 700 1.2rem/1.2 var(--display); letter-spacing: -.015em; }
+.docs a span { color: var(--muted); font-size: .98rem; }
+.docs a:hover strong { text-decoration: underline; text-underline-offset: 4px; }
+
+/* pie */
+footer { padding: 48px 0 64px; border-top: 1px solid var(--rule); color: var(--muted); font-size: .95rem; }
+footer .wrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; }
+footer p { margin: 0 0 10px; max-width: 40em; }
+footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-spacing: -.015em; max-width: 22em; }
+
+@media (max-width: 900px) {
+  .hero .wrap, .install, footer .wrap { grid-template-columns: 1fr; }
+  .cycle { grid-template-columns: 1fr; gap: 28px; }
+  .cycle li { padding: 0 0 0 52px; }
+  .cycle li::before { position: absolute; left: 0; top: 0; margin: 0; }
+  .cycle li:not(:last-child)::after { top: 34px; bottom: -28px; left: 16px; right: auto; width: 2px; height: auto; }
+  .feat, .sites { grid-template-columns: 1fr; }
+  table { min-width: 0; }
+  th { width: 55%; }
+  th, td { padding-right: 12px; font-size: .95rem; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+@media (prefers-reduced-motion: no-preference) {
+  .row { transition: background-color .25s, color .25s; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="loopwork, inicio">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><path d="M9 11h9a5 5 0 010 10H9" fill="none" stroke="var(--code-add)" stroke-width="3" stroke-linecap="round"/><path d="M12 8l-3 3 3 3" fill="none" stroke="var(--paper)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      loopwork
+    </a>
+    <nav aria-label="Principal">
+      <a href="#ciclo">Cómo funciona</a>
+      <a href="#incluye">Qué incluye</a>
+      <a href="#privacidad">Privacidad</a>
+      <a href="#instalar">Instalar</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <h1><span style="display:block">La IA propone.</span><span style="display:block">Tú decides.</span></h1>
+        <p class="lead">loopwork es un taller local de archivos y código <strong>dentro de DeepSeek, ChatGPT, Gemini y Claude</strong>. Cada cambio que sugiere la IA llega como un diff: lo lees, lo aplicas o lo rechazas. Tus archivos nunca salen del navegador.</p>
+        <div class="cta">
+          <a class="btn" href="#instalar">Instalar loopwork</a>
+          <a class="btn ghost" href="manual.md">Leer el manual</a>
+        </div>
+        <small>Prototipo funcional, versión 1.5.41. No es un IDE completo ni un respaldo externo.</small>
+      </div>
+
+      <div class="patch" id="patch" data-state="pending">
+        <div class="patch-head">
+          <span><b>programa.js</b> · propuesta de la IA</span>
+          <span>hash verificado antes de guardar</span>
+        </div>
+        <div class="diff" role="group" aria-label="Diferencias propuestas en programa.js">
+          <div class="row hunk"><i>3</i><i>3</i><span class="m"></span><span>@@ function total(items) @@</span></div>
+          <div class="row"><i>3</i><i>3</i><span class="m"></span><span>function total(items) {</span></div>
+          <div class="row del"><i>4</i><i></i><span class="m">-</span><span>  return items.length;</span></div>
+          <div class="row add"><i></i><i>4</i><span class="m">+</span><span>  return items.reduce((s, i) => s + i.precio, 0);</span></div>
+          <div class="row"><i>5</i><i>5</i><span class="m"></span><span>}</span></div>
+        </div>
+        <div class="patch-foot">
+          <button type="button" id="apply">Aplicar cambios</button>
+          <button type="button" class="no" id="reject">Rechazar</button>
+          <button type="button" class="no" id="reset" hidden>Repetir el ejemplo</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite">Ejemplo interactivo. Nada se guarda hasta que pulses <b>Aplicar cambios</b>.</p>
+      </div>
+    </div>
+  </div>
+
+  <section id="ciclo">
+    <div class="wrap">
+      <h2>Un ciclo corto, con una puerta en el medio</h2>
+      <p class="intro">La IA no ve tu disco y no escribe archivos. Solo conoce lo que tú le compartes, y sus respuestas pasan por una revisión antes de tocar nada.</p>
+      <ol class="cycle">
+        <li><h3>Compartes</h3><p><span class="who">Tú.</span> Eliges un archivo con <em>Compartir archivo…</em>. Viaja con su huella SHA256.</p></li>
+        <li><h3>Propone</h3><p><span class="who">La IA.</span> Responde con un bloque <code>dv</code>: un cambio pequeño y exacto.</p></li>
+        <li><h3>Revisas</h3><p><span class="who">Tú.</span> <em>Revisar parche en DV</em> abre el editor con el diff. Todavía no se guarda nada.</p></li>
+        <li><h3>Aplicas</h3><p><span class="who">Tú.</span> Se crea un checkpoint de la versión anterior y se comprueba que el archivo no cambió.</p></li>
+        <li><h3>Pruebas y versionas</h3><p><span class="who">Tú.</span> Ejecutas el archivo y guardas el resultado con un commit local.</p></li>
+      </ol>
+      <p class="cycle-note">Si el archivo cambió desde que la IA lo vio, el hash ya no coincide y la propuesta se rechaza. No hay cambios a una versión que ya no existe.</p>
+    </div>
+  </section>
+
+  <section id="incluye">
+    <div class="wrap">
+      <h2>Un taller completo dentro del chat</h2>
+      <p class="intro">Todo vive en un panel flotante. Los comandos locales no se envían al chat ni gastan tokens.</p>
+      <dl class="feat">
+        <div><dt>Disco virtual o carpeta real</dt><dd>Trabaja en el almacenamiento privado del navegador (OPFS) o conecta una carpeta de tu PC. Exporta todo, incluido Git, a un ZIP estándar.</dd></div>
+        <div><dt>Editor con diff y aprobación</dt><dd>Resaltado de sintaxis, minimapa, buscar y reemplazar con regex, vista previa HTML en vivo. Guardar siempre muestra el diff completo.</dd></div>
+        <div><dt>Git local, con o sin comandos</dt><dd>Botones para guardar, ver cambios y revertir. Si prefieres el teclado: <code>init</code>, <code>add</code>, <code>commit</code>, <code>diff</code>, <code>branch</code>, <code>checkout</code>, <code>restore</code>. Sin remoto ni cuenta de GitHub.</dd></div>
+        <div><dt>Checkpoints por archivo</dt><dd>Copia exacta de bytes, incluso de archivos que nunca tuvieron commit. Lista, compara, restaura y limpia.</dd></div>
+        <div><dt>Recuperación ante cierres a medias</dt><dd>Cada guardado deja un temporal verificado y un registro. Si el navegador se cierra a mitad, al volver se completa, se revierte o se guarda aparte. Nunca pisa en silencio.</dd></div>
+        <div><dt>Ejecutar sin salir del chat</dt><dd>HTML estático en una pestaña conectada que se actualiza al guardar, y JavaScript de consola en un Worker aislado.</dd></div>
+        <div class="wide"><dt>En español, inglés y chino simplificado</dt><dd>El idioma cambia sin recargar y conserva tu borrador, el historial y la posición del panel. Los comandos no se traducen.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="privacidad">
+    <div class="wrap">
+      <h2>Qué sale del navegador y qué no</h2>
+      <p class="intro">Compartir es siempre una acción explícita tuya. Lo demás es local.</p>
+      <div class="tablewrap">
+        <table>
+          <caption>Lo que llega al chat del sitio actual</caption>
+          <tbody>
+            <tr><th scope="row">Editar, ejecutar, importar, descargar, Git, checkpoints</th><td class="no">Nada</td></tr>
+            <tr><th scope="row">Revisar un parche y aplicarlo</th><td class="no">Nada</td></tr>
+            <tr><th scope="row"><code>--share</code></th><td>Un resumen de hasta 1200 caracteres, que revisas antes</td></tr>
+            <tr><th scope="row"><code>--share-file</code></th><td>El archivo completo, con vista previa y confirmación</td></tr>
+            <tr><th scope="row">Botones <em>Enviar archivo al chat</em> y <em>Ejecutar + Compartir</em></th><td>Se envía en el momento, sin segunda confirmación. El clic es la autorización</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="warn"><strong>Local no significa cero red.</strong> El chat es un servicio remoto, y tu gestor de userscripts descarga las bibliotecas de Git y diff desde jsDelivr al instalar. Tus archivos no se suben para cargarlas. Y si borras los datos del sitio, pierdes el disco: exporta un ZIP de lo importante.</p>
+    </div>
+  </section>
+
+  <section id="sitios">
+    <div class="wrap">
+      <h2>Dónde funciona hoy</h2>
+      <p class="intro">El protocolo es el mismo en todos; solo cambia el adaptador de cada sitio. Los discos son independientes por sitio: para moverlos, exporta un ZIP e impórtalo en el otro.</p>
+      <div class="sites">
+        <article class="site"><span class="tag ok">Verificado en uso real</span><h3>DeepSeek</h3><p class="host">chat.deepseek.com</p><p>Todo el ciclo, incluida la recuperación tras un cierre interrumpido.</p></article>
+        <article class="site"><span class="tag exp">Experimental</span><h3>ChatGPT</h3><p class="host">chatgpt.com</p><p>Comprobado sin iniciar sesión. Falta confirmarlo con una cuenta real.</p></article>
+        <article class="site"><span class="tag exp">Experimental</span><h3>Gemini</h3><p class="host">gemini.google.com</p><p>Comprobado sin iniciar sesión. Ejecutar JavaScript no está disponible por la política de seguridad del sitio.</p></article>
+        <article class="site"><span class="tag exp">Experimental · nuevo</span><h3>Claude</h3><p class="host">claude.ai</p><p>Añadido en 1.5.40. La edición se probó con un ProseMirror real; falta confirmarlo en claude.ai con una cuenta.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="instalar">
+    <div class="wrap install">
+      <div>
+        <h2>Instálalo en tres pasos</h2>
+        <ol>
+          <li>Usa un navegador <strong>Chromium</strong> (Chrome, Edge, Brave) e instala <a href="https://www.tampermonkey.net/">Tampermonkey</a>.</li>
+          <li>Crea un script nuevo y pega completo <a href="deepseek-disco.user.js"><code>deepseek-disco.user.js</code></a>, incluida la cabecera.</li>
+          <li>Abre o recarga el chat. Verás el panel con <strong>v1.5.41</strong>.</li>
+        </ol>
+        <a class="btn" href="manual.md">Seguir con el manual</a>
+      </div>
+      <ul class="docs">
+        <li><a href="manual.md"><strong>Manual del usuario</strong><span>Cada botón, comando y receta, paso a paso.</span></a></li>
+        <li><a href="README.md"><strong>README</strong><span>Visión general, límites y detalles técnicos.</span></a></li>
+        <li><a href="roadmap.md"><strong>Roadmap</strong><span>Qué está hecho, qué falta y en qué orden.</span></a></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <p class="loop">Dos mentes en bucle: la IA propone, el usuario decide y el resultado se verifica.</p>
+      <p>Licencia aún sin formalizar: falta añadir el archivo LICENSE. Las dependencias conservan las suyas.</p>
+    </div>
+    <div>
+      <p><strong>Germán Peña</strong>, autor del proyecto, con la División de Informática de <a href="https://geeknome.com">Geeknome</a>.</p>
+      <p>DeepSeek y GitHub Copilot colaboraron como herramientas de IA en ideas, implementación, documentación y pruebas. Esto no implica patrocinio ni afiliación oficial.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var patch = document.getElementById('patch');
+  var status = document.getElementById('status');
+  var apply = document.getElementById('apply');
+  var reject = document.getElementById('reject');
+  var reset = document.getElementById('reset');
+  var initial = status.innerHTML;
+
+  function set(state, html, focusEl) {
+    patch.setAttribute('data-state', state);
+    status.innerHTML = html;
+    var done = state !== 'pending';
+    apply.hidden = done;
+    reject.hidden = done;
+    reset.hidden = !done;
+    if (focusEl) focusEl.focus();
+  }
+  apply.addEventListener('click', function () {
+    set('applied', '<b>Aplicado.</b> Antes de guardar se creó un checkpoint de la versión anterior; si no te convence, <code>!restore</code> la devuelve.', reset);
+  });
+  reject.addEventListener('click', function () {
+    set('rejected', '<b>Rechazado.</b> El archivo sigue igual. No se guardó nada.', reset);
+  });
+  reset.addEventListener('click', function () {
+    set('pending', initial, apply);
+  });
+})();
+</script>
+</body>
+</html>

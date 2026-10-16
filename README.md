@@ -1,16 +1,38 @@
 # loopwork
 
-**Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT y Gemini.**
+**Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.5.40**. **165 pruebas Node** y validaciones aisladas en navegador.
+Versión actual: **1.5.41**. **135 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
+
+**Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
+[Roadmap](./roadmap.md) (estado y pendientes) · [Portada del proyecto](./index.html).
+
+## En 60 segundos
+
+1. Instala [Tampermonkey](https://www.tampermonkey.net/) y pega
+   [deepseek-disco.user.js](./deepseek-disco.user.js) en un script nuevo.
+2. Abre DeepSeek (o ChatGPT / Gemini / Claude, experimentales): aparece el panel flotante.
+3. **Nuevo archivo…** → pega tu código → **Compartir archivo…** → pide un cambio.
+4. En la respuesta pulsa **Revisar parche en DV**, mira el diff y **Aplicar cambios**.
+5. **Ejecutar** para probar y **Guardar cambios en Git** para versionar.
+
+Todo ocurre en tu navegador: la IA solo ve lo que tú compartes, y nada se
+escribe sin tu aprobación.
+
+| Sitio | Estado |
+| --- | --- |
+| chat.deepseek.com | Verificado en uso real |
+| chatgpt.com | Experimental (falta confirmar con cuenta real) |
+| gemini.google.com | Experimental (falta cuenta Pro; `run archivo.js` no disponible por CSP) |
+| claude.ai | Experimental, nuevo en 1.5.40 (selectores sin probar con una cuenta real) |
 
 ## Contenido
 
+- [En 60 segundos](#en-60-segundos)
 - [Qué ofrece](#qué-ofrece)
 - [Instalación](#instalación)
-- [Python en el navegador](#python-en-el-navegador)
 - [Primeros pasos](#primeros-pasos)
 - [Idiomas](#idiomas)
 - [Ciclo de corrección con IA](#ciclo-de-corrección-con-ia)
@@ -46,10 +68,9 @@ Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
   Reconoce el formato real de DeepSeek (`.md-code-block` con `<pre>` sin `<code>`;
   lenguaje `dv` leído de la cabecera del bloque). Validado en chat.deepseek.com.
 - Git local: commits, staging, diff, lectura histórica y ramas protegidas.
-- GitHub opcional: remoto `origin`, token solo en memoria, push sin force y pull fast-forward verificado.
 - Guardado contextual en Git con lista revisable, mensaje editable y confirmación sin escribir comandos.
 - Checkpoints independientes de Git, incluso para archivos sin commit.
-- Vista previa HTML con recursos relativos del disco y JavaScript de consola aislado.
+- Vista previa HTML estática y JavaScript de consola aislado.
 - HTML en pestaña conectada: actualización al guardar, botón Actualizar desde disco y recarga con F5.
 - Interfaz, ayuda, avisos y errores en español, inglés y chino simplificado.
 - Compartir resultados y archivos desde el panel con un clic explícito; `--share` y `--share-file` conservan vista previa y confirmación.
@@ -70,36 +91,6 @@ No instala un motor WASM ni ofrece Python, Node, shell, dependencias, autocomple
 o validación semántica por lenguaje. El motor de edición verifica candidatos y
 hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#límites-y-recuperación)).
 
-## Python en el navegador
-
-Abre [python-runner.html](./python-runner.html) en una pestaña independiente,
-fuera de Gemini/ChatGPT/DeepSeek. No necesita instalar Python, extensiones,
-servidores ni paquetes de Windows. Descarga Pyodide **314.0.7** desde jsDelivr
-al ejecutar; requiere conexión y puede tardar la primera vez.
-
-1. Desde DV, descarga el archivo `.py` que quieras probar.
-2. En la página independiente, usa **Abrir archivo .py** o pega el código.
-3. Revisa el programa, configura la entrada para `input()` y pulsa
-   **Ejecutar Python**. La salida y los errores aparecen debajo.
-4. **Detener** termina el Worker, incluso durante la carga o un bucle infinito.
-   El límite de ejecución es configurable (1–120 segundos); la descarga tiene
-   un límite separado de 120 segundos.
-
-Ejecuta Python real en WebAssembly, no CMD/PowerShell ni C. Cada ejecución tiene
-un sistema de archivos virtual temporal y empieza desde cero. No hay conexión
-automática con OPFS, carpetas reales, Git ni la página del chat. Usa
-**Descargar borrador .py** para conservar los cambios del editor.
-No se instalan paquetes adicionales automáticamente; las extensiones nativas
-de Windows y los procesos del sistema no son compatibles.
-
-**No es un sandbox para código hostil.** El Worker mantiene la interfaz
-responsiva, pero Python puede acceder a APIs de red mediante la interoperabilidad
-JavaScript de Pyodide. Ejecuta solo código revisado y no incluyas secretos.
-El programa no se envía a un servicio de ejecución: se descargan los componentes
-del runtime y el cálculo ocurre en el navegador. La caché depende del navegador;
-no se garantiza funcionamiento sin conexión. Si tu navegador impide Workers
-desde `file:`, sirve la página con un servidor local que ya tengas disponible.
-
 ## Instalación
 
 1. Usa un navegador Chromium moderno, con OPFS, Web Crypto, Workers,
@@ -111,19 +102,34 @@ desde `file:`, sirve la página con un servidor local que ya tengas disponible.
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.5.40**.
+5. Comprueba que el panel muestra **v1.5.41**.
 
 No hace falta npm para usarlo. Sí hace falta el gestor de userscripts; si el
 navegador exige permisos adicionales para ejecutarlos, concédelos al gestor.
 La compatibilidad con otros navegadores y futuras versiones de DeepSeek no está
 certificada.
 
+- **Soporte experimental para Claude** (`claude.ai`, nuevo en 1.5.40): el compositor
+  de claude.ai es un editor ProseMirror (`contenteditable`), no un `<textarea>`; el
+  adaptador lo localiza, lee sus párrafos línea a línea y lo rellena con
+  `insertText` o, si este aplana los saltos de línea, con un pegado sintético.
+  Si el texto no coincide exactamente, el envío se cancela y se restaura el borrador.
+  Los bloques del asistente se reconocen por `.font-claude-response` /
+  `[data-is-streaming]`, y los del usuario por `[data-testid="user-message"]`.
+  En 1.5.41 el botón de enviar se localiza también por su etiqueta traducida
+  («Enviar mensaje» en un claude.ai en español) y, si no aparece, se envía con Enter.
+  Los mensajes fijos que dicen «DeepSeek» muestran ahora el nombre del sitio
+  actual. Los selectores se basan en el DOM conocido de claude.ai y la lógica de
+  edición se comprobó contra un editor ProseMirror real en un navegador aislado,
+  pero **falta confirmarlo en claude.ai con una cuenta**. Es posible que `run archivo.js`
+  quede bloqueado por la CSP del sitio, como en Gemini; el panel lo informará.
+
 Para probar Gemini, actualiza el userscript completo en Tampermonkey y recarga
 Gemini. Pide una respuesta con un bloque de código que contenga únicamente `!ls`:
 debe aparecer **Ejecutar en DV** y, al pulsarlo, mostrar la salida en el
 panel, sin enviar otro mensaje. No requiere API ni clave de Gemini.
 El disco OPFS pertenece a cada origen: Gemini no verá los archivos guardados en
-DeepSeek o ChatGPT. Para trasladarlos, exporta un ZIP en el sitio de origen e
+DeepSeek, ChatGPT o Claude. Para trasladarlos, exporta un ZIP en el sitio de origen e
 impórtalo en Gemini.
 
 Si el panel no aparece:
@@ -213,9 +219,8 @@ Pensado para no necesitar otro editor:
   contador de resultados; ir a línea sin prompt().
 - Cierre automático de paréntesis, comillas y etiquetas HTML; Enter con sangría
   inteligente; Backspace borra pares vacíos.
-- HTML: **Vista previa** en vivo del borrador con CSS/JS del disco y **Pestaña**,
-  que se refresca al guardar el HTML o sus recursos (ideal en pantalla dividida).
-  En Gemini se muestra HTML/CSS con aviso de JavaScript bloqueado por CSP.
+- HTML: **Vista previa** en vivo del borrador (sin scripts ni red) y **Pestaña**,
+  que se refresca al guardar (ideal en pantalla dividida).
 - JSON: **Formatear**. Tamaño de letra A−/A+ (se recuerda), Copiar, Pegar,
   Descargar el borrador, indicador ● de cambios y aviso al cerrar la página.
 - Barra de estado: Ln/Col, selección, líneas, bytes, lenguaje, LF/CRLF.
@@ -285,81 +290,6 @@ rollback automático. No hay bloqueo entre pestañas.
 El estado se actualiza tras las operaciones del panel. Cambios desde otra pestaña
 pueden requerir **Actualizar lista**.
 
-### Continuar en otra PC con GitHub privado
-
-No se sincroniza automáticamente. Actualiza/reinstala el UserScript en ambas
-PC y acepta el nuevo permiso `GM_xmlhttpRequest` con conexión a `github.com`
-en Tampermonkey/Violentmonkey. No se usa un proxy externo ni las cookies de
-GitHub; iniciar sesión en una pestaña de GitHub no autentica estos comandos.
-
-1. En GitHub crea un repositorio **privado vacío**, sin README, licencia ni
-   `.gitignore` iniciales si ya tienes commits locales. No se crea desde DV.
-2. En el panel de la primera PC, inicializa Git si aún no existe, guarda tus
-   archivos y haz commit mediante **Guardar cambios en Git** o:
-
-   ```text
-   !git init
-   !git add --all
-   !git commit -m "Primera version"
-   !git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
-   !git auth
-   !git push
-   ```
-
-   No repitas `git init` si ya tienes repositorio. `git auth` abre un diálogo
-   privado con campo de contraseña y enlace para crear un token fine-grained:
-   **Only select repositories → ese repositorio**, permiso de repositorio
-   **Contents: Read and write**, con caducidad corta. Puede requerir aprobación
-   de la organización/SSO; los cambios en `.github/workflows` pueden necesitar
-   además el permiso **Workflows: Read and write**.
-   **Nunca pegues el token en el chat ni en un comando.**
-   Se mantiene solo en memoria, asociado a esa URL; recargar requiere otro
-   `git auth`. `git logout` lo olvida, pero no lo revoca en GitHub.
-3. En la segunda PC, usa un disco vacío (o vincula una carpeta vacía):
-
-   ```text
-   !git init
-   !git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
-   !git auth
-   !git pull
-   ```
-
-   No crees un commit inicial vacío en la segunda PC: pull descarga los
-   commits existentes y escribe los archivos. La rama inicial es `main`;
-   el remoto debe tener la misma rama que la rama local activa.
-4. Antes de cambiar de PC: guarda, haz commit y `git push`. Al volver a una
-   PC: `git auth` si recargaste y `git pull` **antes de editar**.
-
-`git remote -v` muestra el destino. Para cambiarlo usa
-`git remote set-url origin https://github.com/TU_USUARIO/OTRO_REPO.git`
-y vuelve a autenticarte. Solo se admite HTTPS GitHub con `origin`, sin
-credenciales en la URL, argumentos en push/pull, borrado remoto ni `--force`.
-Los comandos remotos no admiten pipes ni redirecciones.
-
-Cada push/pull pide autorización de red mostrando repositorio y rama.
-**Push publica todo el historial alcanzable**, incluso versiones antiguas de
-archivos borrados: revisa que no haya secretos, aunque el repositorio sea privado.
-No se envía el chat, checkpoints ni journal. El envío se rechaza si el historial
-incluye metadatos internos. El token no se añade a la configuración Git.
-
-Ambos comandos exigen disco limpio y editor cerrado; también se rechazan archivos
-ignorados sin seguimiento para evitar pérdidas o confundir lo que se sincroniza.
-Guarda copias de esos archivos fuera del disco. Pull descarga primero los objetos
-Git y solo aplica **fast-forward**, sin merge automático: si hay commits distintos
-en las dos PCs se detiene y debes resolverlos fuera de DV. No usa force remoto.
-Antes de reemplazar archivos pide una segunda confirmación, valida rutas/tipos
-(sin enlaces simbólicos/submódulos) y crea checkpoints de los archivos actuales.
-La escritura multiarchivo no es atómica: si falla, informa del estado parcial;
-revisa `git status` y los checkpoints. No hay rollback automático ni bloqueo
-contra modificaciones externas o desde otra pestaña. Repositorios con archivos
-que excedan el límite de checkpoints no se aplican automáticamente.
-
-Las solicitudes Git tienen timeout de 120 s y un límite de 64 MB por cuerpo de
-solicitud/respuesta (la respuesta se comprueba al recibirse). Repositorios grandes,
-Git LFS, submódulos y resolución de conflictos quedan fuera de este flujo.
-La integración se prueba con transportes simulados e historiales Git reales;
-una prueba contra tu repositorio privado requiere que tú autorices el token.
-
 **Revertir…** abre la misma lista con un botón **Revertir** junto a cada archivo
 que existe en el último commit (los archivos nuevos no lo tienen; usa Eliminar).
 Equivale a `git restore --source HEAD archivo`: abre el editor con el diff, no
@@ -381,61 +311,13 @@ del navegador estén respaldados.
 
 ### Ejecutar y descargar
 
-**HTML interactivo con JS/CSS de la misma carpeta:** abre
-[project-preview.html](./project-preview.html) fuera del chat, manteniendo
-[project-preview.js](./project-preview.js) junto a esa página. Selecciona la
-carpeta completa del proyecto, elige su HTML y pulsa **Abrir / Recargar**.
-No requiere instalación ni servidor. Si usas carpeta real en DV, selecciona
-esa carpeta; si usas OPFS, exporta el ZIP y extráelo primero.
-
-Resuelve scripts clásicos `.js`, hojas CSS, imágenes y fuentes relativas
-(incluidas rutas desde CSS) en memoria: scripts/CSS incorporados y recursos
-binarios como URL data dentro de un documento Blob. El iframe usa
-`sandbox="allow-scripts"` sin `allow-same-origin` y una CSP que bloquea fetch,
-Workers, iframes, formularios y recursos externos. Solo se leen los archivos
-seleccionados; no hay escritura ni conexión automática con el disco DV.
-Ejecuta solo proyectos revisados: no es un entorno seguro para código hostil
-ni ofrece límite de CPU; un bucle infinito puede bloquear la pestaña.
-
-No admite módulos ES/importmap, scripts `async`, imports dinámicos, CSS `@import`, `srcset`,
-`fetch` de archivos, navegación entre páginas ni backend. Para esos casos usa
-un servidor local. Los fallos de recursos detectados se muestran antes de
-abrir la vista; los errores del JavaScript del proyecto se consultan en la
-consola del navegador. El máximo de selección es 20 MB. Para recoger cambios
-externos debes volver a seleccionar la carpeta; no hay auto-recarga nativa.
-**Cerrar vista previa** retira el iframe y libera sus recursos Blob.
-
-El visor independiente es opcional. Para archivos que ya están en DV usa
-**Vista previa** en el editor (borrador), **Pestaña** o `run archivo.html` (guardado):
-
 ```text
 !write test.html '<!doctype html><html><body><h1>Hola</h1></body></html>'
 !run test.html
 ```
 
-O pulsa **Ejecutar** en su fila. HTML abre una **pestaña de vista previa conectada**;
-si ya está abierta para ese archivo, se reutiliza. Ambas vistas resuelven CSS,
-scripts clásicos e imágenes desde el disco activo (virtual o carpeta vinculada),
-sin exportar ni seleccionar otra carpeta. Las rutas pueden incluir subcarpetas;
-CSS `url(...)` se resuelve respecto a su hoja de estilos.
-
-En Gemini solo se muestran HTML, CSS e imágenes: un aviso explica que la CSP
-bloquea JavaScript. En otros sitios se pide autorización para ejecutar scripts
-en `sandbox="allow-scripts"` sin `allow-same-origin`; cancelar mantiene la vista
-estática. La CSP del sitio todavía puede restringir la ejecución. Usa
-`addEventListener` o atributos como `onclick` para los eventos: con JavaScript
-autorizado ambos funcionan en el modal y en la pestaña conectada. Esta conserva
-nonces para los scripts y permite atributos de evento solo en modo interactivo.
-No hay acceso al disco, red, formularios ni
-otros frames. Un bucle infinito puede bloquear la pestaña; usa código revisado.
-
-El ensamblado admite hasta 8 MB. Los recursos inexistentes, externos o las rutas
-hacia metadatos internos muestran un error. No se admiten módulos ES, `async`,
-CSS `@import` ni `srcset`; usa scripts clásicos, hojas `<link>` e imágenes `src`.
-Al guardar CSS/JS/imágenes se actualizan las pestañas que los usan. La vista del
-borrador se reconstruye al editar el HTML o al volver a abrirla; no vigila
-modificaciones externas realizadas fuera del panel.
-
+O pulsa **Ejecutar** en su fila. HTML abre una **pestaña de vista previa conectada**
+sin scripts ni recursos externos; si ya está abierta para ese archivo, se reutiliza.
 JavaScript de consola se ejecuta en Worker aislado y muestra logs/errores en el
 panel. Ambos requieren confirmación.
 
@@ -449,7 +331,7 @@ disponible allí con este ejecutor; usar Blob no basta para habilitarlo.
 El panel distingue entre falta de señal de arranque del controlador y ausencia
 de respuesta del Worker, e informa del posible bloqueo sin relajar el sandbox.
 Esto no indica necesariamente un error en tu archivo. Para interactividad de
-HTML y JavaScript en Gemini, usa el visor independiente fuera del chat o un servidor local.
+HTML y JavaScript, abre el proyecto fuera del chat con un servidor local.
 
 Para trabajar lado a lado, arrastra la pestaña a otra ventana y coloca DeepSeek
 en media pantalla y la vista previa en la otra (por ejemplo, con **Win+Izquierda**
@@ -596,7 +478,7 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `!propose propuesta.json` | Prepara un cambio JSON para el editor |
 | `!replace archivo old new [--all] [--hash SHA256] [--dry-run]` | Literal único o todas las coincidencias no solapadas; diff/aprobación obligatorios |
-| `!run archivo.html` / `!run archivo.js` | Proyecto HTML con recursos del disco en pestaña conectada o JS de consola aislado |
+| `!run archivo.html` / `!run archivo.js` | HTML estático en pestaña conectada o JS de consola aislado |
 | `!edit archivo` | Abre el editor; si no existe, empieza en blanco y lo crea al guardar |
 | `!journal [-n N]` | Consulta el journal con el estado de cada escritura (PREPARED/COMMITTED/ABORTED/CONFLICT) |
 | `!recover` | Revisa escrituras interrumpidas y limpia temporales huérfanos |
@@ -704,23 +586,22 @@ archivo elegido; abrir el selector no envía nada.
 Si el comando incluye `--share-file`, se mantiene la vista previa del mensaje
 completo. Las confirmaciones propias de ejecución, edición y borrado no cambian.
 
-**Local-first no significa cero red:** DeepSeek, ChatGPT y Gemini son servicios remotos.
+**Local-first no significa cero red:** DeepSeek, ChatGPT, Gemini y Claude son servicios remotos.
 Tampermonkey/Violentmonkey descarga y gestiona las bibliotecas Git/diff mediante
 `@require` desde jsDelivr (`isomorphic-git@1.32.1`, `diff@7.0.0`) antes de ejecutar
 el userscript. Actualiza también la cabecera completa y recarga el chat para
-que el gestor procese estas dependencias. Se usan los globales `git` y
-`Diff` del entorno del gestor (o de `window`), sin importar módulos desde la página cuando están disponibles.
+que el gestor procese estas dependencias. Se usan los globales `window.git` y
+`window.Diff`, sin importar módulos desde la página cuando están disponibles.
 Si no están disponibles, se conserva la importación bajo demanda desde esm.sh
 como alternativa; esta sí está sujeta a las restricciones de red/CSP del sitio.
-Git local no requiere iniciar sesión en GitHub. La sincronización opcional
-usa `git auth` y push/pull explícitos; abrir GitHub no autentica ni sincroniza
-este disco por sí solo. El nuevo permiso de red solo admite `github.com`.
+Git es local y no requiere iniciar sesión en GitHub; abrir GitHub no autentica
+ni sincroniza este disco.
 No se suben archivos para cargar esas bibliotecas; el sitio y el código que
 ejecuta en su origen siguen formando parte de la frontera de confianza.
 El Shadow DOM no es una barrera de seguridad contra la página anfitriona.
 
-OPFS pertenece al **origen del sitio actual** (`chat.deepseek.com`, `chatgpt.com`
-o `gemini.google.com`, por ejemplo), no a una conversación ni a
+OPFS pertenece al **origen del sitio actual** (`chat.deepseek.com`, `chatgpt.com`,
+`gemini.google.com` o `claude.ai`, por ejemplo), no a una conversación ni a
 un usuario del modelo. No hay separación por cuenta implementada. Otro
 navegador/perfil/origen no ve automáticamente esos datos.
 
@@ -763,8 +644,7 @@ puede tener falsos positivos/negativos.
 | Vista de resultados en log | 800 caracteres; Ayuda tiene vista completa |
 | Explorador | 50 filas; Eliminar todos incluye todos los archivos de usuario |
 
-La vista HTML no permite navegación ni red; carga assets relativos del disco y
-puede ejecutar scripts clásicos con autorización fuera de Gemini. JS de consola no dispone de
+HTML no ejecuta scripts, navegación ni assets OPFS relativos. JS no dispone de
 DOM, Node, imports/dependencias, red ni OPFS; usa `await` para tareas asíncronas.
 No existe cuota estricta de memoria para el Worker. CSP del sitio puede bloquear
 el entorno; no se degrada a ejecutar en la página principal.
@@ -800,8 +680,10 @@ Archivos principales:
 
 - [deepseek-disco.user.js](./deepseek-disco.user.js): implementación.
 - [tests/userscript.test.cjs](./tests/userscript.test.cjs): regresiones Node.
-- [index.html](./index.html): laboratorio separado; sus pruebas no se integran
-  automáticamente en el userscript.
+- [manual.md](./manual.md): manual del usuario.
+- [index.html](./index.html): portada del proyecto (apta para GitHub Pages).
+- `laboratorio.html`: laboratorio separado de pruebas OPFS/Git (antes llamado
+  `index.html`); sus pruebas no se integran automáticamente en el userscript.
 - [roadmap.md](./roadmap.md): avances, evidencia y pendientes.
 
 Con Node.js moderno y npm:
@@ -848,7 +730,7 @@ ni como una declaración de patrocinio o afiliación oficial con sus proveedores
 
 ## Roadmap y licencia
 
-Consulta [roadmap.md](./roadmap.md). Las fases son parciales: faltan
+Consulta [roadmap.md](./roadmap.md) (empieza por «Estado de un vistazo»). Las fases son parciales: faltan
 validadores, formateadores/linters, diff entre commits, exportación
 histórica exacta, grafo, experimentos/recetas, Git remoto y motores adicionales.
 

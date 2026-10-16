@@ -1,5 +1,44 @@
 # Roadmap: Entorno de edicion y analisis local (OPFS + WASM + Git)
 
+Proyecto: **loopwork** (userscript `deepseek-disco.user.js`). Documentos
+hermanos: [README](./README.md) (vision general y limites) y
+[manual del usuario](./manual.md) (uso paso a paso).
+
+## Estado de un vistazo (1.5.41)
+
+**Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
+registrada, mas validaciones en navegador con OPFS nativo):
+
+- Disco virtual OPFS o carpeta real; exportar/importar ZIP completo.
+- Editor integrado con diff y aprobacion; escrituras transaccionales con
+  journal y recuperacion al iniciar.
+- Protocolo `dv` de propuestas con hash; boton **Revisar parche en DV**.
+- Git local (init, add, commit, log, diff, show, branch, checkout protegido,
+  restore) y botones de guardado/revision/reversion sin escribir comandos.
+- Checkpoints por archivo (listar, ver, comparar, restaurar, limpiar).
+- Vista previa HTML conectada y JavaScript de consola aislado.
+- Interfaz en espanol, ingles y chino simplificado.
+
+**Verificado en uso real:** DeepSeek (chat.deepseek.com).
+**Experimental:** ChatGPT y Gemini (solo verificados en sesion anonima;
+falta confirmacion con cuenta real), Claude (claude.ai, nuevo en 1.5.40, sin
+probar con cuenta real), carpeta real, `run archivo.js` (no
+disponible en Gemini por CSP).
+
+**Siguiente, en este orden:**
+
+1. Confirmar ChatGPT, Gemini y Claude con una cuenta real y ajustar selectores.
+2. Cerrar la Fase 2: copia previa para `rm`/`mv`/importacion e inventario
+   antes/despues de cada operacion.
+3. Completar la Fase 1: `.gitignore` por defecto, checkout de commit y
+   `log --oneline/--graph`.
+4. Observabilidad (Fase 4): grafo de ramas e historial por archivo.
+5. Primer validador (Fase 6): JSON y sintaxis JS, diciendo con honestidad lo
+   que no se puede validar.
+6. Revisar los textos de interfaz que mencionan sitios concretos (desde 1.5.40
+   "DeepSeek" se sustituye por el nombre del sitio actual).
+7. Formalizar la licencia (archivo LICENSE) antes de presentarlo como MIT.
+
 ## Vision
 
 Entorno 100% local en el navegador donde:
@@ -89,7 +128,7 @@ Verificable, no declarativo.
 - Deteccion de cambios externos via statusMatrix.
 - Tests integrados en el navegador.
 
-Las pruebas de index.html NO se integran automaticamente en el userscript.
+Las pruebas del laboratorio (laboratorio.html) NO se integran automaticamente en el userscript.
 Su test E2E contiene siete pasos, pero releer archivos no equivale a cerrar
 y reabrir el navegador. No dar ese criterio por certificado.
 
@@ -124,7 +163,7 @@ y reabrir el navegador. No dar ese criterio por certificado.
   junto a los de carpeta real.
 - Escritor y lector ZIP propios (sin dependencias externas): CRC32 manual,
   `CompressionStream('deflate-raw')`/`DecompressionStream('deflate-raw')`
-  nativos para el metodo deflate, y metodo store (0) quando deflate no
+  nativos para el metodo deflate, y metodo store (0) cuando deflate no
   reduce el tamano o el archivo esta vacio. Formato estandar, abrible con
   cualquier gestor de archivos o herramienta ZIP.
 - Exportar recorre `walk(rootDir)` completo, incluyendo `.git` y `.dv`
@@ -185,6 +224,75 @@ de sitio que lee la entrada de chat y detecta bloques de codigo. Cambios:
   "DeepSeek" explicitamente (botones, confirmaciones, mensajes de log); hoy
   son cosmeticos y no afectan la funcionalidad en otros sitios.
 
+## Soporte experimental para Gemini (1.5.3x, antes de 1.5.39)
+
+Segundo sitio adicional tras ChatGPT. El protocolo `dv` no cambia; solo el
+adaptador de sitio.
+
+- `@match` incluye `https://gemini.google.com/*`.
+- Entrada: editor Quill (`rich-textarea .ql-editor[contenteditable="true"]`).
+- Bloques del asistente (`model-response` / `code-block`): Gemini muestra los
+  lenguajes desconocidos, `dv` incluido, como "Code snippet". Por eso un bloque
+  JSON de una respuesta de Gemini tambien ofrece **Revisar parche en DV**, pero
+  el boton solo se habilita si el JSON cumple el esquema de propuesta.
+- Los comandos `!` de una sola linea muestran **Ejecutar en DV** y se ejecutan
+  localmente sin modal de confirmacion inicial.
+- Vista previa HTML: con Trusted Types activo se usa la politica privada
+  `dv-static-preview`; no se crea una politica `default` ni se relaja la CSP.
+- `run archivo.js` NO funciona en Gemini: su CSP bloquea tanto el script de
+  arranque del iframe Blob como los Workers Blob. El panel lo informa sin
+  degradar el sandbox.
+- Verificado sin iniciar sesion: montaje del panel, entrada Quill y
+  cancelacion/ejecucion local de `!ls` desde un bloque real. **Pendiente:**
+  validar con una cuenta (incluida Pro).
+- El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
+  se trasladan con Exportar/Importar ZIP.
+
+## Soporte experimental para Claude (1.5.40)
+
+Tercer sitio adicional. El protocolo `dv` no cambia; solo el adaptador.
+
+- `@match` incluye `https://claude.ai/*`.
+- Entrada: el compositor de claude.ai es un editor ProseMirror
+  (`[data-testid="chat-input"]` / `div.ProseMirror[contenteditable="true"]`),
+  sin `<textarea>`. `getInput()` lo busca antes de la heuristica generica.
+- Lectura: `getText()` aplica el lector por parrafos (antes solo Quill de Gemini)
+  tambien a `.ProseMirror`; el parrafo vacio con `<br>` cuenta como linea vacia.
+  Esto tambien beneficia al compositor ProseMirror de ChatGPT.
+- Escritura: `insertText`; si ProseMirror aplana los saltos de linea, se reintenta
+  con un evento `paste` sintetico (`text/plain`), que crea un parrafo por linea.
+  Para `.ProseMirror` ya no se cae a `textContent` (rompe el estado del editor):
+  si el texto no coincide exactamente, `sendToChat` cancela y restaura el borrador.
+- Boton de enviar: ya cubierto por `button[aria-label="Send message"]`.
+- Mensajes: usuario `[data-testid="user-message"]`; asistente
+  `.font-claude-response`, `.font-claude-message` o `[data-is-streaming]`.
+- Bloques de codigo: el lenguaje `dv` se lee de `language-dv` o de la etiqueta
+  de la cabecera del bloque (`[class*="group/copy"]`). Como respaldo, un bloque
+  JSON del asistente con `"path"` y `"hash"` tambien ofrece **Revisar parche en DV**.
+- Textos: `t()` sustituye "DeepSeek" por el nombre del sitio actual (Claude,
+  ChatGPT o Gemini), de modo que mensajes como "Nada enviado a DeepSeek" no
+  resulten engañosos fuera de DeepSeek. En DeepSeek y en las pruebas no cambia nada.
+- Evidencia: la logica de `getInput/getText/setText` se ejecuto contra un
+  editor ProseMirror real (prosemirror-view) en un navegador aislado con una
+  linea, varias lineas, lineas vacias y bloques con ``` ; todas coinciden
+  exactamente y se pueden vaciar. **No se probo en claude.ai** (requiere cuenta)
+  y los selectores salen del DOM conocido, que puede cambiar.
+- Pendiente: confirmar con una cuenta (envio, boton de parche, `!` en la
+  entrada), comprobar si la CSP bloquea `run archivo.js` y si un mensaje largo
+  se convierte en adjunto ("pasted content") al usar el pegado sintetico.
+- 1.5.41 (fallo reportado en uso real: "no se encontro un boton de envio
+  habilitado", y el texto quedaba en la entrada): el boton de claude.ai lleva
+  una etiqueta traducida ("Enviar mensaje"), que `button[aria-label="Send message"]`
+  no cubria. `findSend` ahora busca, subiendo desde la entrada, botones visibles
+  cuya etiqueta/titulo sea de envio (send, enviar, envoyer, senden, invia, 发送...)
+  excluyendo detener/adjuntar/modelo/compartir. Si aun asi no hay boton, solo en
+  claude.ai se envia con Enter. Si falla, se registra en el panel la lista de
+  botones junto a la entrada (con su estado) y se retira el texto de la entrada.
+  Comprobado con un ProseMirror real y una barra de botones en espanol:
+  envio por boton, envio por Enter y fallo limpio.
+- Sin pruebas Node nuevas: la carpeta `tests/` no estaba disponible al hacer el
+  cambio. Conviene anadir casos para `getText/setText` con `.ProseMirror`.
+
 ## Guardia de foco para el editor y el modal de Git (1.5.39)
 
 Bug reportado por el usuario en ChatGPT: al abrir el editor de codigo (o el
@@ -209,7 +317,7 @@ ChatGPT en vez de en el campo del panel.
   (host cerrado != campo reconocible para el DOM externo) es la causa mas
   probable y la correccion aplicada lo cubre de forma generica.
 - Arreglo: `installFocusTrap(host, scopeEl, initial, isActive)`, una
-  utilidad nueva que seguir el ultimo control enfocado dentro del shadow DOM
+  utilidad nueva que sigue el ultimo control enfocado dentro del shadow DOM
   (via un listener `focusin` interno, sin retargeting) y, si el foco sale
   del `host` mientras `isActive()` siga siendo verdadero (un `focusin`
   global en `document` con `composedPath()` que no incluye al host), lo
@@ -1048,7 +1156,8 @@ Interfaces actuales del userscript:
 - [x] !git branch (listar/crear ramas, 1.5.21)
 - [x] !git checkout <rama-local> (cambio protegido, 1.5.21)
 - [ ] !git checkout <commit> (HEAD separado)
-- [ ] !git restore <archivo> (respaldo y diff/aprobacion antes de descartar)
+- [x] !git restore <archivo> [--staged] [--source <ref>] (diff, aprobacion y
+      checkpoint previo; boton Revertir en el modal Git)
 - [ ] !git log [--oneline] [--graph]
 - [x] !git diff [--staged] [<ref>] (texto UTF-8, binarios solo aviso)
 - [x] Politica de checkout: bloquear si hay cambios sin confirmar
@@ -1064,11 +1173,15 @@ verificar hashes de archivos confirmados.
 - [x] Concepto: candidato vs vigente (temporal + hash)
 - [ ] Flujo: preparar -> validar -> diff -> aprobar -> commit
       (editor ya prepara/diff/aprueba; validadores y commit integrado pendientes)
-- [ ] Escritura atomica (temp + rename)
+- [ ] Escritura atomica (temp + rename). OPFS no tiene rename atomico: hoy el
+      temporal verificado + journal hace de copia de recuperacion
 - [x] Registro persistente de operaciones (journal basico; errores aun ocultos)
 - [x] Validacion de rutas (splitPath normaliza `.`, rechaza `..`)
-- [ ] Manejo de errores sin dejar archivos a medias
-- [ ] Recuperacion tras cierre inesperado
+- [ ] Manejo de errores sin dejar archivos a medias (cubierto en editor,
+      propuestas y write; no en cp/mv/import/rm)
+- [x] Recuperacion tras cierre inesperado (1.5.34: `!recover` y al iniciar;
+      PREPARED > 2 min se completa, revierte o guarda `.recuperado-<id>`;
+      verificado en chat.deepseek.com real, incluido el caso de conflicto)
 - [x] Checkpoint persistente manual por archivo y restore aprobado (1.5.16)
 - [x] Checkpoint previo automatico al restore que sobrescribe archivo existente
       (no aplica a todas las ediciones/importaciones/borrados)
@@ -1097,9 +1210,9 @@ Fase parcialmente cubierta; regex/sed/patch/jq y validadores pendientes.
 
 ## FASE 4 - Observabilidad
 
-- [ ] Modal con vista de diff (git diff integrado)
+- [x] Modal con vista de diff (git diff integrado; "Ver cambios" y revision de commit)
 - [ ] Grafo de Git (git log --graph --all)
-- [ ] Estado de archivos (working, staged, committed)
+- [x] Estado de archivos (working, staged, committed; barra Git y `!git status`)
 - [ ] Progreso de operaciones en vivo
 - [ ] Eventos y errores en tiempo real
 - [ ] Hash antes/despues en cada edicion
@@ -1119,6 +1232,14 @@ por que y que resultado produjo cada operacion.
 - [ ] Errores como entrada del siguiente paso
 - [ ] Validacion de sintaxis antes de enviar
 - [x] Propuestas revisables en editor, aplicacion solo confirmada
+
+### 5C - Otros sitios de chat
+
+- [x] ChatGPT: adaptador experimental (1.5.38)
+- [x] Gemini: adaptador experimental (ver seccion especifica)
+- [x] Claude: adaptador experimental (1.5.40, ver seccion especifica)
+- [ ] Confirmar ChatGPT, Gemini y Claude con cuenta real
+- [x] Textos de interfaz: "DeepSeek" se sustituye por el sitio actual (1.5.40)
 
 ### 5B - Bifurcacion (no implementada)
 
@@ -1222,6 +1343,7 @@ Criterio de salida: sin remoto, todo funciona. Con remoto, es opt-in.
 - [x] Consultar texto de HEAD/version historica con git show ref:archivo
       (1.5.17; lectura, no descarga exacta)
 - [x] Descargar archivo actual del working tree con boton (bytes exactos, 1.5.18)
+- [x] Exportar/importar disco completo como ZIP, con `.git` y checkpoints (1.5.38)
 - [ ] Descargar version confirmada HEAD con bytes exactos
 - [ ] Descargar version historica (git show <commit>:<file>)
 - [ ] Descargar repo completo (git archive)
@@ -1267,17 +1389,20 @@ Criterio de salida: el sistema no solo ejecuta, ensena.
 
 ## Estado actual
 
-| Fase | Estado                            |
-| ---- | --------------------------------- |
-| 0    | ✅ Base local probada; WASM solo en laboratorio |
-| 0.5  | 🟡 Userscript leido; falta modelo y cierre/reapertura |
-| 1    | 🟡 Git local y diff probados; faltan ignore y criterio de cierre |
-| 2    | 🟡 Candidato/hash/journal; falta recuperacion |
-| 3-4  | ⏳ Pendientes |
-| 5    | 🟡 Panel dual; falta protocolo y ramas |
-| 6-10 | ⏳ Pendientes |
-| 11   | ⏳ Remoto y autenticacion no implementados |
-| 12-13| ⏳ Pendientes |
+| Fase  | Estado |
+| ----- | ------ |
+| 0     | ✅ Base local probada; WASM solo en laboratorio |
+| 0.5   | 🟡 Interfaces documentadas; falta modelo comando/commit/experimento/receta y prueba de cierre/reapertura |
+| 1     | 🟡 Git local: init, add, commit, log, diff, show, branch, checkout, restore; faltan checkout de commit, `log --graph` y `.gitignore` |
+| 2     | 🟡 Candidato, hash, journal y recuperacion al iniciar; faltan rename atomico, inventario y cobertura de cp/mv/import/rm |
+| 3     | 🟡 propose/replace con diff y aprobacion; faltan regex/sed/patch/jq y validadores |
+| 4     | 🟡 Diff y estado Git en modal; faltan grafo, historial por archivo y progreso en vivo |
+| 5     | 🟡 Panel dual, protocolo `dv` y boton de revision (DeepSeek verificado; ChatGPT, Gemini y Claude experimentales); falta bifurcacion |
+| 6-9   | ⏳ Pendientes |
+| 10    | 🟡 Checkpoints (show/diff/prune); faltan arbol de ramas, experimentos y recetas |
+| 11    | ⏳ Remoto y autenticacion no implementados |
+| 12    | 🟡 Descarga actual y ZIP completo; faltan version historica exacta y `git archive` |
+| 13    | ⏳ Pendientes |
 
 ## La frase que resume
 
