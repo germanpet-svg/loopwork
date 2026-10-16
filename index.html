@@ -3,88 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Loopwork — Editor de código con IA, Git local y control humano</title>
-<meta name="description" content="Loopwork permite revisar y aprobar cambios de código propuestos por ChatGPT, DeepSeek, Gemini y Claude. Editor con diff, archivos locales, checkpoints y Git en el navegador.">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-<meta name="author" content="Germán Peña">
-<meta name="application-name" content="Loopwork">
-<meta name="keywords" content="Loopwork, editor de código con IA, programación con inteligencia artificial, revisión de código, diff de código, Git local, editor en navegador, ChatGPT, DeepSeek, Gemini, Claude, privacidad de código">
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<link rel="canonical" href="https://geeknome.com/loopwork/">
-<meta name="theme-color" content="#f2f4f1">
-<meta property="og:locale" content="es_ES">
-<meta property="og:site_name" content="Loopwork">
-<meta property="og:title" content="Loopwork — La IA propone. Tú decides.">
-<meta property="og:description" content="Revisa, aprueba o rechaza los cambios de código sugeridos por la IA. Editor, diff, checkpoints y Git local, con control humano.">
+<title>loopwork: la IA propone, tú decides</title>
+<meta name="description" content="Taller local de archivos y código dentro de DeepSeek, ChatGPT, Gemini y Claude. Cada cambio de la IA llega como un diff que tú revisas y apruebas. Todo en tu navegador, con Git local.">
+<meta property="og:title" content="loopwork: la IA propone, tú decides">
+<meta property="og:description" content="Disco virtual, editor, Git local y checkpoints dentro del chat de tu IA. Nada se escribe sin tu aprobación.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://geeknome.com/loopwork/">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Loopwork — La IA propone. Tú decides.">
-<meta name="twitter:description" content="Un taller local de archivos y código para trabajar con asistentes de IA sin perder el control de tus cambios.">
-<meta property="og:updated_time" content="2026-10-15T00:00:00Z">
-<meta name="color-scheme" content="light dark">
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "SoftwareApplication",
-      "@id": "https://geeknome.com/loopwork/#software",
-      "name": "Loopwork",
-      "url": "https://geeknome.com/loopwork/",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Navegador compatible con Chromium; Tampermonkey para instalar el userscript",
-      "description": "Taller local de archivos y código integrado en interfaces de asistentes de IA. Permite revisar diferencias de código, aprobar o rechazar cambios, usar checkpoints y trabajar con Git local.",
-      "softwareVersion": "1.5.41",
-      "inLanguage": ["es", "en", "zh-Hans"],
-      "author": {
-        "@type": "Person",
-        "name": "Germán Peña",
-        "url": "https://geeknome.com/"
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "Geeknome",
-        "url": "https://geeknome.com/"
-      },
-      "featureList": [
-        "Revisión de cambios mediante diff",
-        "Aprobación explícita antes de aplicar cambios",
-        "Checkpoints por archivo",
-        "Git local",
-        "Almacenamiento en el navegador o carpeta local",
-        "Exportación e importación ZIP"
-      ]
-    },
-    {
-      "@type": "WebPage",
-      "@id": "https://geeknome.com/loopwork/#webpage",
-      "url": "https://geeknome.com/loopwork/",
-      "name": "Loopwork — Editor de código con IA, Git local y control humano",
-      "description": "Conoce Loopwork, un taller local para revisar y controlar los cambios de código sugeridos por asistentes de IA.",
-      "inLanguage": "es",
-      "isPartOf": {
-        "@type": "WebSite",
-        "@id": "https://geeknome.com/#website",
-        "url": "https://geeknome.com/",
-        "name": "Geeknome"
-      },
-      "about": {"@id": "https://geeknome.com/loopwork/#software"}
-    }
-  ]
-}
-</script>
+<meta name="theme-color" content="#f5f5f5">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2317201b'/%3E%3Cpath d='M9 11h9a5 5 0 010 10H9' fill='none' stroke='%236fd59a' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M12 8l-3 3 3 3' fill='none' stroke='%23f2f4f1' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --paper: #f2f4f1;
+  --paper: #f5f5f5;
   --panel: #ffffff;
-  --ink: #17201b;
+  --ink: #1a1a1a;
   --muted: #55625a;
   --rule: #d3dad4;
   --add: #1b7447;
@@ -130,8 +63,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent); text-underline-offset: 3px; }
-.skip-link { position: absolute; left: 12px; top: -100px; z-index: 1000; padding: 10px 14px; background: var(--ink); color: var(--on-ink); border-radius: 8px; }
-.skip-link:focus { top: 12px; }
 a:hover { text-decoration-thickness: 2px; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
@@ -217,7 +148,13 @@ h2 { font: 700 clamp(1.8rem, 3.6vw, 2.8rem)/1.05 var(--display); letter-spacing:
 .cycle h3 { font: 700 1.2rem/1.2 var(--display); margin: 0 0 6px; letter-spacing: -.015em; }
 .cycle p { margin: 0; color: var(--muted); font-size: .98rem; line-height: 1.5; }
 .who { font-weight: 600; color: var(--ink); }
-.cycle-note { margin: 40px 0 0; padding: 18px 20px; border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); max-width: 46em; }
+.cycle-note { margin: 40px 0 0; padding: 18px 22px; border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 8px; background: var(--paper); max-width: 46em; }
+
+/* demo del panel */
+.demo-figure { margin: 0; }
+.demo-figure img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--rule); box-shadow: 0 24px 48px -28px rgba(0,0,0,.25); }
+.demo-figure figcaption { margin-top: 14px; color: var(--muted); font-size: .95rem; max-width: 46em; }
+.demo-figure figcaption code { font-size: .9em; }
 
 /* qué incluye: lista de definiciones en dos columnas */
 .feat { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(32px, 6vw, 88px); margin: 0; }
@@ -281,9 +218,9 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
 }
 </style>
 </head>
-<body>\n<a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+<body>
 
-<div id="top"></div>\n<header class="top">
+<header class="top">
   <div class="wrap">
     <a class="brand" href="#top" aria-label="loopwork, inicio">
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><path d="M9 11h9a5 5 0 010 10H9" fill="none" stroke="var(--code-add)" stroke-width="3" stroke-linecap="round"/><path d="M12 8l-3 3 3 3" fill="none" stroke="var(--paper)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -291,6 +228,7 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
     </a>
     <nav aria-label="Principal">
       <a href="#ciclo">Cómo funciona</a>
+      <a href="#demo">Demo</a>
       <a href="#incluye">Qué incluye</a>
       <a href="#privacidad">Privacidad</a>
       <a href="#instalar">Instalar</a>
@@ -298,12 +236,12 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
   </div>
 </header>
 
-<main id="contenido">
+<main id="top">
   <div class="hero">
     <div class="wrap">
       <div>
         <h1><span style="display:block">La IA propone.</span><span style="display:block">Tú decides.</span></h1>
-        <p class="lead">Loopwork es un <strong>editor de código con IA y control humano</strong> que funciona dentro de DeepSeek, ChatGPT, Gemini y Claude. Cada cambio sugerido llega como un diff: lo revisas, lo aplicas o lo rechazas. Tus archivos permanecen en tu navegador o en la carpeta local que conectes.</p>
+        <p class="lead">loopwork es un taller local de archivos y código <strong>dentro de DeepSeek, ChatGPT, Gemini y Claude</strong>. Cada cambio que sugiere la IA llega como un diff: lo lees, lo aplicas o lo rechazas. Tus archivos nunca salen del navegador.</p>
         <div class="cta">
           <a class="btn" href="#instalar">Instalar loopwork</a>
           <a class="btn ghost" href="manual.md">Leer el manual</a>
@@ -345,6 +283,17 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
         <li><h3>Pruebas y versionas</h3><p><span class="who">Tú.</span> Ejecutas el archivo y guardas el resultado con un commit local.</p></li>
       </ol>
       <p class="cycle-note">Si el archivo cambió desde que la IA lo vio, el hash ya no coincide y la propuesta se rechaza. No hay cambios a una versión que ya no existe.</p>
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="wrap">
+      <h2>Así se ve dentro del chat</h2>
+      <p class="intro">El panel vive a la derecha del chat. Los comandos empiezan por <code>!</code> y se ejecutan en local: no se envían al servidor ni gastan tokens.</p>
+      <figure class="demo-figure">
+        <img src="demo.gif" alt="Panel de loopwork dentro de DeepSeek: explorador OPFS, botones de Git, entrada de comandos locales y editor con vista previa en vivo." loading="lazy">
+        <figcaption>Grabación real dentro de <code>chat.deepseek.com</code>: <code>!git status</code>, explorador OPFS y primeros pasos guiados. Sin cortes ni edición.</figcaption>
+      </figure>
     </div>
   </section>
 
@@ -392,7 +341,7 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
         <article class="site"><span class="tag ok">Verificado en uso real</span><h3>DeepSeek</h3><p class="host">chat.deepseek.com</p><p>Todo el ciclo, incluida la recuperación tras un cierre interrumpido.</p></article>
         <article class="site"><span class="tag exp">Experimental</span><h3>ChatGPT</h3><p class="host">chatgpt.com</p><p>Comprobado sin iniciar sesión. Falta confirmarlo con una cuenta real.</p></article>
         <article class="site"><span class="tag exp">Experimental</span><h3>Gemini</h3><p class="host">gemini.google.com</p><p>Comprobado sin iniciar sesión. Ejecutar JavaScript no está disponible por la política de seguridad del sitio.</p></article>
-        <article class="site"><span class="tag exp">Experimental · nuevo</span><h3>Claude</h3><p class="host">claude.ai</p><p>Añadido en 1.5.40. La edición se probó con un ProseMirror real; falta confirmarlo en claude.ai con una cuenta.</p></article>
+        <article class="site"><span class="tag ok">Verificado en uso real</span><h3>Claude</h3><p class="host">claude.ai</p><p>El mismo userscript, con el adaptador de sitio y el guardia de foco. El ciclo completo funciona en claude.ai.</p></article>
       </div>
     </div>
   </section>
@@ -403,7 +352,7 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
         <h2>Instálalo en tres pasos</h2>
         <ol>
           <li>Usa un navegador <strong>Chromium</strong> (Chrome, Edge, Brave) e instala <a href="https://www.tampermonkey.net/">Tampermonkey</a>.</li>
-          <li>Crea un script nuevo y pega completo <a href="deepseek-disco.user.js"><code>deepseek-disco.user.js</code></a>, incluida la cabecera.</li>
+          <li>Crea un script nuevo y pega completo <a href="loopwork.js"><code>loopwork.js</code></a>, incluida la cabecera.</li>
           <li>Abre o recarga el chat. Verás el panel con <strong>v1.5.41</strong>.</li>
         </ol>
         <a class="btn" href="manual.md">Seguir con el manual</a>
