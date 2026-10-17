@@ -1,10 +1,10 @@
 # Roadmap: Entorno de edicion y analisis local (OPFS + WASM + Git)
 
-Proyecto: **loopwork** (userscript `deepseek-disco.user.js`). Documentos
+Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.5.41)
+## Estado de un vistazo (1.5.43)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -18,6 +18,7 @@ registrada, mas validaciones en navegador con OPFS nativo):
 - Checkpoints por archivo (listar, ver, comparar, restaurar, limpiar).
 - Vista previa HTML conectada y JavaScript de consola aislado.
 - Interfaz en espanol, ingles y chino simplificado.
+- Extension de Chrome (MV3) generada desde el mismo userscript, sin permisos.
 
 **Verificado en uso real:** DeepSeek (chat.deepseek.com).
 **Experimental:** ChatGPT y Gemini (solo verificados en sesion anonima;
@@ -247,6 +248,56 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## La vista previa del editor se restaura (1.5.43)
+
+Reporte: en el editor de un HTML, al cerrar y volver a abrir ya no aparecia la vista previa.
+
+- Causa: `liveOpen` nacia en `false` en cada apertura del editor y el panel arrancaba oculto,
+  asi que cada reapertura obligaba a pulsar **Vista previa** otra vez.
+- Arreglo: el estado se guarda en `localStorage` (`dv.editor.live.v1`, con try/catch por si no hay
+  almacenamiento). Al abrir un HTML se restaura el panel, el estado del boton y el primer render.
+  Minimizar, ampliar y restaurar ya conservaban la vista previa.
+- Comprobado en un navegador aislado: abrir, editar, guardar, cerrar y reabrir deja la vista previa abierta
+  con el contenido guardado; el boton la cierra al pulsarlo.
+- La pestana conectada (**Pestana**) se abre, se cierra y se vuelve a abrir correctamente; si la
+  pestana estaba cerrada se crea una nueva en lugar de reutilizar la anterior.
+- Cambio de nombre: el script pasa a llamarse `loopwork.js` (cabecera `@name loopwork`).
+
+## Extension de Chrome y arreglo de Ctrl+V (1.5.42)
+
+Problema reportado en claude.ai: Ctrl+V no pegaba dentro del panel.
+
+- Causa probable: el panel vive en un shadow DOM cerrado, asi que para el
+  documento el elemento enfocado es el host (un `div`), no un campo editable.
+  Los manejadores globales de `paste` del sitio lo tratan como "sin foco" y
+  desvian el texto a su propio composer (mismo mecanismo que el robo de foco de 1.5.39).
+- Userscript: `installClipboardGuard(host, shadow)` detiene `paste/copy/cut` en el
+  host (fase de burbuja) y, si el sitio ya cancelo el pegado, inserta el texto a mano
+  en el campo enfocado. Aplicado al panel y al editor.
+- Extension (`extension/`, generada con `tools/build-extension.py`):
+  - Manifest V3, `world: "MAIN"` (mismo contexto que `@grant none`), sin permisos
+    ni `host_permissions`; solo `content_scripts` para los cinco dominios.
+  - `early-guard.js` corre en `document_start`, antes que los scripts del sitio, y en
+    la fase de captura de `window` aisla `paste/copy/cut` cuyo `composedPath()` incluya
+    `#dv-host` o `#dv-code-editor`, sin cancelar el evento (la accion nativa sigue). Esto
+    cubre tambien los manejadores del sitio registrados en captura, que el userscript
+    (`document-idle`) no puede adelantar.
+  - `isomorphic-git@1.32.1` y `diff@7.0.0` van incluidos en `vendor/`: la extension
+    no descarga nada de jsDelivr ni de esm.sh. Las bibliotecas se bajan una vez de npm
+    al construir.
+  - El script de contenido de la extension no esta sujeto a la CSP de la pagina; los
+    Workers/iframes Blob de `run archivo.js` si lo siguen estando.
+  - Popup estatico con la version y los sitios.
+- Evidencia: extension cargada en Chromium (con `--load-extension`) sobre una
+  pagina falsa que imita el desvio de `paste` de claude.ai. El panel se monta, las
+  bibliotecas quedan como `window.git`/`window.Diff`, el sitio no ve los eventos `paste`
+  originados en el panel (si ve los de la pagina), y un Ctrl+V real escribe en el campo del
+  panel dejando vacio el composer del sitio.
+- **No probado** en claude.ai, chatgpt.com, gemini.google.com ni chat.deepseek.com reales.
+- Pendiente: publicar en Chrome Web Store (cuenta de desarrollador y revision),
+  opcion de actualizar sin regenerar la carpeta, y firmar/empaquetar `.crx`.
+- Nota: si se instalan a la vez el userscript y la extension aparecen dos paneles.
 
 ## Soporte experimental para Claude (1.5.40)
 

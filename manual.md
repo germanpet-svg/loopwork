@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.5.41.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.5.43.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -55,11 +55,16 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 
 1. Usa un navegador **Chromium** moderno (Chrome, Edge, Brave…).
 2. Instala [Tampermonkey](https://www.tampermonkey.net/) (o Violentmonkey).
-3. Crea un script nuevo y pega completo `deepseek-disco.user.js`.
+3. Crea un script nuevo y pega completo `loopwork.js`.
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.5.41**.
+5. Comprueba que el panel muestra **v1.5.43**.
+
+**Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
+abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
+No pide permisos, trae sus bibliotecas incluidas y evita que el chat intercepte **Ctrl+V** dentro del panel.
+Usa solo una vía a la vez: con el userscript y la extensión activos aparecerían dos paneles.
 
 **Actualizar:** pega la versión nueva *completa* (incluida la cabecera `==UserScript==`,
 porque ahí se declaran las bibliotecas) y recarga el chat. No dejes dos versiones activas.
@@ -151,7 +156,7 @@ puedes **mover** (arrastra la barra de título), **redimensionar** (esquina infe
 - Números de línea y **minimapa** clicable y arrastrable.
 - **Buscar/reemplazar** flotante con mayúsculas (`Aa`), expresiones regulares (`.*`) y `$1`.
 - Cierre automático de paréntesis, comillas y etiquetas HTML; sangría inteligente.
-- **HTML:** botón **Vista previa** (en vivo, sin scripts ni red) y **Pestaña** (se refresca al guardar).
+- **HTML:** botón **Vista previa** (en vivo, sin scripts ni red) y **Pestaña** (se refresca al guardar). La vista previa recuerda si la dejaste abierta y se restaura al reabrir el editor.
 - **JSON:** botón **Formatear**.
 - Tamaño de letra A−/A+ (se recuerda), Copiar, Pegar, Descargar borrador.
 - Barra de estado: línea/columna, selección, líneas, bytes, lenguaje, LF/CRLF.
@@ -492,6 +497,7 @@ interpreta escapes de shell como `\n`.
 | La vista previa dejó de actualizarse | La página del chat se recargó: pulsa **Ejecutar** otra vez |
 | `run archivo.js` falla en Gemini (o en Claude) | La política de seguridad del sitio bloquea Workers; prueba fuera del chat |
 | En Claude, el mensaje se queda en la entrada o el envío se cancela (v1.5.41 busca el botón por su etiqueta, también en español, y usa Enter si no lo halla; el panel lista los botones que ve) |
+| **Ctrl+V** no pega en el panel o el texto aparece en el chat (claude.ai) | Actualiza a 1.5.42. Si sigue pasando con el userscript, usa la extensión de Chrome: registra el aislamiento antes que los scripts del sitio. Mientras tanto, el botón **Pegar** del editor usa el portapapeles directamente |
 | En Claude, el texto compartido no llega o el envío se cancela | El compositor de claude.ai es experimental: vacía la entrada, reintenta y, si persiste, copia el mensaje a mano y repórtalo con tu versión |
 | Error de Git "sin inicializar" | Pulsa **Inicializar Git local** o `!git init` |
 | `checkout bloqueado` | Haz commit o conserva tus archivos; no hay `--force` |

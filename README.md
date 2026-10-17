@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.5.41**. **135 pruebas Node** y validaciones aisladas en navegador.
+Versión actual: **1.5.43**. **135 pruebas Node** y validaciones aisladas en navegador.
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -61,6 +61,7 @@ escribe sin tu aprobación.
 - Importación múltiple desde la PC y descarga de archivos con sus bytes originales.
 - Botones por archivo: **Editar · Ejecutar · Descargar · Eliminar**.
 - Editor de código con resaltado, minimapa, buscar/reemplazar (regex), vista previa HTML en vivo, diff y aprobación.
+- La **Vista previa** del editor HTML recuerda si estaba abierta: al cerrar y volver a abrir el editor se restaura.
 - **Nuevo archivo…** (o `!edit pagina.html`): editor en blanco para pegar código; nunca sobrescribe.
 - Escrituras transaccionales (temporal verificado + journal PREPARED/COMMITTED) con recuperación al iniciar.
 - Propuestas JSON con hash para evitar aplicar cambios a una versión obsoleta.
@@ -102,7 +103,24 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.5.41**.
+5. Comprueba que el panel muestra **v1.5.43**.
+
+### Alternativa: extensión de Chrome
+
+La misma funcionalidad está disponible como **extensión de Chrome** (Manifest V3,
+Chrome 111 o superior; también Edge y Brave). No necesita Tampermonkey, **no pide
+ningún permiso** y lleva `isomorphic-git` y `diff` dentro, así que no descarga
+nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la página,
+lo que corrige que **Ctrl+V** no pegara en claude.ai.
+
+1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
+   `loopwork-extension-1.5.43.zip`).
+2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
+3. Elige la carpeta `extension/` y recarga el chat.
+
+**Usa una sola vía:** si instalas la extensión, desactiva o borra el userscript en Tampermonkey; con las dos
+activas aparecerían dos paneles. Para actualizar, vuelve a generar la carpeta y pulsa el botón de recarga de la
+extensión en `chrome://extensions`. Aún no está en Chrome Web Store.
 
 No hace falta npm para usarlo. Sí hace falta el gestor de userscripts; si el
 navegador exige permisos adicionales para ejecutarlos, concédelos al gestor.
@@ -680,6 +698,7 @@ Archivos principales:
 
 - [loopwork.js](./loopwork.js): implementación.
 - [tests/userscript.test.cjs](./tests/userscript.test.cjs): regresiones Node.
+- [tools/build-extension.py](./tools/build-extension.py): genera la extensión de Chrome (`extension/`) a partir del userscript.
 - [manual.md](./manual.md): manual del usuario.
 - [index.html](./index.html): portada del proyecto (apta para GitHub Pages).
 - `laboratorio.html`: laboratorio separado de pruebas OPFS/Git (antes llamado
