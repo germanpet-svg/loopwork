@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.7.0**. **135 pruebas Node** más una suite nueva en `tests/` (cobertura de traducciones y e2e en Chromium).
+Versión actual: **1.7.1**. **135 pruebas Node** más una suite nueva en `tests/` (cobertura de traducciones y e2e en Chromium).
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -103,7 +103,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.7.0**.
+5. Comprueba que el panel muestra **v1.7.1**.
 
 ### Alternativa: extensión de Chrome
 
@@ -114,7 +114,7 @@ nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la p�
 lo que corrige que **Ctrl+V** no pegara en claude.ai.
 
 1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
-   `loopwork-extension-1.7.0.zip`).
+   `loopwork-extension-1.7.1.zip`).
 2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
 3. Elige la carpeta `extension/` y recarga el chat.
 
@@ -708,7 +708,7 @@ Archivos principales:
   `index.html`); sus pruebas no se integran automáticamente en el userscript.
 - [roadmap.md](./roadmap.md): avances, evidencia y pendientes.
 
-Suite nueva (1.7.0), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
+Suite nueva (1.7.1), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
 traducción y ejercita en Chromium las copias previas, `git log/diff`, `patch`, `--regex`, `diag`, el pegado y la vista previa
 del editor (`cd tests/e2e && npm install && npm test`).
 

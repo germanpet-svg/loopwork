@@ -4,7 +4,7 @@ Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.6.2)
+## Estado de un vistazo (1.7.1)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -294,6 +294,16 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## Teclado aislado de la página (1.7.1)
+
+- Sintoma (ChatGPT): lo escrito en el panel pasaba al chat. Causa probable: el sitio lleva lo tecleado al composer si el
+  foco no esta en un campo editable, y con el shadow DOM cerrado el destino visible es el contenedor del panel.
+  **No se pudo confirmar en ChatGPT real** (sin cuenta); se reprodujo con una pagina que imita ese comportamiento.
+- Arreglo: `@run-at document-start` (y la extension tambien en `document_start`) para registrar primero, en captura de
+  `window`, un guard que no deja pasar keydown/keypress/keyup del panel a la pagina y los reenvia como copia al elemento enfocado
+  (Enter, historial, atajos del editor siguen funcionando). Alt+Shift+D se maneja ahi.
+- Pruebas: `keyboard-guard.test.mjs` (falla sin el guard: reproduce el sintoma).
 
 ## Multiarchivo, tarea compartida y visibilidad del panel (1.7.0)
 

@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.7.0.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.7.1.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.7.0**.
+5. Comprueba que el panel muestra **v1.7.1**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -131,7 +131,7 @@ se pide confirmación antes de reemplazarlo (y no hay deshacer automático).
 usuario y **conserva** `.git`, `.dv` (checkpoints y registro) y `.dv_tmp`. Si usas carpeta real,
 la confirmación te avisa de que son archivos reales de tu PC.
 
-**Copia previa automática (desde 1.7.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
+**Copia previa automática (desde 1.7.1).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
 reemplazar un destino con `cp`/`mv`, de importar un archivo o un ZIP sobre uno existente y de
 `write` sobre un archivo con contenido distinto, loopwork guarda un **checkpoint** del archivo
 afectado (etiquetas «Antes de rm», «Antes de cp», «Antes de importar»…). La confirmación te dice
@@ -532,6 +532,7 @@ interpreta escapes de shell como `\n`.
 | En Claude, el mensaje se queda en la entrada o el envío se cancela | Desde 1.5.41 se busca el botón por su etiqueta (también en español) y se usa Enter si no aparece. Si persiste, pulsa **Diagnóstico** y adjunta el informe al reportarlo |
 | **Ctrl+V** no pega en el panel o el texto aparece en el chat (claude.ai) | Actualiza a 1.5.42. Si sigue pasando con el userscript, usa la extensión de Chrome: registra el aislamiento antes que los scripts del sitio. Mientras tanto, el botón **Pegar** del editor usa el portapapeles directamente |
 | En Claude, el texto compartido no llega o el envío se cancela | El compositor de claude.ai es experimental: vacía la entrada, reintenta y, si persiste, copia el mensaje a mano y repórtalo con tu versión |
+| Lo que escribo en el panel aparece en el chat (ChatGPT) | Actualiza a 1.7.1: el teclado del panel queda aislado de la página. El script ahora arranca en `document-start`; si Tampermonkey no lo aplica, abre el script, comprueba que la cabecera dice `@run-at document-start` y recarga el chat. Si persiste, pulsa **Diagnóstico** y adjunta el informe |
 | Error de Git "sin inicializar" | Pulsa **Inicializar Git local** o `!git init` |
 | `checkout bloqueado` | Haz commit o conserva tus archivos; no hay `--force` |
 | Aviso POSIBLE FUGA | Revisa el chat; es solo una alerta heurística |

@@ -3,7 +3,7 @@
 // @name:en      loopwork (Dual-Channel OPFS + Git)
 // @name:zh-CN   loopwork（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.7.0
+// @version      1.7.1
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -15,19 +15,52 @@
 // @require      https://cdn.jsdelivr.net/npm/isomorphic-git@1.32.1/index.umd.min.js
 // @require      https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js
 // @grant        none
-// @run-at       document-idle
+// @run-at       document-start
 // @noframes
 // ==/UserScript==
 
 (function () {
   'use strict';
+
+  // ============================================================
+  // AISLAMIENTO DE TECLADO (se instala lo primero, antes que los scripts del sitio)
+  // Algunos sitios (ChatGPT) llevan lo que escribes al composer cuando el foco no está en un campo
+  // editable; con el shadow DOM cerrado la página ve como destino el contenedor del panel. Aquí, en la
+  // fase de captura de window, el evento del teclado no llega a la página: se reenvía como copia al
+  // elemento enfocado del panel (la acción nativa de escribir no se toca) y, si el panel la cancela
+  // (Enter, flechas, atajos del editor), se cancela también el original.
+  // ============================================================
+  const guardedHosts = new Map(); // contenedor -> shadowRoot
+  for (const type of ['keydown', 'keypress', 'keyup']) {
+    window.addEventListener(type, (e) => {
+      // Alt+Shift+D muestra/oculta el panel desde cualquier sitio, también con el foco dentro del panel.
+      if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyD') {
+        e.stopImmediatePropagation(); e.preventDefault();
+        if (type === 'keydown' && !e.repeat) ui?.toggleVisible?.();
+        return;
+      }
+      const path = e.composedPath ? e.composedPath() : [];
+      const host = path.find((node) => guardedHosts.has(node));
+      if (!host) return;
+      e.stopImmediatePropagation();
+      const target = guardedHosts.get(host).activeElement;
+      if (!target) return;
+      const relay = new KeyboardEvent(type, {
+        key: e.key, code: e.code, location: e.location, repeat: e.repeat, isComposing: e.isComposing,
+        ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
+        keyCode: e.keyCode, charCode: e.charCode, which: e.which, bubbles: true, cancelable: true, composed: false
+      });
+      target.dispatchEvent(relay);
+      if (relay.defaultPrevented) e.preventDefault();
+    }, true);
+  }
   if (window.top !== window.self) return;
 
   // ============================================================
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.7.0',
+    VERSION: '1.7.1',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -7106,9 +7139,7 @@
   const PANEL_HIDDEN_PREF = 'dv.panel.hidden.v1';
   // Mostrar/ocultar desde fuera del panel: icono de la extensión (evento) y atajo Alt+Shift+D.
   window.addEventListener('loopwork:toggle', () => ui?.toggleVisible?.());
-  document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyD') { e.preventDefault(); ui?.toggleVisible?.(); }
-  }, true);
+
   const uiLog = (m, c) => { if (ui) ui.log(m, c); };
 
   // Algunos chats (p. ej. ChatGPT) reenfocan su propio composer ante cualquier
@@ -7123,6 +7154,8 @@
   // desvían el texto a su propio composer. El host aísla estos eventos de la página y, si el
   // sitio ya canceló el pegado, el texto se inserta a mano en el campo enfocado.
   function installClipboardGuard(host, shadow) {
+    for (const known of guardedHosts.keys()) if (!known.isConnected && known !== host) guardedHosts.delete(known);
+    guardedHosts.set(host, shadow);
     for (const type of ['paste', 'copy', 'cut']) host.addEventListener(type, (e) => e.stopPropagation());
     shadow.addEventListener?.('paste', (e) => {
       if (!e.defaultPrevented) return;
