@@ -1,0 +1,1 @@
+console.log('Hola desde el Worker'); const x = 40 + 2; console.log('40 + 2 =', x);

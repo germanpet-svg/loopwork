@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.5.43**. **135 pruebas Node** y validaciones aisladas en navegador.
+Versión actual: **1.6.0**. **135 pruebas Node** más una suite nueva en `tests/` (cobertura de traducciones y e2e en Chromium).
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -103,7 +103,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.5.43**.
+5. Comprueba que el panel muestra **v1.6.0**.
 
 ### Alternativa: extensión de Chrome
 
@@ -114,7 +114,7 @@ nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la p�
 lo que corrige que **Ctrl+V** no pegara en claude.ai.
 
 1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
-   `loopwork-extension-1.5.43.zip`).
+   `loopwork-extension-1.6.0.zip`).
 2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
 3. Elige la carpeta `extension/` y recarga el chat.
 
@@ -373,7 +373,7 @@ La vista previa:
   sus protecciones; `DOMParser` por sí solo tampoco evita Trusted Types.
 - Requiere mantener la página de DeepSeek abierta. Si la cierras o recargas,
   vuelve a pulsar **Ejecutar** para crear una nueva conexión. Si el archivo falta,
-  no es UTF-8 válido o supera 256 KB, muestra un error y retira la vista anterior.
+  no es UTF-8 válido o supera 1 MB, muestra un error y retira la vista anterior.
 
 Permite ventanas emergentes para DeepSeek si el navegador bloquea la pestaña.
 No hay sincronización automática con cambios de otra instancia del userscript:
@@ -489,13 +489,14 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!ls [-R] [ruta]` | Lista contenido del disco |
 | `!cat [archivo...]` / `!head [-n N] [archivo]` | Lee texto; también aceptan entrada de pipeline |
 | `!grep [-i] [-n] [-F] patrón [archivo]` | Regex por líneas, sin distinguir mayúsculas con `-i`, numeradas con `-n`, literales con `-F`; acepta pipes |
-| `!write archivo texto` | Guarda texto mediante candidato y verificación |
+| `!write archivo texto` | Guarda texto mediante candidato y verificación; si reemplaza contenido distinto, checkpoint previo |
 | `!save archivo` | Guarda el último resultado textual; no exporta bytes históricos |
 | `!cp origen destino` / `!mv origen destino` | Copia bytes verificados; mv confirma y borra origen tras comprobarlo |
-| `!rm [-r] ruta` | Borra una ruta tras confirmación, sin rollback |
+| `!rm [-r] ruta` | Borra una ruta tras confirmación; guarda antes un checkpoint de cada archivo de hasta 1 MB (recupera con `!restore`) |
 | `!view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
-| `!propose propuesta.json` | Prepara un cambio JSON para el editor |
-| `!replace archivo old new [--all] [--hash SHA256] [--dry-run]` | Literal único o todas las coincidencias no solapadas; diff/aprobación obligatorios |
+| `!propose propuesta.json` | Prepara un cambio JSON (`replace`, `insert-before/after`, `append` o `patch` con diff unificado exacto) para el editor |
+| `!replace archivo old new [--all] [--regex] [--hash SHA256] [--dry-run]` | Literal único o todas las coincidencias no solapadas (o regex con `$1`); diff/aprobación obligatorios |
+| `!diag` (botón **Diagnóstico**) | Informe del sitio y del script para reportar fallos; sin mensajes ni archivos |
 | `!run archivo.html` / `!run archivo.js` | HTML estático en pestaña conectada o JS de consola aislado |
 | `!edit archivo` | Abre el editor; si no existe, empieza en blanco y lo crea al guardar |
 | `!journal [-n N]` | Consulta el journal con el estado de cada escritura (PREPARED/COMMITTED/ABORTED/CONFLICT) |
@@ -509,8 +510,9 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!git status` | Cambios staged/unstaged y sin seguimiento |
 | `!git add archivo` / `!git add --all` | Staging, incluidos borrados; metadatos internos excluidos |
 | `!git commit -m "mensaje"` | Commit con cambios staged |
-| `!git log` | Últimos diez commits |
-| `!git diff [--staged] [ref]` | Staging/HEAD/ref frente a staging o working tree; no dos commits |
+| `!git log [--oneline] [-n N] [-- archivo]` | Últimos commits (10 por defecto, máx. 200); con `-- archivo`, solo los que lo tocan |
+| `!git diff [--staged] [ref]` | Staging/HEAD/ref frente a staging o working tree |
+| `!git diff A B` | Diff entre dos commits o ramas (SHA abreviado válido); no toca el working tree |
 | `!git show [ref]` | Metadatos del commit; no su diff |
 | `!git show ref:archivo` | Texto de archivo histórico sin restaurarlo |
 | `!git restore archivo` | Vuelve a la versión del staging, con diff y checkpoint previo |
@@ -558,7 +560,7 @@ ni redirecciones.
 !restore ID
 ```
 
-- Copias hasta 256 KB, con bytes originales y hash en `.dv/checkpoints`.
+- Copias hasta 1 MB, con bytes originales y hash en `.dv/checkpoints`.
 - Listado reciente primero; `--file` compara ruta normalizada y `--tag` busca
   texto literal en la etiqueta, sensible a mayúsculas.
 - Contenido/diff requieren UTF-8 sin NUL; metadatos admiten binarios.
@@ -656,7 +658,7 @@ puede tener falsos positivos/negativos.
 | Operación | Límite actual |
 |---|---|
 | Compartir archivo | 64 KB, UTF-8 sin NUL |
-| Editor, propuestas, checkpoints, run, show histórico | 256 KB por archivo/candidato |
+| Editor, propuestas, checkpoints, run, show histórico | 1 MB por archivo/candidato |
 | Importación/copia verificada | 512 MB por archivo; hashing usa memoria |
 | JS aislado | 3 segundos, 100 mensajes y unos 20 KB de logs |
 | Vista de resultados en log | 800 caracteres; Ayuda tiene vista completa |
@@ -705,6 +707,10 @@ Archivos principales:
   `index.html`); sus pruebas no se integran automáticamente en el userscript.
 - [roadmap.md](./roadmap.md): avances, evidencia y pendientes.
 
+Suite nueva (1.6.0), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
+traducción y ejercita en Chromium las copias previas, `git log/diff`, `patch`, `--regex`, `diag`, el pegado y la vista previa
+del editor (`cd tests/e2e && npm install && npm test`).
+
 Con Node.js moderno y npm:
 
 ```text
@@ -749,8 +755,8 @@ ni como una declaración de patrocinio o afiliación oficial con sus proveedores
 
 ## Roadmap y licencia
 
-Consulta [roadmap.md](./roadmap.md) (empieza por «Estado de un vistazo»). Las fases son parciales: faltan
-validadores, formateadores/linters, diff entre commits, exportación
+Consulta [roadmap.md](./roadmap.md) (empieza por «Estado de un vistazo» y el «Plan priorizado»). Las fases son parciales: faltan
+formateadores/linters, validadores más allá de JSON/JS/HTML básico, exportación
 histórica exacta, grafo, experimentos/recetas, Git remoto y motores adicionales.
 
 La licencia del proyecto **no está formalizada en un archivo LICENSE**.

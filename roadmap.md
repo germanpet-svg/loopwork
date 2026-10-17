@@ -4,7 +4,7 @@ Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.5.43)
+## Estado de un vistazo (1.6.0)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -15,7 +15,9 @@ registrada, mas validaciones en navegador con OPFS nativo):
 - Protocolo `dv` de propuestas con hash; boton **Revisar parche en DV**.
 - Git local (init, add, commit, log, diff, show, branch, checkout protegido,
   restore) y botones de guardado/revision/reversion sin escribir comandos.
-- Checkpoints por archivo (listar, ver, comparar, restaurar, limpiar).
+- Checkpoints por archivo (listar, ver, comparar, restaurar, limpiar) y **copia previa automatica** antes de rm, mv/cp que sobrescriben, importar, ZIP y write.
+- Propuestas `patch` (diff unificado exacto), `replace --regex`, avisos de validacion (JSON/JS/HTML), `git diff A B`, `git log --oneline/-n/-- archivo` y `!diag`.
+- Suite de navegador en `tests/e2e` (Playwright) y comprobacion de cobertura de traducciones en `tests/unit`.
 - Vista previa HTML conectada y JavaScript de consola aislado.
 - Interfaz en espanol, ingles y chino simplificado.
 - Extension de Chrome (MV3) generada desde el mismo userscript, sin permisos.
@@ -26,19 +28,63 @@ falta confirmacion con cuenta real), Claude (claude.ai, nuevo en 1.5.40, sin
 probar con cuenta real), carpeta real, `run archivo.js` (no
 disponible en Gemini por CSP).
 
-**Siguiente, en este orden:**
+**Siguiente:** ver el [plan priorizado](#plan-priorizado-revision-2026-10-16).
 
-1. Confirmar ChatGPT, Gemini y Claude con una cuenta real y ajustar selectores.
-2. Cerrar la Fase 2: copia previa para `rm`/`mv`/importacion e inventario
-   antes/despues de cada operacion.
-3. Completar la Fase 1: `.gitignore` por defecto, checkout de commit y
-   `log --oneline/--graph`.
-4. Observabilidad (Fase 4): grafo de ramas e historial por archivo.
-5. Primer validador (Fase 6): JSON y sintaxis JS, diciendo con honestidad lo
-   que no se puede validar.
-6. Revisar los textos de interfaz que mencionan sitios concretos (desde 1.5.40
-   "DeepSeek" se sustituye por el nombre del sitio actual).
-7. Formalizar la licencia (archivo LICENSE) antes de presentarlo como MIT.
+## Plan priorizado (revision 2026-10-16)
+
+Revision de las 87 casillas pendientes. Criterio: **solo entra lo que mejora el
+bucle real** (compartir -> proponer -> revisar -> aplicar -> probar -> versionar),
+reduce el riesgo de perder datos o mantiene vivos los adaptadores de cada chat.
+Lo demas se aparca con motivo (abajo), en lugar de dejarlo como promesa.
+
+Esfuerzo: S = horas, M = uno o dos dias, L = una semana o mas.
+
+### Prioridad 1 - estabilidad y confianza (1.5.44 - 1.6.0)
+
+| # | Que | Por que sirve | Esf. | Hecho cuando |
+| - | --- | ------------- | ---- | ------------ |
+| 1 | ✅ **1.6.0** (parcial: arnes, claude.ai, editor, pegado, Git, copias; faltan fixtures de DeepSeek/ChatGPT/Gemini) **Pruebas de navegador en el repo** (Playwright): arnes con shadow DOM abierto, fixtures del DOM de cada sitio (composer, boton de enviar, bloques del asistente) y casos de editor, vista previa, pegado y Git | Los fallos de 1.5.39 a 1.5.43 (foco, boton de enviar localizado, Ctrl+V, vista previa) fueron de interfaz y las 135 pruebas Node no los cubren. Absorbe `!selftest` y el test "crear -> commit -> cerrar -> reabrir -> hash" | M | `npm run e2e` pasa y falla si se rompe un selector |
+| 2 | ✅ **1.6.0** **Diagnostico del sitio**: boton/`!diag` que genera un informe copiable (version, sitio, entrada, boton de enviar, bloques del asistente, CSP/Workers/Trusted Types, OPFS) sin datos del usuario | Confirmar ChatGPT, Gemini y Claude con cuentas reales sin depender de capturas; cada reporte trae lo necesario | S | El informe se genera en los 4 sitios y se pega en un issue |
+| 3 | ✅ **1.6.0** (variante: usa checkpoints y `!restore`, no `.dv/trash`; sin copia sobre 1 MB, y la confirmacion lo avisa) **Papelera y copia previa** en `rm`, `mv` que sobrescribe, importar archivo/ZIP y Eliminar todos: `.dv/trash/<id>/`, `!trash --list`, `!undelete ID`, purga confirmada | Cierra el hueco que la documentacion admite ("no hay copia antes de rm/mv/import") y cumple "reversible siempre" | M | Ninguna operacion del panel destruye bytes sin copia recuperable (hasta el limite) |
+| 4 | ✅ **1.6.0** **Traducciones sin excepcion**: si falta una clave, usar el espanol y registrar la clave en el log; prueba que lista claves sin traducir | Hoy `t()` lanza `Missing translation` en ingles/chino: peor que un texto sin traducir | S | Cambiar idioma nunca rompe una accion |
+| 5 | ⏳ **pendiente de decision del titular (licencia) y de la URL del repo** **LICENSE y empaque**: archivo de licencia, `@updateURL/@downloadURL`, nombre `loopwork.user.js` para instalar desde GitHub, politica de privacidad | Necesario para publicar y para que Tampermonkey actualice solo | S | Instalar desde la URL raw ofrece actualizacion |
+
+### Prioridad 2 - mejorar el bucle con la IA (1.6.x)
+
+| # | Que | Por que sirve | Esf. | Hecho cuando |
+| - | --- | ------------- | ---- | ------------ |
+| 6 | ✅ **1.6.0** **Propuesta `patch` (diff unificado)** y `replace --regex`: `Diff.applyPatch` ya esta cargado; hash obligatorio, sin tolerancia, rechazo si no aplica limpio; misma revision con diff | Los modelos escriben diffs con soltura; el `old` unico es fragil en cambios grandes | M | Un diff multi-hunk se aplica o se rechaza entero |
+| 7 | ✅ **1.6.0** **Validacion antes de aplicar**: JSON (`JSON.parse`), JS (solo compilar, sin ejecutar, si la CSP lo permite), HTML (etiquetas sin cerrar); resultado como aviso en la revision | Detecta propuestas rotas antes de guardar; si no puede validar, lo dice | S-M | La revision muestra "valido / invalido / no verificable" |
+| 8 | ⏳ **sin hacer** **Propuestas multiarchivo**: un `dv` con `changes: [...]`, una revision, verificar todos los hashes antes de escribir, checkpoint por archivo | Los cambios reales rara vez tocan un solo archivo | M-L | Si un archivo falla la verificacion no se escribe ninguno |
+| 9 | ⏳ **sin hacer** **Compartir con instruccion**: caja "que quieres cambiar" + archivos elegidos + arbol (`!tree`) en un envio, con tope de 64 KB y vista previa | Hoy son varios pasos manuales; es la mayor friccion del uso diario | M | De "elegir archivos" a "mensaje enviado" en un flujo |
+| 10 | ✅ **1.6.0** (sin `.gitignore` por defecto: los metadatos internos ya se excluyen) **Git para revisar**: `git diff A B` entre commits/ramas, `log --oneline`, `log -- archivo`, `.gitignore` por defecto | Es lo que falta para entender que cambio la IA (README lo lista como carencia) | M | Se ve el diff de cualquier par de commits |
+| 11 | ⏳ **sin hacer** **Descarga exacta de una version Git** (HEAD o SHA) y `git archive` como ZIP reutilizando el escritor ZIP | Entrega el resultado sin friccion; bytes exactos | S | Descargar `ref:archivo` coincide byte a byte |
+
+### Prioridad 3 - despues de usarlo con cuentas reales
+
+| # | Que | Nota |
+| - | --- | ---- |
+| 12 | **Modularizar** `src/*.js` + compilacion a `loopwork.js` y `extension/` | Hacerlo despues del punto 1, con la red de pruebas puesta |
+| 13 | **Probar en una rama**: aplicar la propuesta en una rama nueva sin tocar `main` | Util, pero exige reglas claras de `checkout` con cambios pendientes |
+| 14 | **Prettier opcional** (JS/CSS/JSON/MD/HTML), solo en la extension y empaquetado aparte | Un formateador cubre la mayoria del valor; el resto no compensa |
+| 15 | **`!test` minimo para JS**: aserciones en el Worker aislado, sin frameworks | Reemplaza la idea de ejecutar Jest/pytest en el navegador |
+| 16 | **Git remoto solo en la extension**, permisos opcionales y token en memoria | GitHub no permite CORS en git por HTTP desde una pagina; la extension si podria. Opt-in, con confirmacion antes de cada push |
+| 17 | **Vista de ramas en texto** (`log --graph` simple) | Antes que cualquier grafo visual |
+
+### Aparcado o descartado (con motivo)
+
+| Fase / item | Decision | Motivo |
+| ----------- | -------- | ------ |
+| 7 Formateadores Black, gofmt, rustfmt, shfmt | Aparcado | Cada uno exige su propio WASM y mantenimiento; el valor esta en Prettier |
+| 8 Linters ESLint, Ruff, Clippy, shellcheck | Aparcado | Igual que arriba; un linter completo no cabe en un userscript |
+| 9 Jest, Vitest, pytest, cargo test, go test | Descartado | Necesitan runtime, dependencias y sistema de archivos; se reformula como `!test` minimo (punto 15) |
+| 6 YAML, Python y Shell por WASM | Aparcado | Sin demanda; JSON/JS/HTML cubren el uso actual |
+| 10 Experimentos, recetas, registro de ideas | Aparcado | Es un producto aparte; antes hay que ver si alguien lo usa. Git + checkpoints ya guardan el rastro |
+| 13 Aprendizaje compartido, modo exploracion | Aparcado | Sin definicion concreta ni criterio de hecho |
+| 11 OAuth device flow, submodulos, hooks | Descartado | GitHub no ofrece CORS para ese flujo desde una pagina; el riesgo supera el beneficio |
+| 0.5 Modelo de datos comando/commit/experimento/receta | Aparcado | Solo tiene sentido si se retoma la Fase 10 |
+| `!git checkout <commit>` (HEAD separado) | Aparcado | `restore --source` ya cubre recuperar una version sin peligro |
+| `!sed`, `!jq` | Descartado | Se cubren con `replace --regex` y propuestas `patch` |
 
 ## Vision
 
@@ -248,6 +294,22 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## Mejoras de seguridad, revision y pruebas (1.6.0)
+
+- **Copia previa automatica** (checkpoint) antes de `rm`, `rm -r`, Eliminar todos, `cp`/`mv` que reemplazan, importar
+  archivo o ZIP sobre existentes y `write` con contenido distinto. La confirmacion informa de cuantas copias se
+  guardan y de los archivos que superan 1 MB (sin copia). Si la copia falla no se modifica nada.
+- **Limite real**: el codigo usa `MAX_RUN_BYTES = 1 MB`; los mensajes y documentos decian 256 KB. Se alineo todo a 1 MB.
+- `t()` ya no lanza `Missing translation`: usa el espanol y registra la clave (visible en `!diag`). Una prueba
+  de cobertura impide que falte alguna.
+- `!diag` / boton **Diagnostico**: informe sin datos personales (sitio, entrada, boton de enviar, CSP, bibliotecas).
+- Revision del editor: avisos de JSON no valido, sintaxis JS (solo compila, no ejecuta; "no verificable" en modulos o
+  con CSP estricta) y etiquetas HTML sin pareja. Son avisos, no bloquean.
+- Propuestas `operation: "patch"` (un archivo, hash obligatorio, sin tolerancia) y `replace --regex [--all]`.
+- Git: `git diff A B`, `git log --oneline`, `-n N`, `-- archivo`.
+- Pruebas: `tests/e2e` (Chromium) y `tests/unit` (traducciones). Las 135 pruebas Node anteriores no se pudieron
+  ejecutar en esta sesion (el repositorio recibido no incluia `tests/userscript.test.cjs`); ejecutalas antes de publicar.
 
 ## La vista previa del editor se restaura (1.5.43)
 
@@ -548,9 +610,9 @@ Evidencia reproducible:
 - [x] Ampliar/Reducir dentro de ventana; conserva posicion normal y comando.
       Drag bloqueado al ampliar; Contraer/Abrir accesible sin borrar borradores.
       Alineacion de filas revisada en 1.5.24 (ver arriba).
-- [ ] Editor integrado con navegacion Volver y estados borrador/aprobacion.
+- [x] Editor integrado con estados borrador/aprobacion (ventana propia; "Volver" ya no hace falta).
       Modal existente se conserva para no arriesgar guardias hash/diff.
-- [ ] Seleccion de archivo y acciones contextuales adicionales.
+- [x] Acciones por archivo (Editar, Ejecutar, Descargar, Eliminar) en cada fila.
 - Evidencia: 78 pruebas Node (incluye actualizacion busy durante espera/error);
   navegador localhost OPFS: bienvenida inicial, ejemplo sin ejecutar, recordar
   y reabrir tras reload, ampliar/reducir conserva entrada, busy deshabilita
@@ -753,7 +815,7 @@ explicita ni habilitar checkout que descarte borradores.
 - Referencias de commit: HEAD, rama o SHA completo; no implementa HEAD~N,
   SHA abreviado, opciones de Git nativo ni resolucion de tags anotados.
   El SHA completo se obtiene con git show, no del log abreviado.
-- Texto UTF-8 sin NUL hasta 256 KB; binarios/UTF-8 invalido se rechazan, sin
+- Texto UTF-8 sin NUL hasta 1 MB; binarios/UTF-8 invalido se rechazan, sin
   convertir bytes silenciosamente. La libreria carga el objeto antes de
   comprobar tamano: el limite no garantiza memoria ante objetos enormes.
 - Rutas raiz/traversal/metadatos protegidas. Repo/refs/objetos/archivo ausentes
@@ -1145,15 +1207,15 @@ Uso y limites de sharing:
 
 Proximos pendientes de estabilizacion:
 
-- [ ] Comprobar panel e interceptores en DeepSeek con el userscript instalado.
-- [ ] Integrar `!selftest` sobre un sandbox propio; no tocar el repo vigente.
+- [x] Panel e interceptores comprobados en DeepSeek real (1.5.34).
+- [ ] `!selftest` sobre un sandbox propio -> absorbido por las pruebas de navegador (plan, punto 1).
 - [x] `!cp` y `!mv` basicos para archivos, con reemplazo confirmado y copia
       verificada antes de borrar. Directorios y recuperacion quedan pendientes.
 - [x] No sobrescribir borradores del chat al compartir; limitar tamano,
       mostrar vista previa y manejar errores/timeouts de envio explicitamente.
 - [x] Parsear --share y --share-file como tokens, respetando comillas y
       contenido literal; ya no se extraen mediante regex sobre texto libre.
-- [ ] Journal: errores explicitos y recuperacion verificable ante fallos.
+- [x] Journal con recuperacion verificable (1.5.34).
 
 Nota: rm no ofrece deshacer automatico ni copia de recuperacion. Por eso
 requiere confirmacion incluso para archivos. Su implementacion no cierra
@@ -1176,9 +1238,9 @@ Cerrar antes de implementar el resto.
 
 - [x] Leer userscript real (shell de comandos, comunicacion con IA)
 - [x] Documentar interfaces existentes
-- [ ] Definir modelo de datos: comando / commit / experimento / receta
-- [ ] Disenar motor transaccional sobre interfaces reales
-- [ ] Test de integridad: crear -> commit -> cerrar -> reabrir -> hash
+- [ ] Definir modelo de datos: comando / commit / experimento / receta (aparcado: ver plan)
+- [x] Motor transaccional disenado e implementado (candidato + journal + recuperacion)
+- [ ] Test de integridad: crear -> commit -> cerrar -> reabrir -> hash (plan, punto 1)
 
 Criterio de salida: los cinco puntos resueltos y documentados.
 
@@ -1317,6 +1379,8 @@ que no puede ejecutar.
 
 ## FASE 7 - Formateadores
 
+> Estado: APARCADA salvo Prettier opcional; ver plan priorizado.
+
 - [ ] !format <file> (detecta lenguaje)
 - [ ] Prettier (JS/TS/JSON/CSS/MD)
 - [ ] Black (Python)
@@ -1328,6 +1392,8 @@ que no puede ejecutar.
 Criterio de salida: formatear produce candidato, no sobrescribe.
 
 ## FASE 8 - Linters
+
+> Estado: APARCADA; ver plan priorizado.
 
 - [ ] !lint <file> (detecta lenguaje)
 - [ ] ESLint (JS/TS)
@@ -1341,6 +1407,8 @@ Criterio de salida: problemas visibles en el modal con linea/col.
 
 ## FASE 9 - Tests
 
+> Estado: REFORMULADA como `!test` minimo para JS; ver plan priorizado.
+
 - [ ] !test (detecta framework y ejecuta)
 - [ ] Jest / Vitest (JS/TS)
 - [ ] pytest (Python)
@@ -1352,6 +1420,8 @@ Criterio de salida: problemas visibles en el modal con linea/col.
 Criterio de salida: dos ramas comparables por resultado de tests.
 
 ## FASE 10 - Arbol de decisiones
+
+> Estado: solo se conserva la vista de ramas en texto; experimentos y recetas, aparcados (ver plan priorizado).
 
 Va mas alla del grafo de Git.
 
@@ -1371,6 +1441,8 @@ Criterio de salida: el arbol conserva el conocimiento operativo
 de cada experimento, no solo el grafo.
 
 ## FASE 11 - Git remoto opcional
+
+> Estado: solo viable desde la extension, con permisos opcionales (ver plan priorizado, punto 16).
 
 No implementado en 1.5.23. Primero estabilizar Git local.
 Los nombres/emails de commits no autentican contra ningun servidor.
@@ -1404,6 +1476,8 @@ Criterio de salida: el usuario obtiene el resultado sin friccion.
 
 ## FASE 13 - Aprendizaje compartido
 
+> Estado: APARCADA; ver plan priorizado.
+
 - [ ] Historial de ideas surgidas en cada paso
 - [ ] Modo exploracion (no solo ejecucion)
 - [ ] Pausa + bifurcacion sin perder contexto
@@ -1426,17 +1500,10 @@ Criterio de salida: el sistema no solo ejecuta, ensena.
 
 ## Prioridad sugerida
 
-1. FASE 0.5 (investigacion + diseno) <- base de decisiones
-2. FASE 1 (Git local minimo) <- cimiento
-3. FASE 2 (motor transaccional) <- seguridad
-4. FASE 3 (primera edicion segura) <- primer valor real
-5. FASE 4 (observabilidad) <- ojos del bucle
-6. FASE 5 (chat del plugin + ramas) <- manos del bucle
-7. FASES 6-9 (validar/format/lint/test) <- calidad de codigo
-8. FASE 10 (arbol de decisiones) <- conocimiento
-9. FASE 11 (remoto, opcional) <- colaboracion
-10. FASE 12 (descarga) <- entrega
-11. FASE 13 (aprendizaje) <- alma del sistema
+Sustituida por el [plan priorizado](#plan-priorizado-revision-2026-10-16): primero
+estabilidad y confianza (pruebas de navegador, diagnostico, papelera, i18n, licencia),
+luego el bucle con la IA (patch, validacion, multiarchivo, compartir con
+instruccion, Git para revisar) y, al final, lo que depende del uso real.
 
 ## Estado actual
 
@@ -1449,11 +1516,11 @@ Criterio de salida: el sistema no solo ejecuta, ensena.
 | 3     | 🟡 propose/replace con diff y aprobacion; faltan regex/sed/patch/jq y validadores |
 | 4     | 🟡 Diff y estado Git en modal; faltan grafo, historial por archivo y progreso en vivo |
 | 5     | 🟡 Panel dual, protocolo `dv` y boton de revision (DeepSeek verificado; ChatGPT, Gemini y Claude experimentales); falta bifurcacion |
-| 6-9   | ⏳ Pendientes |
+| 6-9   | ⏳ Aparcadas o reformuladas (validacion basica en el plan, punto 7) |
 | 10    | 🟡 Checkpoints (show/diff/prune); faltan arbol de ramas, experimentos y recetas |
 | 11    | ⏳ Remoto y autenticacion no implementados |
 | 12    | 🟡 Descarga actual y ZIP completo; faltan version historica exacta y `git archive` |
-| 13    | ⏳ Pendientes |
+| 13    | ⏳ Aparcada |
 
 ## La frase que resume
 

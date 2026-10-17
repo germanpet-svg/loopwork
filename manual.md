@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.5.43.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.6.0.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.5.43**.
+5. Comprueba que el panel muestra **v1.6.0**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -131,6 +131,14 @@ se pide confirmación antes de reemplazarlo (y no hay deshacer automático).
 usuario y **conserva** `.git`, `.dv` (checkpoints y registro) y `.dv_tmp`. Si usas carpeta real,
 la confirmación te avisa de que son archivos reales de tu PC.
 
+**Copia previa automática (desde 1.6.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
+reemplazar un destino con `cp`/`mv`, de importar un archivo o un ZIP sobre uno existente y de
+`write` sobre un archivo con contenido distinto, loopwork guarda un **checkpoint** del archivo
+afectado (etiquetas «Antes de rm», «Antes de cp», «Antes de importar»…). La confirmación te dice
+cuántas copias se guardarán y cuántos archivos **no** tendrán copia por superar 1 MB. Si no puede
+guardar la copia, **no toca nada**. Recupera con `!checkpoint --list --tag "Antes de rm"` y
+`!restore ID`. Los archivos internos (`.git`, `.dv`, `.dv_tmp`) no se copian.
+
 ### Comandos de archivo
 
 ```text
@@ -186,7 +194,7 @@ puedes **mover** (arrastra la barra de título), **redimensionar** (esquina infe
 4. Tras guardar, el editor **sigue abierto** para continuar (las propuestas del chat sí se cierran).
 5. Cerrar con cambios sin guardar pide confirmación; la página avisa antes de cerrarse.
 
-Límite: 256 KB, UTF-8 sin bytes NUL. BOM y CRLF uniforme se conservan.
+Límite: 1 MB, UTF-8 sin bytes NUL. BOM y CRLF uniforme se conservan.
 
 ## 6. El ciclo con la IA
 
@@ -223,9 +231,14 @@ La IA debe responder con un único objeto JSON:
 |---|---|
 | `path` | Ruta exacta del archivo |
 | `hash` | SHA256 completo (64 hex minúsculas) de la versión que la IA vio; no debe inventarlo |
-| `operation` | `replace`, `insert-before`, `insert-after` o `append` |
-| `old` | Texto exacto que aparece **una sola vez** (no se usa en `append`) |
+| `operation` | `replace`, `insert-before`, `insert-after`, `append` o `patch` |
+| `old` | Texto exacto que aparece **una sola vez** (no se usa en `append` ni `patch`) |
 | `new` | Texto exacto a insertar; los saltos se escriben `\n` (o `\r\n`) |
+| `patch` | Solo con `operation: "patch"`: un diff unificado de **un** archivo (sin `old`/`new`) |
+
+**`patch` para cambios grandes.** Cada *hunk* debe coincidir exactamente donde dice (sin
+tolerancia a líneas desplazadas); si uno falla se rechaza todo y el archivo no se toca. El hash
+sigue siendo obligatorio y el cambio pasa por el mismo diff y la misma aprobación.
 
 Si el hash es obsoleto, el bloque aparece dos veces o no aparece, la propuesta se **rechaza**.
 
@@ -276,7 +289,10 @@ Todo es local: no hay remoto, no hace falta cuenta de GitHub.
 !git add --all
 !git commit -m "mensaje"
 !git log
+!git log --oneline -n 5
+!git log -- index.html          # solo commits que tocan ese archivo
 !git diff            # working tree vs staging
+!git diff 3d681c2 a007fc0       # entre dos commits o ramas
 !git diff --staged   # staging vs HEAD
 !git show HEAD:index.html
 !git branch experimento
@@ -286,8 +302,8 @@ Todo es local: no hay remoto, no hace falta cuenta de GitHub.
 
 Notas importantes:
 
-- Referencias válidas: `HEAD`, nombre de rama o **SHA completo** (no abreviado, ni `HEAD~N`).
-- `git show ref:archivo` lee texto UTF-8 hasta 256 KB; para traerlo de vuelta usa `git restore`
+- Referencias válidas: `HEAD`, nombre de rama o **SHA completo** (no `HEAD~N`). `git diff A B` y `git log` también aceptan SHA abreviado (7+ caracteres).
+- `git show ref:archivo` lee texto UTF-8 hasta 1 MB; para traerlo de vuelta usa `git restore`
   o el botón Revertir (con `| save` o `>` el texto puede alterar saltos de línea).
 - `git checkout` solo cambia a ramas locales existentes y **se bloquea** si hay cambios,
   staging pendiente o archivos sin seguimiento/ignorados. No tiene `--force`.
@@ -296,7 +312,7 @@ Notas importantes:
 
 ## 8. Checkpoints: copias de seguridad por archivo
 
-Un checkpoint guarda los **bytes exactos** de un archivo (hasta 256 KB), incluso si nunca se
+Un checkpoint guarda los **bytes exactos** de un archivo (hasta 1 MB), incluso si nunca se
 hizo commit.
 
 ```text
@@ -431,11 +447,11 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 | `write archivo texto` | Escritura transaccional |
 | `save archivo` | Guarda el último resultado textual |
 | `cp origen destino` · `mv origen destino` | Copia verificada; `mv` siempre confirma |
-| `rm [-r] ruta` | Borra tras confirmación |
+| `rm [-r] ruta` | Borra tras confirmación, con copia previa (checkpoint) de hasta 1 MB por archivo |
 | `edit archivo` | Abre el editor (en blanco si no existe) |
 | `view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `propose propuesta.json` | Prepara un cambio JSON para el editor |
-| `replace archivo old new [--all] [--hash SHA256] [--dry-run]` | Reemplazo literal con diff y aprobación |
+| `replace archivo old new [--all] [--regex] [--hash SHA256] [--dry-run]` | Reemplazo literal (o con regex: `$1`, sin coincidencias vacías, ambigua pide `--all`) con diff y aprobación |
 | `run archivo.html` / `run archivo.js` | HTML estático o JS de consola aislado |
 
 ### Sistema y auditoría
@@ -445,11 +461,12 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 | `checkpoint …` · `restore ID` | Ver [sección 8](#8-checkpoints-copias-de-seguridad-por-archivo) |
 | `journal [-n N]` | Estado de las escrituras (PREPARED/COMMITTED/ABORTED/CONFLICT) |
 | `recover` | Revisa escrituras interrumpidas y limpia temporales huérfanos |
+| `diag` (botón **Diagnóstico**) | Informe del sitio y del script para pegar en un issue; no incluye mensajes ni archivos |
 | `help` | Ayuda del registro de comandos |
 
 ### Git
 
-`git init · status · add [archivo|--all] · commit -m · log · diff [--staged] [ref] ·
+`git init · status · add [archivo|--all] · commit -m · log [--oneline] [-n N] [-- archivo] · diff [--staged] [ref] | diff A B ·
 show [ref|ref:archivo] · restore [--staged] [--source ref] archivo · branch [nombre] · checkout rama`
 
 ### Opciones de compartir (aplicables a cualquier comando)
@@ -475,7 +492,7 @@ interpreta escapes de shell como `\n`.
 | Operación | Límite |
 |---|---|
 | Compartir archivo | 64 KB, UTF-8 sin NUL |
-| Editor, propuestas, checkpoints, run, show histórico | 256 KB |
+| Editor, propuestas, checkpoints, run, show histórico | 1 MB |
 | Importación / copia verificada | 512 MB por archivo |
 | ZIP importado | 1 GiB |
 | JS aislado | 3 s, 100 mensajes, ~20 KB |
@@ -496,7 +513,7 @@ interpreta escapes de shell como `\n`.
 | La pestaña HTML no se abre | Permite ventanas emergentes para el sitio |
 | La vista previa dejó de actualizarse | La página del chat se recargó: pulsa **Ejecutar** otra vez |
 | `run archivo.js` falla en Gemini (o en Claude) | La política de seguridad del sitio bloquea Workers; prueba fuera del chat |
-| En Claude, el mensaje se queda en la entrada o el envío se cancela (v1.5.41 busca el botón por su etiqueta, también en español, y usa Enter si no lo halla; el panel lista los botones que ve) |
+| En Claude, el mensaje se queda en la entrada o el envío se cancela | Desde 1.5.41 se busca el botón por su etiqueta (también en español) y se usa Enter si no aparece. Si persiste, pulsa **Diagnóstico** y adjunta el informe al reportarlo |
 | **Ctrl+V** no pega en el panel o el texto aparece en el chat (claude.ai) | Actualiza a 1.5.42. Si sigue pasando con el userscript, usa la extensión de Chrome: registra el aislamiento antes que los scripts del sitio. Mientras tanto, el botón **Pegar** del editor usa el portapapeles directamente |
 | En Claude, el texto compartido no llega o el envío se cancela | El compositor de claude.ai es experimental: vacía la entrada, reintenta y, si persiste, copia el mensaje a mano y repórtalo con tu versión |
 | Error de Git "sin inicializar" | Pulsa **Inicializar Git local** o `!git init` |
@@ -504,7 +521,7 @@ interpreta escapes de shell como `\n`.
 | Aviso POSIBLE FUGA | Revisa el chat; es solo una alerta heurística |
 | Perdí datos tras borrar "datos del sitio" | OPFS se elimina: restaura desde tu ZIP o desde archivos descargados |
 
-Para **reportar un fallo**, incluye versión, navegador, comando o pasos, resultado esperado y
+Para **reportar un fallo**, pulsa **Diagnóstico** (o `!diag`) y pega el informe; incluye además versión, navegador, comando o pasos, resultado esperado y
 error. Usa un archivo mínimo, sin credenciales ni datos sensibles.
 
 ## 15. Recetas rápidas
