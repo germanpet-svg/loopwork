@@ -3,7 +3,7 @@
 // @name:en      loopwork (Dual-Channel OPFS + Git)
 // @name:zh-CN   loopwork（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.6.2
+// @version      1.7.0
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -27,7 +27,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.6.2',
+    VERSION: '1.7.0',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -2208,6 +2208,53 @@
     ]
   };
   const EXTRA_I18N = {
+    'Ocultar panel': ['Hide panel', '隐藏面板'],
+    'Ocultar el panel; vuelve con el botón 💾 DV, Alt+Shift+D o el icono de la extensión': ['Hide the panel; bring it back with the 💾 DV button, Alt+Shift+D or the extension icon', '隐藏面板；可通过 💾 DV 按钮、Alt+Shift+D 或扩展图标恢复'],
+    'Mostrar panel': ['Show panel', '显示面板'],
+    'Mostrar el panel (Alt+Shift+D)': ['Show the panel (Alt+Shift+D)', '显示面板（Alt+Shift+D）'],
+    '{0} supera 64 KB; comparte un resumen con head': ['{0} exceeds 64 KB; share a summary with head', '{0} 超过 64 KB；请用 head 分享摘要'],
+    '{0} es binario; no se comparte': ['{0} is binary; it is not shared', '{0} 是二进制文件；不会分享'],
+    '{0} no es texto UTF-8 válido': ['{0} is not valid UTF-8 text', '{0} 不是有效的 UTF-8 文本'],
+    'máximo {0} archivos por envío': ['at most {0} files per message', '每次最多 {0} 个文件'],
+    '[Tarea]\n{0}\n': ['[Task]\n{0}\n', '[任务]\n{0}\n'],
+    '… y {0} más': ['… and {0} more', '… 以及另外 {0} 个'],
+    'selecciona al menos un archivo': ['select at least one file', '请至少选择一个文件'],
+    'escribe qué quieres cambiar': ['write what you want to change', '请写下你想更改的内容'],
+    'la instrucción supera 4000 caracteres': ['the instruction exceeds 4000 characters', '指令超过 4000 个字符'],
+    'los archivos elegidos suman más de 64 KB; elige menos o comparte un resumen': ['the chosen files add up to more than 64 KB; pick fewer or share a summary', '所选文件总计超过 64 KB；请少选或分享摘要'],
+    '[Árbol del disco]': ['[Disk tree]', '[磁盘目录树]'],
+    'Resuelve la tarea con los archivos mostrados. Devuelve un bloque Markdown con lenguaje dv y un único objeto JSON puro, sin comandos ni comillas de shell.\n': ['Solve the task using the files shown. Return a Markdown block with language dv and a single pure JSON object, without commands or shell quotes.\n', '请使用所示文件完成任务。返回一个语言为 dv 的 Markdown 代码块，其中只有一个纯 JSON 对象，不要命令或 shell 引号。\n'],
+    'Usa cada path y hash exactamente como aparecen; no inventes ni recalcules hashes.\n': ['Use each path and hash exactly as shown; do not invent or recompute hashes.\n', '请原样使用每个 path 和 hash；不要编造或重新计算哈希。\n'],
+    'Para varios archivos usa {"changes":[{path,hash,operation,old,new}, ...]} con rutas distintas (2 a 20 cambios); se aplican todos o ninguno. ': ['For several files use {"changes":[{path,hash,operation,old,new}, ...]} with distinct paths (2 to 20 changes); all are applied or none. ', '多个文件请使用 {"changes":[{path,hash,operation,old,new}, ...]}，路径互不相同（2 到 20 个更改）；要么全部应用，要么都不应用。 '],
+    'Campos: path, hash, operation, old, new. ': ['Fields: path, hash, operation, old, new. ', '字段：path、hash、operation、old、new。 '],
+    'operation: replace, insert-before, insert-after, append (sin old) o patch (diff unificado en el campo patch, sin old/new). ': ['operation: replace, insert-before, insert-after, append (without old) or patch (unified diff in the patch field, without old/new). ', 'operation：replace、insert-before、insert-after、append（不带 old）或 patch（在 patch 字段中放统一 diff，不带 old/new）。 '],
+    'Escapa saltos como \\n (o \\r\\n si el original los usa). Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.': ['Escape line breaks as \\n (or \\r\\n if the original uses them). If context is missing, ask for it; do not assume disk access. The user will review the diff and approve before saving.', '换行请写成 \\n（若原文件使用 \\r\\n 则写 \\r\\n）。若缺少上下文请询问；不要假设可访问磁盘。用户会检查 diff 并在保存前批准。'],
+    'Archivos de la tarea': ['Task files', '任务文件'],
+    '¿Qué quieres cambiar?': ['What do you want to change?', '你想更改什么？'],
+    'Instrucción para la IA': ['Instruction for the AI', '给 AI 的指令'],
+    'Hasta 8 archivos y 64 KB en total. Verás una vista previa antes de enviar; no se reemplazan borradores del chat.': ['Up to 8 files and 64 KB in total. You will see a preview before sending; chat drafts are not replaced.', '最多 8 个文件，总计 64 KB。发送前会显示预览；不会替换聊天草稿。'],
+    'Revisar y enviar': ['Review and send', '检查并发送'],
+    'Marca los archivos y describe el cambio:': ['Tick the files and describe the change:', '勾选文件并描述更改：'],
+    'Incluir lista de archivos del disco': ['Include the disk file list', '包含磁盘文件列表'],
+    'Compartir con instrucción...': ['Share with instruction...', '带指令分享...'],
+    'changes debe ser una lista de 2 a {0} cambios': ['changes must be a list of 2 to {0} changes', 'changes 必须是 2 到 {0} 个更改的列表'],
+    'ruta repetida en changes: {0}': ['repeated path in changes: {0}', 'changes 中路径重复：{0}'],
+    'cambio {0} ({1}): {2}; no se propone ninguno': ['change {0} ({1}): {2}; none is proposed', '更改 {0}（{1}）：{2}；不会提出任何更改'],
+    '{0} cambió desde la revisión; no se escribió nada': ['{0} changed since the review; nothing was written', '{0} 自审查后已更改；未写入任何内容'],
+    '{0} cambió durante la copia previa; no se escribió nada': ['{0} changed during the safety copy; nothing was written', '{0} 在预先复制期间已更改；未写入任何内容'],
+    'falló una escritura ({0}) y NO se pudo deshacer {1}; restaura con !checkpoint --list --tag "Antes de propuesta multiarchivo"': ['a write failed ({0}) and {1} could NOT be undone; restore with !checkpoint --list --tag "Before multi-file proposal"', '一次写入失败（{0}），且无法撤销 {1}；请用 !checkpoint --list --tag "多文件提案之前" 恢复'],
+    'falló una escritura ({0}); los archivos ya escritos volvieron a su versión original': ['a write failed ({0}); files already written were reverted to their original version', '一次写入失败（{0}）；已写入的文件已恢复为原始版本'],
+    '¿Aplicar los cambios a {0} archivos ({1})? Se creará un checkpoint por archivo; si falla una escritura se deshacen las demás. No crea commit.': ['Apply the changes to {0} files ({1})? A checkpoint is created per file; if a write fails the others are undone. No commit is created.', '将更改应用到 {0} 个文件（{1}）？每个文件会创建一个检查点；若某次写入失败，其余将被撤销。不会创建提交。'],
+    'Propuesta multiarchivo aplicada: {0}. Revisa git diff.': ['Multi-file proposal applied: {0}. Review git diff.', '多文件提案已应用：{0}。请检查 git diff。'],
+    '❌ Multiarchivo: {0}': ['❌ Multi-file: {0}', '❌ 多文件：{0}'],
+    'Propuesta multiarchivo · {0} archivos': ['Multi-file proposal · {0} files', '多文件提案 · {0} 个文件'],
+    '❌ No se pudo abrir la revisión: {0}': ['❌ Could not open the review: {0}', '❌ 无法打开审查：{0}'],
+    'una propuesta multiarchivo solo admite el campo changes': ['a multi-file proposal only accepts the changes field', '多文件提案只接受 changes 字段'],
+    'changes no puede anidarse': ['changes cannot be nested', 'changes 不能嵌套'],
+    'Antes de propuesta multiarchivo': ['Before multi-file proposal', '多文件提案之前'],
+    'Revisa cada diff; Aplicar todo escribe los archivos o ninguno.': ['Review each diff; Apply all writes all the files or none.', '请检查每个 diff；“全部应用”要么写入所有文件，要么都不写入。'],
+    'Aplicar todo': ['Apply all', '全部应用'],
+    'Revisión multiarchivo': ['Multi-file review', '多文件审查'],
     'No hay deshacer automático.': ['There is no automatic undo.', '没有自动撤销。'],
     'Antes de rm': ['Before rm', 'rm 之前'],
     'Antes de eliminar': ['Before delete', '删除之前'],
@@ -4408,8 +4455,24 @@
     return editorSnapshot(snapshot.path);
   }
 
+  const MAX_BATCH_CHANGES = 20;
   function validateProposalValue(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(t('propuesta debe ser un objeto JSON'));
+    if ('changes' in value) {
+      if (Object.keys(value).length !== 1) throw new Error(t('una propuesta multiarchivo solo admite el campo changes'));
+      if (!Array.isArray(value.changes) || value.changes.length < 2 || value.changes.length > MAX_BATCH_CHANGES) {
+        throw new Error(t`changes debe ser una lista de 2 a ${MAX_BATCH_CHANGES} cambios`);
+      }
+      const seen = new Set();
+      for (const change of value.changes) {
+        if (change && typeof change === 'object' && 'changes' in change) throw new Error(t('changes no puede anidarse'));
+        validateProposalValue(change);
+        const key = splitPath(change.path).join('/');
+        if (seen.has(key)) throw new Error(t`ruta repetida en changes: ${change.path}`);
+        seen.add(key);
+      }
+      return value;
+    }
     const allowed = ['path', 'hash', 'operation', 'old', 'new', 'patch'];
     if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error(t('campos desconocidos en propuesta'));
     if (typeof value.path !== 'string' || typeof value.hash !== 'string' || !/^[a-f0-9]{64}$/.test(value.hash)) {
@@ -4434,6 +4497,15 @@
 
   async function prepareProposal(value) {
     validateProposalValue(value);
+    if (value.changes) {
+      // Se preparan TODOS los cambios antes de abrir nada: si uno falla (hash, bloque, patch) no se propone ninguno.
+      const items = [];
+      for (const [i, change] of value.changes.entries()) {
+        try { items.push(await prepareProposal(change)); }
+        catch (e) { throw new Error(t`cambio ${i + 1} (${change.path}): ${e.message}; no se propone ninguno`); }
+      }
+      return { batch: items, snapshot: { path: items.map((x) => x.snapshot.path).join(', ') } };
+    }
     const snapshot = await editorSnapshot(value.path);
     if (snapshot.hash !== value.hash) throw new Error(t('hash obsoleto; usa view y solicita una propuesta para la versión actual'));
     let candidate;
@@ -4461,6 +4533,108 @@
     }
     validateEditorCandidate(snapshot, candidate);
     return { snapshot, candidate };
+  }
+
+  // Aplicación de varios archivos: verifica todos los hashes, guarda un checkpoint por archivo y escribe;
+  // si una escritura falla, devuelve los ya escritos a su versión original.
+  async function applyBatch(items) {
+    for (const { snapshot } of items) {
+      if ((await editorSnapshot(snapshot.path)).hash !== snapshot.hash) {
+        throw new Error(t`${snapshot.path} cambió desde la revisión; no se escribió nada`);
+      }
+    }
+    for (const { snapshot } of items) {
+      const backup = await createCheckpoint(snapshot.path, t('Antes de propuesta multiarchivo'));
+      if (backup.hash !== snapshot.hash) throw new Error(t`${snapshot.path} cambió durante la copia previa; no se escribió nada`);
+    }
+    const written = [];
+    try {
+      for (const { snapshot, candidate } of items) {
+        const next = await (async () => { await atomicWrite(snapshot.path, candidate, { expectedHash: snapshot.hash }); return editorSnapshot(snapshot.path); })();
+        written.push({ snapshot, next });
+      }
+    } catch (e) {
+      const failed = [];
+      for (const { snapshot, next } of written.reverse()) {
+        try { await atomicWrite(snapshot.path, snapshot.text, { expectedHash: next.hash }); }
+        catch (e2) { failed.push(snapshot.path); }
+      }
+      throw new Error(failed.length
+        ? t`falló una escritura (${e.message}) y NO se pudo deshacer ${failed.join(', ')}; restaura con !checkpoint --list --tag "Antes de propuesta multiarchivo"`
+        : t`falló una escritura (${e.message}); los archivos ya escritos volvieron a su versión original`);
+    }
+    return written.map((x) => x.next);
+  }
+
+  async function openBatchReview(batch) {
+    if (busy || editorOpen) { uiLog(t('Ya hay una operación o editor abierto.'), 'err'); return false; }
+    editorOpen = true;
+    ui?.updateState?.();
+    let host = null, removeTrap = null;
+    const release = () => { removeTrap?.(); host?.remove(); editorOpen = false; ui?.updateState?.(); };
+    try {
+      const engine = await getDiff();
+      host = h('div', { id: 'dv-code-editor' });
+      const shadow = host.attachShadow({ mode: 'closed' });
+      const status = h('div', { class: 'st', role: 'status' }, t('Revisa cada diff; Aplicar todo escribe los archivos o ninguno.'));
+      let working = false;
+      const apply = h('button', { class: 'ok' }, t('Aplicar todo'));
+      const cancel = h('button', {}, t('Cancelar'));
+      const sections = batch.map(({ snapshot, candidate }) => {
+        const patch = engine.createTwoFilesPatch(`a/${snapshot.path}`, `b/${snapshot.path}`, snapshot.text, candidate, '', '', { context: 3, timeout: 2000 });
+        if (patch === undefined) throw new Error(t`diff excedió el tiempo límite: ${snapshot.path}`);
+        validateEditorCandidate(snapshot, candidate);
+        const notes = validationNotes(snapshot.path, candidate);
+        return h('details', { open: true }, h('summary', {}, snapshot.path, notes.length ? ' · ' + notes.join(' ') : ''), h('pre', {}, patch));
+      });
+      const close = () => { if (!working) release(); };
+      cancel.addEventListener('click', close);
+      apply.addEventListener('click', async () => {
+        if (working) return;
+        if (!confirm(t`¿Aplicar los cambios a ${batch.length} archivos (${batch.map((x) => x.snapshot.path).join(', ')})? Se creará un checkpoint por archivo; si falla una escritura se deshacen las demás. No crea commit.`)) return;
+        working = true; apply.disabled = true; cancel.disabled = true;
+        try {
+          const done = await applyBatch(batch);
+          uiLog(t`Propuesta multiarchivo aplicada: ${done.map((x) => x.path).join(', ')}. Revisa git diff.`, 'info');
+          working = false; release(); ui?.refresh?.();
+        } catch (e) {
+          working = false; apply.disabled = false; cancel.disabled = false;
+          status.textContent = '❌ ' + e.message; status.style.color = '#f87171';
+          uiLog(t`❌ Multiarchivo: ${e.message}`, 'err');
+        }
+      });
+      host.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+      shadow.append(h('style', {}, `
+        :host { all: initial; }
+        .wrap { position: fixed; inset: 5vh 5vw; z-index: 2147483000; background: #18181b; color: #f4f4f5; border: 1px solid #3f3f46;
+          border-radius: 10px; font: 13px system-ui, sans-serif; display: flex; flex-direction: column; box-shadow: 0 12px 36px rgba(0,0,0,.6); }
+        header { padding: 10px 14px; background: #27272a; border-bottom: 1px solid #3f3f46; font-weight: 600; border-radius: 10px 10px 0 0; }
+        .body { overflow: auto; padding: 10px 14px; flex: 1; }
+        details { margin-bottom: 10px; border: 1px solid #3f3f46; border-radius: 6px; }
+        summary { padding: 6px 10px; cursor: pointer; background: #202024; }
+        pre { margin: 0; padding: 8px 10px; font: 12px ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+        footer { padding: 10px 14px; border-top: 1px solid #3f3f46; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .st { flex: 1; color: #93c5fd; min-width: 200px; }
+        button { padding: 6px 12px; background: #3f3f46; color: #f4f4f5; border: 1px solid #52525b; border-radius: 5px; cursor: pointer; font: inherit; }
+        button.ok { background: #047857; border-color: #065f46; }
+        button:disabled { opacity: .5; cursor: default; }`),
+        h('div', { class: 'wrap', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('Revisión multiarchivo') },
+          h('header', {}, t`Propuesta multiarchivo · ${batch.length} archivos`),
+          h('div', { class: 'body' }, sections), h('footer', {}, status, cancel, apply)));
+      document.body.append(host);
+      removeTrap = installFocusTrap(host, shadow, apply, () => editorOpen);
+      apply.focus();
+      return true;
+    } catch (e) {
+      release();
+      uiLog(t`❌ No se pudo abrir la revisión: ${e.message}`, 'err');
+      return false;
+    }
+  }
+
+  // Abre el editor de un archivo o la revisión conjunta, según la propuesta.
+  function openProposal(proposal) {
+    return proposal.batch ? openBatchReview(proposal.batch) : openCodeEditor(proposal.snapshot.path, proposal);
   }
 
   def('view', 'Texto', 'view <archivo> [--from N] [--to N]', 'Código numerado y hash para propuestas de IA', async (ctx) => {
@@ -6515,6 +6689,67 @@
       t('Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.');
   }
 
+  const MAX_TASK_FILES = 8;
+  async function readShareFile(path) {
+    if (!splitPath(path).length || isInternalPath(path)) throw new Error(t('archivo a compartir no permitido'));
+    const file = await (await requireFile(path)).getFile();
+    if (file.size > CFG.MAX_SHARE_FILE_BYTES) throw new Error(t`${path} supera 64 KB; comparte un resumen con head`);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.includes(0)) throw new Error(t`${path} es binario; no se comparte`);
+    let content;
+    try { content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
+    catch (e) {
+      if (e.name === 'TypeError') throw new Error(t`${path} no es texto UTF-8 válido`);
+      throw e;
+    }
+    return { path, content, size: file.size, hash: await computeSha256(bytes) };
+  }
+
+  // Mensaje con tarea + árbol opcional + varios archivos con hash y las reglas del protocolo dv.
+  async function taskShareMessage(paths, instruction, includeTree) {
+    paths = [...new Set(paths)];
+    instruction = String(instruction || '').trim();
+    if (!paths.length) throw new Error(t('selecciona al menos un archivo'));
+    if (paths.length > MAX_TASK_FILES) throw new Error(t`máximo ${MAX_TASK_FILES} archivos por envío`);
+    if (!instruction) throw new Error(t('escribe qué quieres cambiar'));
+    if (instruction.length > 4000) throw new Error(t('la instrucción supera 4000 caracteres'));
+    const files = [];
+    let total = 0;
+    for (const path of paths) {
+      const f = await readShareFile(path);
+      total += f.size;
+      if (total > CFG.MAX_SHARE_FILE_BYTES) throw new Error(t('los archivos elegidos suman más de 64 KB; elige menos o comparte un resumen'));
+      files.push(f);
+    }
+    const out = [t`[Tarea]\n${instruction}\n`];
+    if (includeTree) {
+      const list = (await listFiles()).filter((f) => !isInternalPath(f.path)).sort((a, b) => a.path.localeCompare(b.path));
+      out.push(t('[Árbol del disco]') + '\n' + list.slice(0, 200).map((f) => `${f.path} (${fmtBytes(f.size)})`).join('\n') +
+        (list.length > 200 ? '\n' + t`… y ${list.length - 200} más` : '') + '\n');
+    }
+    for (const f of files) {
+      const fence = safeFence(f.content);
+      out.push(t`[Archivo OPFS: ${JSON.stringify(f.path)}; ${fmtBytes(f.size)}]\nSHA256: ${f.hash}\n${fence}\n${f.content}\n${fence}\n`);
+    }
+    out.push(t('Resuelve la tarea con los archivos mostrados. Devuelve un bloque Markdown con lenguaje dv y un único objeto JSON puro, sin comandos ni comillas de shell.\n') +
+      t('Usa cada path y hash exactamente como aparecen; no inventes ni recalcules hashes.\n') +
+      (files.length > 1
+        ? t('Para varios archivos usa {"changes":[{path,hash,operation,old,new}, ...]} con rutas distintas (2 a 20 cambios); se aplican todos o ninguno. ')
+        : t('Campos: path, hash, operation, old, new. ')) +
+      t('operation: replace, insert-before, insert-after, append (sin old) o patch (diff unificado en el campo patch, sin old/new). ') +
+      t('old debe ser texto exacto y coincidir una sola vez; new es texto exacto, no un diff ni código con puntos suspensivos. ') +
+      t('Escapa saltos como \\n (o \\r\\n si el original los usa). Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.'));
+    return out.join('\n');
+  }
+
+  async function shareTask(paths, instruction, includeTree) {
+    if (busy) { uiLog(t('⏳ Hay una operación en curso; reintenta al terminar.'), 'err'); return; }
+    setBusy(true);
+    try { await sendWithPreview(await taskShareMessage(paths, instruction, includeTree), { confirmSend: true }); }
+    catch (e) { uiLog(`❌ ${e.message}`, 'err'); }
+    finally { setBusy(false); }
+  }
+
   async function sendWithPreview(message, { confirmSend = true } = {}) {
     message = normalizeChatText(message);
     const input = adapter.getInput();
@@ -6598,7 +6833,7 @@
       setBusy(false);
       ui?.refresh();
       if (editorRequest) {
-        if (editorRequest.snapshot) await openCodeEditor(editorRequest.snapshot.path, editorRequest);
+        if (editorRequest.batch || editorRequest.snapshot) await openProposal(editorRequest);
         else await openCodeEditor(editorRequest.path, null, { create: editorRequest.create });
       }
     }
@@ -6637,6 +6872,7 @@
     if (busy || editorOpen) throw new Error(t('cierra el editor o espera a que termine la operación antes de revisar otro parche'));
     const proposal = await prepareProposal(parseChatProposal(text));
     if (busy || editorOpen) throw new Error(t('se abrió otra operación durante la preparación; reintenta al terminar'));
+    if (proposal.batch) return proposal;
     return { ...proposal, checkpointBeforeSave: true, checkpointLabel: t('Antes de parche desde chat') };
   }
 
@@ -6716,7 +6952,7 @@
               const proposal = await prepareChatProposal(code.textContent);
               status.textContent = t`Propuesta: ${proposal.snapshot.path}. Revisa el diff; aún no guardada.`;
               uiLog(t`Parche desde chat: ${proposal.snapshot.path}. Archivo intacto; aprobación y checkpoint requeridos.`, 'info');
-              if (!(await openCodeEditor(proposal.snapshot.path, proposal))) {
+              if (!(await openProposal(proposal))) {
                 throw new Error(t('no se pudo abrir el editor; consulta el error en el panel. Archivo intacto.'));
               }
             } catch (error) {
@@ -6867,6 +7103,12 @@
   // UI DEL PANEL SOBERANO
   // ============================================================
   let ui = null;
+  const PANEL_HIDDEN_PREF = 'dv.panel.hidden.v1';
+  // Mostrar/ocultar desde fuera del panel: icono de la extensión (evento) y atajo Alt+Shift+D.
+  window.addEventListener('loopwork:toggle', () => ui?.toggleVisible?.());
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyD') { e.preventDefault(); ui?.toggleVisible?.(); }
+  }, true);
   const uiLog = (m, c) => { if (ui) ui.log(m, c); };
 
   // Algunos chats (p. ej. ChatGPT) reenfocan su propio composer ante cualquier
@@ -6938,6 +7180,13 @@
       font: 13px system-ui, sans-serif; box-shadow: 0 12px 36px rgba(0,0,0,.6);
       overflow: hidden; max-width: calc(100vw - 16px); z-index: 999999;
     }
+    #launcher {
+      position: fixed; right: 20px; bottom: 20px; z-index: 999999; display: none;
+      min-width: 46px; height: 46px; padding: 0 12px; border-radius: 23px; border: 1px solid #065f46;
+      background: #047857; color: #fff; font: 700 13px system-ui, sans-serif; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,0,0,.45);
+    }
+    #launcher:hover { background: #059669; }
     #header {
       background: #27272a; padding: 10px 12px; cursor: move; user-select: none;
       display: flex;flex-wrap:wrap;gap:6px; justify-content: space-between; align-items: center; font-weight: 600;
@@ -7076,7 +7325,7 @@
           uiLog(t`No se pudo guardar el idioma: ${e.message}`, 'err'); return;
         }
         const state = {
-          draft: cmdInput.value, logs: [...logEl.childNodes], histIdx, collapsed, expanded,
+          draft: cmdInput.value, logs: [...logEl.childNodes], histIdx, collapsed, expanded, hidden: panelHidden,
           panelStyle: panel.style.cssText
         };
         host.remove();
@@ -7228,12 +7477,13 @@
     installFocusTrap(host, gitOverlay, gitMessage, () => gitOverlay.style.display === 'flex');
     const toggleEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Contraer panel'), 'aria-expanded': 'true' }, t('Contraer'));
     const expandEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Ampliar panel'), 'aria-pressed': 'false' }, t('Ampliar'));
+    const hideEl = h('button', { class: 'btn btn-secondary', 'aria-label': t('Ocultar panel'), title: t('Ocultar el panel; vuelve con el botón 💾 DV, Alt+Shift+D o el icono de la extensión') }, '✕');
     const headerEl = h('div', { id: 'header' },
       h('div', {},
         h('span', {}, `💾 DV v${CFG.VERSION} `),
         h('span', { class: 'badge-local' }, t('Panel Soberano'))
       ),
-      h('div', { class: 'row' }, stateEl, languageSelect, expandEl, toggleEl),
+      h('div', { class: 'row' }, stateEl, languageSelect, expandEl, toggleEl, hideEl),
       h('div', { class: 'row', style: 'width:100%;cursor:default' }, gitBadge, btnGitSave, btnGitDiff, btnGitRevert)
     );
 
@@ -7329,6 +7579,38 @@
         }
       }
     }, t('Compartir archivo...'));
+
+    // DIÁLOGO «COMPARTIR CON INSTRUCCIÓN»: tarea + varios archivos + árbol, con vista previa antes de enviar.
+    const taskBox = h('div', { class: 'task-files', role: 'group', 'aria-label': t('Archivos de la tarea'), style: 'max-height:120px; overflow:auto; margin:4px 0;' });
+    const taskText = h('textarea', { rows: 3, placeholder: t('¿Qué quieres cambiar?'), 'aria-label': t('Instrucción para la IA'), style: 'width:100%; box-sizing:border-box;' });
+    const taskTree = h('input', { type: 'checkbox', id: 'dv-task-tree' });
+    const taskNotice = h('div', { style: 'font-size:11px; margin:6px 0;' },
+      t('Hasta 8 archivos y 64 KB en total. Verás una vista previa antes de enviar; no se reemplazan borradores del chat.'));
+    const taskSend = h('button', {
+      class: 'btn btn-share', onclick: async () => {
+        const paths = [...taskBox.querySelectorAll('input:checked')].map((i) => i.value);
+        taskDialog.style.display = 'none';
+        await shareTask(paths, taskText.value, taskTree.checked);
+      }
+    }, t('Revisar y enviar'));
+    const taskDialog = h('div', { class: 'file-dialog' },
+      h('div', { style: 'font-size:11px; margin-bottom:4px;' }, t('Marca los archivos y describe el cambio:')),
+      taskBox, taskText,
+      h('label', { style: 'display:block; margin:4px 0; font-size:11px;' }, taskTree, ' ', t('Incluir lista de archivos del disco')),
+      taskNotice,
+      h('div', { style: 'display:flex; justify-content:flex-end; gap:6px;' },
+        h('button', { class: 'btn btn-secondary', onclick: () => { taskDialog.style.display = 'none'; } }, t('Cancelar')), taskSend));
+    const btnTaskShare = h('button', {
+      class: 'btn btn-secondary', onclick: async () => {
+        try {
+          const files = (await listFiles()).filter((f) => !isInternalPath(f.path));
+          taskBox.replaceChildren(...files.map((f) => h('label', { style: 'display:block; font-size:11px;' },
+            h('input', { type: 'checkbox', value: f.path, disabled: f.size > CFG.MAX_SHARE_FILE_BYTES }), ' ', `${f.path} (${fmtBytes(f.size)})`)));
+          if (!files.length) { uiLog(t('No hay archivos de usuario para compartir.'), 'err'); return; }
+          taskDialog.style.display = 'block';
+        } catch (e) { uiLog(t`❌ No se pudieron listar archivos: ${e.message}`, 'err'); }
+      }
+    }, t('Compartir con instrucción...'));
 
     const helpText = h('pre', { style: 'white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; font:11px monospace;' });
     const helpDialog = h('div', {
@@ -7498,8 +7780,8 @@
       filesEl,
       logEl,
       cmdInput,
-      h('div', { class: 'row' }, btnExec, btnShare, btnOpenShareDialog),
-      fileDialog,
+      h('div', { class: 'row' }, btnExec, btnShare, btnOpenShareDialog, btnTaskShare),
+      fileDialog, taskDialog,
       aboutDialog,
       h('div', { style: 'display:flex;justify-content:flex-end;margin-top:6px;' }, btnAbout)
     );
@@ -7552,7 +7834,25 @@
     for (const t of ['keydown', 'keyup', 'keypress']) panel.addEventListener(t, (e) => e.stopPropagation());
     installClipboardGuard(host, shadow);
 
-    shadow.append(panel, gitOverlay);
+    // Panel oculto: queda un botón flotante 💾 DV para volver a mostrarlo (se recuerda entre recargas).
+    const launcher = h('button', { id: 'launcher', 'aria-label': t('Mostrar panel'), title: t('Mostrar el panel (Alt+Shift+D)') }, '💾 DV');
+    let panelHidden = previous.hidden ?? false;
+    if (previous.hidden === undefined) { try { panelHidden = localStorage.getItem(PANEL_HIDDEN_PREF) === '1'; } catch (e) { /* sin almacenamiento */ } }
+    const showPanelState = () => {
+      panel.style.display = panelHidden ? 'none' : '';
+      launcher.style.display = panelHidden ? 'block' : 'none';
+    };
+    const setPanelHidden = (value) => {
+      panelHidden = !!value;
+      try { localStorage.setItem(PANEL_HIDDEN_PREF, panelHidden ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
+      showPanelState();
+      if (!panelHidden) cmdInput.focus?.();
+    };
+    hideEl.addEventListener('click', () => setPanelHidden(true));
+    launcher.addEventListener('click', () => setPanelHidden(false));
+    showPanelState();
+
+    shadow.append(panel, launcher, gitOverlay);
     document.body.appendChild(host);
 
     const panelLog = (msg, cls = '') => {
@@ -7620,7 +7920,7 @@
     const updateState = () => {
       stateEl.textContent = busy ? t('Operación en curso') : editorOpen ? t('Editor abierto') : t('Listo · local');
       panel.setAttribute('aria-busy', String(busy));
-      for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog, btnConnectFolder, btnReconnectFolder, btnDisconnectFolder, btnExportZip, btnImportZip]) button.disabled = busy;
+      for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog, btnTaskShare, btnConnectFolder, btnReconnectFolder, btnDisconnectFolder, btnExportZip, btnImportZip]) button.disabled = busy;
       btnNewFile.disabled = busy || editorOpen;
       btnGitSave.disabled = busy || editorOpen || gitLoading || gitState?.initialized && !gitState.changes.length;
       btnGitDiff.disabled = busy || editorOpen || gitLoading || !gitState?.initialized;
@@ -7642,7 +7942,7 @@
     }
     refresh();
     panelLog(t`Panel Soberano v${CFG.VERSION} activo. 100% local por defecto.`, 'info');
-    return { log: panelLog, refresh, updateState };
+    return { log: panelLog, refresh, updateState, toggleVisible: () => setPanelHidden(!panelHidden) };
   }
 
   // ============================================================

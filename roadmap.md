@@ -4,7 +4,7 @@ Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.6.0)
+## Estado de un vistazo (1.6.2)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -55,8 +55,8 @@ Esfuerzo: S = horas, M = uno o dos dias, L = una semana o mas.
 | - | --- | ------------- | ---- | ------------ |
 | 6 | ✅ **1.6.0** **Propuesta `patch` (diff unificado)** y `replace --regex`: `Diff.applyPatch` ya esta cargado; hash obligatorio, sin tolerancia, rechazo si no aplica limpio; misma revision con diff | Los modelos escriben diffs con soltura; el `old` unico es fragil en cambios grandes | M | Un diff multi-hunk se aplica o se rechaza entero |
 | 7 | ✅ **1.6.0** **Validacion antes de aplicar**: JSON (`JSON.parse`), JS (solo compilar, sin ejecutar, si la CSP lo permite), HTML (etiquetas sin cerrar); resultado como aviso en la revision | Detecta propuestas rotas antes de guardar; si no puede validar, lo dice | S-M | La revision muestra "valido / invalido / no verificable" |
-| 8 | ⏳ **sin hacer** **Propuestas multiarchivo**: un `dv` con `changes: [...]`, una revision, verificar todos los hashes antes de escribir, checkpoint por archivo | Los cambios reales rara vez tocan un solo archivo | M-L | Si un archivo falla la verificacion no se escribe ninguno |
-| 9 | ⏳ **sin hacer** **Compartir con instruccion**: caja "que quieres cambiar" + archivos elegidos + arbol (`!tree`) en un envio, con tope de 64 KB y vista previa | Hoy son varios pasos manuales; es la mayor friccion del uso diario | M | De "elegir archivos" a "mensaje enviado" en un flujo |
+| 8 | ✅ **1.7.0** (solo edita archivos existentes; no crea nuevos) **Propuestas multiarchivo**: un `dv` con `changes: [...]`, una revision, verificar todos los hashes antes de escribir, checkpoint por archivo | Los cambios reales rara vez tocan un solo archivo | M-L | Si un archivo falla la verificacion no se escribe ninguno |
+| 9 | ✅ **1.7.0** **Compartir con instruccion**: caja "que quieres cambiar" + archivos elegidos + arbol (`!tree`) en un envio, con tope de 64 KB y vista previa | Hoy son varios pasos manuales; es la mayor friccion del uso diario | M | De "elegir archivos" a "mensaje enviado" en un flujo |
 | 10 | ✅ **1.6.0** (sin `.gitignore` por defecto: los metadatos internos ya se excluyen) **Git para revisar**: `git diff A B` entre commits/ramas, `log --oneline`, `log -- archivo`, `.gitignore` por defecto | Es lo que falta para entender que cambio la IA (README lo lista como carencia) | M | Se ve el diff de cualquier par de commits |
 | 11 | ⏳ **sin hacer** **Descarga exacta de una version Git** (HEAD o SHA) y `git archive` como ZIP reutilizando el escritor ZIP | Entrega el resultado sin friccion; bytes exactos | S | Descargar `ref:archivo` coincide byte a byte |
 
@@ -294,6 +294,27 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## Multiarchivo, tarea compartida y visibilidad del panel (1.7.0)
+
+- `{"changes":[…]}`: 2 a 20 cambios, se preparan todos antes de abrir la revision; **Aplicar todo** reverifica hashes,
+  guarda un checkpoint por archivo y revierte los ya escritos si una escritura falla.
+- **Compartir con instruccion**: tarea + hasta 8 archivos (64 KB) + arbol opcional, con vista previa; el mensaje explica `changes` y `patch`.
+- Panel: **✕** lo oculta y un boton flotante **💾 DV** lo restaura; Alt+Shift+D; se recuerda. La extension sustituye el popup por
+  un clic en el icono que alterna el panel (service worker + relay en mundo aislado; sigue sin permisos).
+- Suite: 40 pruebas (3 unitarias + 37 e2e).
+
+## Vista previa: recarga forzada (1.6.2)
+
+- Al ocultar y volver a mostrar la vista previa, asignar el mismo `srcdoc` a un iframe que estuvo oculto podia dejarla en
+  blanco (ocurria en el navegador del usuario, no en Chromium headless). Ahora cada pintado quita `srcdoc` y lo repone con
+  el iframe ya visible; al ocultar se vacia. Prueba: 6 pulsaciones seguidas en `editor-preview.test.mjs`.
+
+## Vista previa del editor: apertura por defecto (1.6.1)
+
+- Con la preferencia de 1.5.43 el HTML se reabria con la vista previa ya encendida y pulsar **Vista previa** la
+  *apagaba* (parecia quedar en blanco). Ahora los HTML se abren siempre con la vista previa visible; el boton la oculta
+  y solo esa decision explicita se recuerda. Cubierto por `tests/e2e/cases/editor-preview.test.mjs`.
 
 ## Mejoras de seguridad, revision y pruebas (1.6.0)
 

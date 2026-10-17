@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.6.0.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.7.0.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.6.0**.
+5. Comprueba que el panel muestra **v1.7.0**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -131,13 +131,19 @@ se pide confirmación antes de reemplazarlo (y no hay deshacer automático).
 usuario y **conserva** `.git`, `.dv` (checkpoints y registro) y `.dv_tmp`. Si usas carpeta real,
 la confirmación te avisa de que son archivos reales de tu PC.
 
-**Copia previa automática (desde 1.6.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
+**Copia previa automática (desde 1.7.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
 reemplazar un destino con `cp`/`mv`, de importar un archivo o un ZIP sobre uno existente y de
 `write` sobre un archivo con contenido distinto, loopwork guarda un **checkpoint** del archivo
 afectado (etiquetas «Antes de rm», «Antes de cp», «Antes de importar»…). La confirmación te dice
 cuántas copias se guardarán y cuántos archivos **no** tendrán copia por superar 1 MB. Si no puede
 guardar la copia, **no toca nada**. Recupera con `!checkpoint --list --tag "Antes de rm"` y
 `!restore ID`. Los archivos internos (`.git`, `.dv`, `.dv_tmp`) no se copian.
+
+### Ocultar y mostrar el panel
+
+La **✕** del encabezado oculta el panel y deja un botón flotante **💾 DV** abajo a la derecha; púlsalo para volver.
+También alterna **Alt+Shift+D** y, en la extensión de Chrome, el **icono de la barra**. Se recuerda al recargar. Ocultar
+no cierra el editor ni detiene nada.
 
 ### Comandos de archivo
 
@@ -211,6 +217,10 @@ Dos formas, ambas explícitas:
 - **Compartir archivo…** (selector): **Enviar archivo al chat** envía el texto completo
   **de inmediato, sin segunda confirmación**. Máximo 64 KB, solo UTF-8. Los archivos mayores
   aparecen deshabilitados con el motivo.
+- **Compartir con instrucción…**: marca hasta 8 archivos (64 KB en total), escribe qué quieres cambiar y,
+  si quieres, incluye la lista de archivos del disco. Verás una **vista previa** antes de enviar. El mensaje
+  lleva tu tarea, cada archivo con su hash y las reglas del protocolo (con varios archivos pide un bloque
+  `changes`).
 - Por comando: `!view programa.js --from 1 --to 20 --share` (resumen de hasta 1200 caracteres
   tras vista previa) o `!ls --share-file "programa.js"` (archivo completo, con vista previa).
 
@@ -235,6 +245,12 @@ La IA debe responder con un único objeto JSON:
 | `old` | Texto exacto que aparece **una sola vez** (no se usa en `append` ni `patch`) |
 | `new` | Texto exacto a insertar; los saltos se escriben `\n` (o `\r\n`) |
 | `patch` | Solo con `operation: "patch"`: un diff unificado de **un** archivo (sin `old`/`new`) |
+
+**Varios archivos a la vez.** Un único bloque puede llevar `{"changes":[{…},{…}]}` (2 a 20 cambios, cada uno con su
+`path`, `hash` y operación, sin repetir rutas). loopwork prepara **todos** antes de mostrar nada: si uno falla
+(hash, bloque no encontrado, patch) no se propone ninguno. La revisión muestra el diff de cada archivo; **Aplicar todo**
+comprueba otra vez todos los hashes, guarda un checkpoint por archivo (etiqueta «Antes de propuesta multiarchivo») y
+escribe; si una escritura falla, devuelve a su versión original los ya escritos. No crea archivos nuevos ni commit.
 
 **`patch` para cambios grandes.** Cada *hunk* debe coincidir exactamente donde dice (sin
 tolerancia a líneas desplazadas); si uno falla se rechaza todo y el archivo no se toca. El hash

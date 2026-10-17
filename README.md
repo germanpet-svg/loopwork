@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.6.0**. **135 pruebas Node** más una suite nueva en `tests/` (cobertura de traducciones y e2e en Chromium).
+Versión actual: **1.7.0**. **135 pruebas Node** más una suite nueva en `tests/` (cobertura de traducciones y e2e en Chromium).
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -103,7 +103,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.6.0**.
+5. Comprueba que el panel muestra **v1.7.0**.
 
 ### Alternativa: extensión de Chrome
 
@@ -114,11 +114,11 @@ nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la p�
 lo que corrige que **Ctrl+V** no pegara en claude.ai.
 
 1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
-   `loopwork-extension-1.6.0.zip`).
+   `loopwork-extension-1.7.0.zip`).
 2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
 3. Elige la carpeta `extension/` y recarga el chat.
 
-**Usa una sola vía:** si instalas la extensión, desactiva o borra el userscript en Tampermonkey; con las dos
+**Icono de la barra:** pulsarlo muestra u oculta el panel de la pestaña (sin permisos extra). **Usa una sola vía:** si instalas la extensión, desactiva o borra el userscript en Tampermonkey; con las dos
 activas aparecerían dos paneles. Para actualizar, vuelve a generar la carpeta y pulsa el botón de recarga de la
 extensión en `chrome://extensions`. Aún no está en Chrome Web Store.
 
@@ -496,6 +496,7 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `!propose propuesta.json` | Prepara un cambio JSON (`replace`, `insert-before/after`, `append` o `patch` con diff unificado exacto) para el editor |
 | `!replace archivo old new [--all] [--regex] [--hash SHA256] [--dry-run]` | Literal único o todas las coincidencias no solapadas (o regex con `$1`); diff/aprobación obligatorios |
+| `!propose` con `{"changes":[…]}` | Varios archivos en una sola revisión: se comprueban todos los hashes, se guarda un checkpoint por archivo y se aplican todos o ninguno (2 a 20 cambios, rutas distintas) |
 | `!diag` (botón **Diagnóstico**) | Informe del sitio y del script para reportar fallos; sin mensajes ni archivos |
 | `!run archivo.html` / `!run archivo.js` | HTML estático en pestaña conectada o JS de consola aislado |
 | `!edit archivo` | Abre el editor; si no existe, empieza en blanco y lo crea al guardar |
@@ -707,7 +708,7 @@ Archivos principales:
   `index.html`); sus pruebas no se integran automáticamente en el userscript.
 - [roadmap.md](./roadmap.md): avances, evidencia y pendientes.
 
-Suite nueva (1.6.0), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
+Suite nueva (1.7.0), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
 traducción y ejercita en Chromium las copias previas, `git log/diff`, `patch`, `--regex`, `diag`, el pegado y la vista previa
 del editor (`cd tests/e2e && npm install && npm test`).
 
