@@ -106,6 +106,12 @@ h1 {
 .gif-demo img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 10px; background: var(--rule); }
 .gif-demo figcaption { margin-top: 10px; font-size: .92rem; opacity: .75; }
 .gif-demo[hidden] { display: none; }
+.demo-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+.demo-tabs button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--rule); background: transparent; color: var(--ink); cursor: pointer; }
+.demo-tabs button:hover { background: var(--rule); }
+.demo-tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper, #fff); border-color: var(--ink); }
+.demo-tabs button:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+.gif-demo.missing img { visibility: hidden; min-height: 200px; }
 
 /* ---------- demo del parche ---------- */
 .patch { background: var(--code-bg); color: var(--code-ink); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 0 var(--rule), 0 24px 48px -28px rgba(0,0,0,.45); }
@@ -305,10 +311,15 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
   <section id="demo">
     <div class="wrap">
       <h2>Míralo funcionando</h2>
-      <p class="intro">Una sesión real: compartir un archivo, recibir la propuesta, revisar el diff y aplicarla.</p>
-      <figure class="gif-demo" id="gifDemo">
-        <img src="demo.gif" alt="Grabación de loopwork en un chat: compartir un archivo, revisar el diff de la propuesta y aplicarla" loading="lazy" decoding="async">
-        <figcaption>Grabación del panel de loopwork dentro de un chat.</figcaption>
+      <p class="intro">Tres recorridos guiados sobre una página de demostración. Elige cuál ver.</p>
+      <div class="demo-tabs" role="tablist" aria-label="Demostraciones">
+        <button type="button" role="tab" id="tab-flujo" aria-selected="true" aria-controls="gifDemo" data-gif="loopwork-demo-v1.7.0.gif" data-alt="Recorrido completo de loopwork: compartir un archivo, recibir la propuesta, revisar el diff y aplicarla" data-cap="El ciclo completo: compartir, proponer, revisar y aplicar.">Flujo completo</button>
+        <button type="button" role="tab" id="tab-editor" aria-selected="false" aria-controls="gifDemo" tabindex="-1" data-gif="loopwork-editor-v1.7.0.gif" data-alt="El editor integrado de loopwork con resaltado, vista previa en vivo y diff" data-cap="El editor integrado: vista previa en vivo y diff antes de guardar.">Editor</button>
+        <button type="button" role="tab" id="tab-hash" aria-selected="false" aria-controls="gifDemo" tabindex="-1" data-gif="loopwork-hash-obsoleto-v1.7.0.gif" data-alt="loopwork rechaza una propuesta cuyo hash ya no coincide con el archivo" data-cap="Hash obsoleto: si el archivo cambió, la propuesta se rechaza y no se toca nada.">Hash obsoleto</button>
+      </div>
+      <figure class="gif-demo" id="gifDemo" role="tabpanel" aria-labelledby="tab-flujo">
+        <img src="loopwork-demo-v1.7.0.gif" alt="Recorrido completo de loopwork: compartir un archivo, recibir la propuesta, revisar el diff y aplicarla" decoding="async">
+        <figcaption id="gifCaption">El ciclo completo: compartir, proponer, revisar y aplicar.</figcaption>
       </figure>
     </div>
   </section>
@@ -410,11 +421,35 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
 })();
 </script>
 <script>
-  // Si demo.gif aún no existe en el repositorio, la sección se oculta en lugar de mostrar una imagen rota.
+  // Demostraciones: un solo GIF visible a la vez; los otros se cargan al elegirlos.
   (function () {
-    var img = document.querySelector('#gifDemo img');
-    if (!img) return;
-    img.addEventListener('error', function () { var s = document.getElementById('demo'), a = document.querySelector('a[href="#demo"]'); if (s) s.hidden = true; if (a) a.hidden = true; });
+    var tabs = [].slice.call(document.querySelectorAll('.demo-tabs [role="tab"]'));
+    var fig = document.getElementById('gifDemo'), img = fig && fig.querySelector('img'), cap = document.getElementById('gifCaption');
+    if (!tabs.length || !img) return;
+    var failed = {};
+    function select(tab) {
+      tabs.forEach(function (t) { var on = t === tab; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
+      fig.setAttribute('aria-labelledby', tab.id);
+      fig.classList.remove('missing');
+      cap.textContent = tab.getAttribute('data-cap');
+      img.alt = tab.getAttribute('data-alt');
+      img.removeAttribute('src');          // reinicia la animación al volver a elegirla
+      img.src = tab.getAttribute('data-gif');
+    }
+    img.addEventListener('error', function () {
+      fig.classList.add('missing');
+      cap.textContent = 'Esta demostración aún no está disponible.';
+      failed[img.getAttribute('src')] = true;
+      if (Object.keys(failed).length >= tabs.length) { var s = document.getElementById('demo'), a = document.querySelector('a[href="#demo"]'); if (s) s.hidden = true; if (a) a.hidden = true; }
+    });
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener('click', function () { select(tab); });
+      tab.addEventListener('keydown', function (e) {
+        var j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
+        if (j < 0) return;
+        e.preventDefault(); j = (j + tabs.length) % tabs.length; tabs[j].focus(); select(tabs[j]);
+      });
+    });
   })();
 </script>
 </body>
