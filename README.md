@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.7.1**. **135 pruebas Node** más una suite nueva en `tests/` (cobertura de traducciones y e2e en Chromium).
+Versión actual: **1.10.0**. **135 pruebas Node** más una suite nueva en `tests/` (80 pruebas: traducciones, análisis de código y e2e en Chromium).
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -103,7 +103,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.7.1**.
+5. Comprueba que el panel muestra **v1.10.0**.
 
 ### Alternativa: extensión de Chrome
 
@@ -114,7 +114,7 @@ nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la p�
 lo que corrige que **Ctrl+V** no pegara en claude.ai.
 
 1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
-   `loopwork-extension-1.7.1.zip`).
+   `loopwork-extension-1.10.0.zip`).
 2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
 3. Elige la carpeta `extension/` y recarga el chat.
 
@@ -255,7 +255,19 @@ Pensado para no necesitar otro editor:
 | Ctrl+Shift+K | Borrar línea |
 | Tab / Shift+Tab | Sangrar / quitar sangría |
 | Shift+Alt+F | Formatear JSON |
+| Alt+Shift+→ | Selecciona la función del cursor (repetir: la exterior) |
 | Esc | Cierra ayuda, ir a línea o búsqueda; si no, el editor |
+
+**Guías de bloque (1.10.0).** Junto a los números de línea se dibuja una línea vertical por cada bloque de varias líneas
+(llaves y corchetes en JS/CSS/JSON, sangría en Python, etiquetas en HTML), con una marca donde abre y otra donde cierra;
+el bloque del cursor se resalta, un clic lo selecciona y el botón **Guías** las oculta.
+
+**Revisión básica y funciones (1.9.0).** En JS, CSS, HTML y Python el botón **Revisar** avisa de llaves, paréntesis o
+corchetes sin cerrar o cruzados, cadenas sin cerrar, `;` olvidado entre declaraciones CSS y, en Python, dos puntos
+que faltan y sangría inconsistente; cada aviso salta a su línea y, si el arreglo es seguro, ofrece **Arreglar**
+(o **Arreglar todo**). En JS, Python y los `<script>` de un HTML, **Función** selecciona la función (o método, o clase) que
+contiene el cursor y **Reemplazar función** la sustituye por el texto del portapapeles ajustando la sangría. Desde la IA:
+`operation: "replace-function"` con `name` y `new` (ver el manual).
 
 ### Importar y explorar
 
@@ -492,6 +504,7 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | `!write archivo texto` | Guarda texto mediante candidato y verificación; si reemplaza contenido distinto, checkpoint previo |
 | `!save archivo` | Guarda el último resultado textual; no exporta bytes históricos |
 | `!cp origen destino` / `!mv origen destino` | Copia bytes verificados; mv confirma y borra origen tras comprobarlo |
+| `!undo` | Deshace la última operación con copia previa (rm, cp/mv, importar, write, guardar, propuesta multiarchivo); repetirlo la rehace. Se conservan 20 copias por archivo y 64 MB |
 | `!rm [-r] ruta` | Borra una ruta tras confirmación; guarda antes un checkpoint de cada archivo de hasta 1 MB (recupera con `!restore`) |
 | `!view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `!propose propuesta.json` | Prepara un cambio JSON (`replace`, `insert-before/after`, `append` o `patch` con diff unificado exacto) para el editor |
@@ -708,7 +721,7 @@ Archivos principales:
   `index.html`); sus pruebas no se integran automáticamente en el userscript.
 - [roadmap.md](./roadmap.md): avances, evidencia y pendientes.
 
-Suite nueva (1.7.1), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
+Suite nueva (1.8.0), independiente de la anterior: [tests/e2e](./tests/e2e/README.md) comprueba que todo texto tenga
 traducción y ejercita en Chromium las copias previas, `git log/diff`, `patch`, `--regex`, `diag`, el pegado y la vista previa
 del editor (`cd tests/e2e && npm install && npm test`).
 

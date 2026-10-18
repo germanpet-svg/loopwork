@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.7.1.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.10.0.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.7.1**.
+5. Comprueba que el panel muestra **v1.10.0**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -131,13 +131,22 @@ se pide confirmación antes de reemplazarlo (y no hay deshacer automático).
 usuario y **conserva** `.git`, `.dv` (checkpoints y registro) y `.dv_tmp`. Si usas carpeta real,
 la confirmación te avisa de que son archivos reales de tu PC.
 
-**Copia previa automática (desde 1.7.1).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
+**Copia previa automática (desde 1.8.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
 reemplazar un destino con `cp`/`mv`, de importar un archivo o un ZIP sobre uno existente y de
 `write` sobre un archivo con contenido distinto, loopwork guarda un **checkpoint** del archivo
 afectado (etiquetas «Antes de rm», «Antes de cp», «Antes de importar»…). La confirmación te dice
 cuántas copias se guardarán y cuántos archivos **no** tendrán copia por superar 1 MB. Si no puede
 guardar la copia, **no toca nada**. Recupera con `!checkpoint --list --tag "Antes de rm"` y
 `!restore ID`. Los archivos internos (`.git`, `.dv`, `.dv_tmp`) no se copian.
+
+**`!undo`.** Deshace de un paso la última operación que dejó copia previa: `rm`, `cp`/`mv`, importar, `write`, guardar desde
+el editor o una propuesta multiarchivo (todas las copias de esa operación a la vez). Un archivo borrado se recrea; uno
+modificado abre el diff para que lo apruebes (varios archivos: una sola revisión con **Aplicar todo**). Como el propio
+deshacer deja una copia, ejecutarlo otra vez **rehace** el cambio.
+
+**Retención automática.** Se conservan hasta **20 copias por archivo** y 64 MB en total; lo más antiguo se borra solo, y la
+copia más reciente de cada archivo nunca. El aviso aparece en el registro. Si necesitas conservar una versión, exporta el
+ZIP o haz un commit de Git.
 
 ### Ocultar y mostrar el panel
 
@@ -172,6 +181,17 @@ puedes **mover** (arrastra la barra de título), **redimensionar** (esquina infe
 - Cierre automático de paréntesis, comillas y etiquetas HTML; sangría inteligente.
 - **HTML:** botón **Vista previa** (en vivo, sin scripts ni red) y **Pestaña** (se refresca al guardar). La vista previa recuerda si la dejaste abierta y se restaura al reabrir el editor.
 - **JSON:** botón **Formatear**.
+- **Guías de bloque** (JS, JSON, CSS, HTML, Python): entre los números de línea y el código, una línea vertical por cada bloque
+  de varias líneas con una marca donde abre y otra donde cierra. Las llaves y corchetes se leen sin contar los de cadenas o comentarios;
+  en Python se usa la sangría y en HTML las etiquetas. El bloque donde está el cursor se resalta, un clic en una guía selecciona
+  el bloque entero y el botón **Guías** las oculta (se recuerda). Son solo visuales: no se pueden plegar.
+- **Revisar** (JS, CSS, HTML, Python): lista llaves/paréntesis/corchetes sin cerrar o cruzados, cadenas o comentarios sin cerrar,
+  `;` olvidado en CSS y, en Python, `:` que falta y sangría inconsistente. Cada aviso salta a su línea y, si el arreglo es seguro,
+  ofrece **Arreglar**; **Arreglar todo** los aplica de una vez (un solo paso de Ctrl+Z). No cambia JS por «falta de `;`»:
+  en JavaScript es opcional y adivinarlo cambiaría el programa.
+- **Función** y **Reemplazar función** (JS, Python y `<script>` de HTML): seleccionan la función, método o clase del cursor
+  (repetir amplía a la exterior) y la sustituyen por el portapapeles reajustando la sangría. Si el texto pegado tiene llaves
+  o comillas sin equilibrar pide confirmación.
 - Tamaño de letra A−/A+ (se recuerda), Copiar, Pegar, Descargar borrador.
 - Barra de estado: línea/columna, selección, líneas, bytes, lenguaje, LF/CRLF.
 
@@ -188,6 +208,7 @@ puedes **mover** (arrastra la barra de título), **redimensionar** (esquina infe
 | Ctrl+Shift+K | Borrar línea |
 | Tab / Shift+Tab | Sangrar / quitar sangría |
 | Shift+Alt+F | Formatear JSON |
+| Alt+Shift+→ | Selecciona la función del cursor (repetir: la exterior) |
 | Esc | Cierra ayuda, "ir a línea" o búsqueda; si no hay nada abierto, cierra el editor |
 
 ### Guardar con seguridad
@@ -195,10 +216,12 @@ puedes **mover** (arrastra la barra de título), **redimensionar** (esquina infe
 1. Al guardar ves el **diff completo** y confirmas.
 2. El guardado es **transaccional**: se escribe un temporal verificado, se registra en el
    journal y se comprueba el resultado.
-3. Si el archivo cambió mientras lo tenías abierto, **no se sobrescribe**: conserva tu
+3. **Cada guardado de un archivo existente crea antes un checkpoint** (etiqueta «Antes de guardar desde editor»);
+   si no se puede verificar la copia, no se guarda. Recupéralo con `!undo`.
+4. Si el archivo cambió mientras lo tenías abierto, **no se sobrescribe**: conserva tu
    borrador y vuelve a abrirlo.
-4. Tras guardar, el editor **sigue abierto** para continuar (las propuestas del chat sí se cierran).
-5. Cerrar con cambios sin guardar pide confirmación; la página avisa antes de cerrarse.
+5. Tras guardar, el editor **sigue abierto** para continuar (las propuestas del chat sí se cierran).
+6. Cerrar con cambios sin guardar pide confirmación; la página avisa antes de cerrarse.
 
 Límite: 1 MB, UTF-8 sin bytes NUL. BOM y CRLF uniforme se conservan.
 
@@ -241,10 +264,17 @@ La IA debe responder con un único objeto JSON:
 |---|---|
 | `path` | Ruta exacta del archivo |
 | `hash` | SHA256 completo (64 hex minúsculas) de la versión que la IA vio; no debe inventarlo |
-| `operation` | `replace`, `insert-before`, `insert-after`, `append` o `patch` |
+| `operation` | `replace`, `insert-before`, `insert-after`, `append`, `patch` o `replace-function` |
 | `old` | Texto exacto que aparece **una sola vez** (no se usa en `append` ni `patch`) |
 | `new` | Texto exacto a insertar; los saltos se escriben `\n` (o `\r\n`) |
 | `patch` | Solo con `operation: "patch"`: un diff unificado de **un** archivo (sin `old`/`new`) |
+| `name` | Solo con `operation: "replace-function"`: nombre de la función (`render`) o `Clase.metodo`; sin `old` |
+
+**Reemplazar una función entera.** `{"path":"app.js","hash":"…","operation":"replace-function","name":"render","new":"function render() {\n  …\n}"}`
+sustituye la función completa (JS, Python y `<script>` de HTML); `new` debe incluir la **firma** y, en Python, los
+decoradores si deben conservarse. Se rechaza si el nombre no existe, si es ambiguo (usa `Clase.metodo`) o si `new` tiene
+llaves o comillas sin equilibrar (típico de una respuesta cortada). La sangría de `new` se ajusta a la del original;
+después sigue el flujo normal de diff, aprobación y checkpoint.
 
 **Varios archivos a la vez.** Un único bloque puede llevar `{"changes":[{…},{…}]}` (2 a 20 cambios, cada uno con su
 `path`, `hash` y operación, sin repetir rutas). loopwork prepara **todos** antes de mostrar nada: si uno falla
@@ -463,6 +493,7 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 | `write archivo texto` | Escritura transaccional |
 | `save archivo` | Guarda el último resultado textual |
 | `cp origen destino` · `mv origen destino` | Copia verificada; `mv` siempre confirma |
+| `undo` | Deshace la última operación con copia previa; repetirlo la rehace |
 | `rm [-r] ruta` | Borra tras confirmación, con copia previa (checkpoint) de hasta 1 MB por archivo |
 | `edit archivo` | Abre el editor (en blanco si no existe) |
 | `view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
@@ -532,7 +563,7 @@ interpreta escapes de shell como `\n`.
 | En Claude, el mensaje se queda en la entrada o el envío se cancela | Desde 1.5.41 se busca el botón por su etiqueta (también en español) y se usa Enter si no aparece. Si persiste, pulsa **Diagnóstico** y adjunta el informe al reportarlo |
 | **Ctrl+V** no pega en el panel o el texto aparece en el chat (claude.ai) | Actualiza a 1.5.42. Si sigue pasando con el userscript, usa la extensión de Chrome: registra el aislamiento antes que los scripts del sitio. Mientras tanto, el botón **Pegar** del editor usa el portapapeles directamente |
 | En Claude, el texto compartido no llega o el envío se cancela | El compositor de claude.ai es experimental: vacía la entrada, reintenta y, si persiste, copia el mensaje a mano y repórtalo con tu versión |
-| Lo que escribo en el panel aparece en el chat (ChatGPT) | Actualiza a 1.7.1: el teclado del panel queda aislado de la página. El script ahora arranca en `document-start`; si Tampermonkey no lo aplica, abre el script, comprueba que la cabecera dice `@run-at document-start` y recarga el chat. Si persiste, pulsa **Diagnóstico** y adjunta el informe |
+| Lo que escribo en el panel aparece en el chat (ChatGPT) | Actualiza a 1.8.0: el teclado del panel queda aislado de la página. El script ahora arranca en `document-start`; si Tampermonkey no lo aplica, abre el script, comprueba que la cabecera dice `@run-at document-start` y recarga el chat. Si persiste, pulsa **Diagnóstico** y adjunta el informe |
 | Error de Git "sin inicializar" | Pulsa **Inicializar Git local** o `!git init` |
 | `checkout bloqueado` | Haz commit o conserva tus archivos; no hay `--force` |
 | Aviso POSIBLE FUGA | Revisa el chat; es solo una alerta heurística |

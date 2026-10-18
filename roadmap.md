@@ -4,7 +4,7 @@ Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.7.1)
+## Estado de un vistazo (1.10.0)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -294,6 +294,35 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## Editor: guías de bloque (1.10.0)
+
+- `codeBlocks` calcula bloques multilínea (llaves/corchetes, sangría de Python, etiquetas HTML, y `<script>`/`<style>`) con su
+  profundidad; el editor los dibuja como líneas verticales junto a los números de línea, resalta el del cursor y el clic lo selecciona.
+- Decisión: solo visual. Plegar código exigiría sustituir el `textarea` por un editor propio; queda como posible mejora.
+- Pruebas: 4 unitarias y 1 e2e nuevas. Total 80.
+
+## Editor: revisión básica y funciones completas (1.9.0)
+
+- `codeAnalyze`: máscara de comentarios, cadenas, plantillas y regex; equilibrio de `([{` con arreglo seguro (cerrar al final,
+  corregir el cierre equivocado, insertar el que falta); `;` en CSS (error entre declaraciones, aviso en la última); en HTML
+  revisa solo el contenido de `<script>` y `<style>`; en Python `:` que falta, sangría inesperada/inconsistente y tabuladores mezclados.
+- Decisión: en JS no se «arregla» el `;` (ASI lo hace opcional) y en Python solo se detecta la sangría, porque corregirla
+  cambiaría el significado.
+- `codeFunctions`: funciones, métodos, flechas y clases (con propietario `Clase.metodo`) en JS, Python y `<script>`.
+  Editor: **Función** (más pequeña, repetir amplía), **Reemplazar función** (portapapeles + sangría) y Alt+Shift+→.
+- Protocolo `dv`: `operation: "replace-function"` con `name` y `new`; rechaza nombre inexistente, ambiguo o `new` desequilibrado.
+- Límites conocidos: heurística de regex en JS, sin soporte para TypeScript con genéricos complejos; detecta, no analiza tipos.
+- Pruebas: `codetools.test.mjs` (16) y `code-tools.test.mjs` (7). Total 75.
+
+## Datos seguros: undo, guardado con copia y retención (1.8.0)
+
+- El editor crea un checkpoint antes de **cada** guardado de un archivo existente (antes solo en restore y parches del chat).
+- `!undo`: restaura la ultima operacion con copia previa, agrupando las copias de una misma operacion (10 s y misma
+  etiqueta); archivos borrados se recrean, los modificados pasan por diff, varios por una revision conjunta.
+- Retencion automatica: 20 copias por archivo y 64 MB totales (`CFG.CHECKPOINT_KEEP_PER_FILE`, `CHECKPOINT_MAX_TOTAL_BYTES`);
+  nunca borra la mas reciente de cada archivo y no interrumpe la operacion si falla.
+- Pruebas: `undo-retention.test.mjs`. Total 52.
 
 ## Teclado aislado de la página (1.7.1)
 

@@ -3,7 +3,7 @@
 // @name:en      loopwork (Dual-Channel OPFS + Git)
 // @name:zh-CN   loopwork（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.7.1
+// @version      1.10.0
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -60,11 +60,13 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.7.1',
+    VERSION: '1.10.0',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
     MAX_SHARE_FILE_BYTES: 64 * 1024,
+    CHECKPOINT_KEEP_PER_FILE: 20,           // retención automática: copias por archivo
+    CHECKPOINT_MAX_TOTAL_BYTES: 64 * 1024 * 1024, // y tope total de copias
     SEND_TIMEOUT_MS: 4000,
     MAX_OUTPUT_CHARS: 6000,
     ATTACH_PREVIEW_CHARS: 1500,
@@ -2241,6 +2243,65 @@
     ]
   };
   const EXTRA_I18N = {
+    'Retención de copias: se eliminaron {0} checkpoint(s) antiguos (se conservan {1} por archivo y la más reciente siempre).': ['Copy retention: {0} old checkpoint(s) were removed ({1} are kept per file and the latest always).', '副本保留：已删除 {0} 个旧检查点（每个文件保留 {1} 个，且始终保留最新的）。'],
+    '⚠ No se pudo aplicar la retención de checkpoints: {0}': ['⚠ Could not apply checkpoint retention: {0}', '⚠ 无法应用检查点保留策略：{0}'],
+    'Antes de guardar desde editor': ['Before saving from the editor', '从编辑器保存之前'],
+    'uso: undo': ['usage: undo', '用法：undo'],
+    'cierra el editor actual antes de deshacer': ['close the current editor before undoing', '撤销前请关闭当前编辑器'],
+    'no hay copias previas que restaurar': ['there are no safety copies to restore', '没有可恢复的预先副本'],
+    'undo: {0} ahora es una carpeta; no se toca': ['undo: {0} is now a folder; it is not touched', 'undo：{0} 现在是文件夹；不会改动'],
+    'Nada que deshacer: los archivos ya coinciden con la última copia previa.': ['Nothing to undo: the files already match the latest safety copy.', '没有可撤销的内容：文件已与最近的预先副本一致。'],
+    'Deshaciendo «{0}» en {1}.\n': ['Undoing "{0}" on {1}.\n', '正在撤销“{0}”（{1}）。\n'],
+    'Deshacer «{0}» preparado en {1} archivos. Revisa los diffs y confirma Aplicar todo.': ['Undo of "{0}" prepared for {1} files. Review the diffs and confirm Apply all.', '“{0}”的撤销已为 {1} 个文件准备好。请检查差异并确认“全部应用”。'],
+    "⚠ Revisión básica: {0} problemas (llaves, comillas, «;» o sangría); usa Revisar en el editor.": ["⚠ Basic check: {0} problems (brackets, quotes, \";\" or indentation); use Check in the editor.", "⚠ 基础检查：{0} 个问题（括号、引号、“;”或缩进）；请在编辑器中使用“检查”。"],
+    "la función nueva tiene llaves, paréntesis o comillas sin equilibrar (línea {0}); revisa que no esté cortada": ["the new function has unbalanced braces, parentheses or quotes (line {0}); check that it is not truncated", "新函数的括号或引号不平衡（第 {0} 行）；请检查是否被截断"],
+    "función {0} no encontrada; disponibles: {1}": ["function {0} not found; available: {1}", "未找到函数 {0}；可用：{1}"],
+    "nombre {0} ambiguo (líneas {1}); usa Clase.metodo o un patch": ["name {0} is ambiguous (lines {1}); use Class.method or a patch", "名称 {0} 有歧义（第 {1} 行）；请使用 Class.method 或 patch"],
+    "«{0}» abierta en la línea {1} no se cierra": ["\"{0}\" opened on line {1} is never closed", "第 {1} 行打开的“{0}”没有关闭"],
+    "«{0}» de más en la línea {1}": ["Extra \"{0}\" on line {1}", "第 {1} 行多了一个“{0}”"],
+    "Línea {0}: se esperaba «{1}» y hay «{2}»": ["Line {0}: expected \"{1}\" but found \"{2}\"", "第 {0} 行：应为“{1}”，实际为“{2}”"],
+    "Cadena sin cerrar en la línea {0}": ["Unterminated string on line {0}", "第 {0} 行的字符串未关闭"],
+    "Comentario /* sin cerrar desde la línea {0}": ["Unterminated /* comment from line {0}", "从第 {0} 行开始的 /* 注释未关闭"],
+    "Plantilla con comillas invertidas sin cerrar desde la línea {0}": ["Unterminated backtick template from line {0}", "从第 {0} 行开始的反引号模板未关闭"],
+    "Falta «;» al final de la declaración (línea {0})": ["Missing \";\" at the end of the declaration (line {0})", "声明末尾缺少“;”（第 {0} 行）"],
+    "Falta «;» en la última declaración (línea {0}); es válido, pero conviene añadirlo": ["Missing \";\" on the last declaration (line {0}); it is valid, but worth adding", "最后一个声明缺少“;”（第 {0} 行）；这是合法的，但建议添加"],
+    "Sangría con tabuladores y espacios mezclados (línea {0})": ["Indentation mixes tabs and spaces (line {0})", "缩进混用了制表符和空格（第 {0} 行）"],
+    "Sangría inesperada en la línea {0}": ["Unexpected indentation on line {0}", "第 {0} 行出现意外缩进"],
+    "La sangría de la línea {0} no coincide con ningún nivel anterior": ["The indentation of line {0} matches no previous level", "第 {0} 行的缩进与之前任何层级都不匹配"],
+    "Se esperaba un bloque con sangría en la línea {0}": ["Expected an indented block on line {0}", "第 {0} 行应为缩进的代码块"],
+    "Falta «:» al final de la línea {0}": ["Missing \":\" at the end of line {0}", "第 {0} 行末尾缺少“:”"],
+    "Seleccionada {0} (líneas {1}–{2}). Pega encima, usa Reemplazar función o repite para ampliar.": ["Selected {0} (lines {1}–{2}). Paste over it, use Replace function, or repeat to widen.", "已选中 {0}（第 {1}–{2} 行）。可直接粘贴覆盖、使用“替换函数”，或重复操作以扩大范围。"],
+    "El texto pegado tiene llaves, paréntesis o comillas sin equilibrar (línea {0}). ¿Reemplazar {1} igualmente?": ["The pasted text has unbalanced braces, parentheses or quotes (line {0}). Replace {1} anyway?", "粘贴的文本括号或引号不平衡（第 {0} 行）。仍要替换 {1} 吗？"],
+    "Función {0} reemplazada ({1} → {2} líneas). Revisa el diff.": ["Function {0} replaced ({1} → {2} lines). Review the diff.", "函数 {0} 已替换（{1} → {2} 行）。请检查差异。"],
+    "replace-function no admite old; usa name": ["replace-function does not accept old; use name", "replace-function 不接受 old；请使用 name"],
+    "name debe ser el nombre de una función (por ejemplo render o Clase.metodo)": ["name must be a function name (for example render or Class.method)", "name 必须是函数名（例如 render 或 Class.method）"],
+    "new debe ser la función completa, con su firma": ["new must be the complete function, including its signature", "new 必须是完整的函数，包含其签名"],
+    "name solo es válido con operation \"replace-function\"": ["name is only valid with operation \"replace-function\"", "name 仅适用于 operation \"replace-function\""],
+    "replace-function solo está disponible para JavaScript, Python y HTML con <script>": ["replace-function is only available for JavaScript, Python and HTML with <script>", "replace-function 仅适用于 JavaScript、Python 和带 <script> 的 HTML"],
+    "Alt+Shift+→: seleccionar la función del cursor (repite para la exterior)": ["Alt+Shift+→: select the function at the cursor (repeat for the outer one)", "Alt+Shift+→：选中光标所在函数（重复可选外层函数）"],
+    "Bloque de la línea {0} a la {1}; clic para seleccionarlo": ["Block from line {0} to {1}; click to select it", "从第 {0} 行到第 {1} 行的代码块；点击可选中"],
+    "Mostrar u ocultar las guías de bloque junto a los números de línea": ["Show or hide the block guides next to the line numbers", "显示或隐藏行号旁的代码块引导线"],
+    "Guías": ["Guides", "引导线"],
+    "Arreglar todo": ["Fix all", "全部修复"],
+    "Revisión básica": ["Basic check", "基础检查"],
+    "Cerrar la lista de problemas": ["Close the problem list", "关闭问题列表"],
+    "Revisar llaves, comillas, «;» y sangría": ["Check brackets, quotes, \";\" and indentation", "检查括号、引号、“;”和缩进"],
+    "Revisar": ["Check", "检查"],
+    "Nada que arreglar automáticamente.": ["Nothing to fix automatically.", "没有可自动修复的内容。"],
+    "Arreglo aplicado. Revisa el diff antes de guardar.": ["Fix applied. Review the diff before saving.", "已应用修复。保存前请检查差异。"],
+    "Arreglar": ["Fix", "修复"],
+    "Sin problemas básicos.": ["No basic problems.", "没有基础问题。"],
+    "Seleccionar función solo está disponible para JavaScript, Python y HTML con <script>.": ["Selecting a function is only available for JavaScript, Python and HTML with <script>.", "仅 JavaScript、Python 和带 <script> 的 HTML 支持选择函数。"],
+    "El cursor no está dentro de ninguna función.": ["The cursor is not inside any function.", "光标不在任何函数内。"],
+    "El navegador bloqueó el portapapeles; selecciona con Función y pega con Ctrl+V.": ["The browser blocked the clipboard; select with Function and paste with Ctrl+V.", "浏览器阻止了剪贴板；请用“函数”选中后按 Ctrl+V 粘贴。"],
+    "El portapapeles está vacío.": ["The clipboard is empty.", "剪贴板为空。"],
+    "Seleccionar la función que contiene el cursor (Alt+Shift+→)": ["Select the function containing the cursor (Alt+Shift+→)", "选中包含光标的函数（Alt+Shift+→）"],
+    "Función": ["Function", "函数"],
+    "Reemplazar la función del cursor por el texto del portapapeles, ajustando la sangría": ["Replace the function at the cursor with the clipboard text, adjusting indentation", "用剪贴板文本替换光标处的函数，并调整缩进"],
+    "Reemplazar función": ["Replace function", "替换函数"],
+    "  operation replace-function: name (render o Clase.metodo) y new (función completa con firma); JS, Python y HTML.": ["  operation replace-function: name (render or Class.method) and new (complete function with signature); JS, Python and HTML.", "  operation replace-function：name（render 或 Class.method）和 new（含签名的完整函数）；适用于 JS、Python 和 HTML。"],
+    "En JavaScript y Python también replace-function con name (la función o Clase.metodo) y new (la función completa con su firma), sin old. ": ["In JavaScript and Python there is also replace-function with name (the function or Class.method) and new (the complete function with its signature), without old. ", "在 JavaScript 和 Python 中还可使用 replace-function，带 name（函数或 Class.method）和 new（含签名的完整函数），不带 old。"],
+    'Deshace la última operación con copia previa (rm, cp/mv, importar, write, guardar, propuesta); repetirlo la rehace': ['Undoes the last operation that made a safety copy (rm, cp/mv, import, write, save, proposal); running it again redoes it', '撤销最近一次生成预先副本的操作（rm、cp/mv、导入、write、保存、提案）；再次运行会重做'],
     'Ocultar panel': ['Hide panel', '隐藏面板'],
     'Ocultar el panel; vuelve con el botón 💾 DV, Alt+Shift+D o el icono de la extensión': ['Hide the panel; bring it back with the 💾 DV button, Alt+Shift+D or the extension icon', '隐藏面板；可通过 💾 DV 按钮、Alt+Shift+D 或扩展图标恢复'],
     'Mostrar panel': ['Show panel', '显示面板'],
@@ -4225,7 +4286,35 @@
     }
     await writeBytes(`${base}.json`, JSON.stringify(metadata));
     await readCheckpoint(id);
+    await autoPruneCheckpoints();
     return metadata;
+  }
+
+  // Retención automática: hasta CHECKPOINT_KEEP_PER_FILE copias por archivo y CHECKPOINT_MAX_TOTAL_BYTES en total.
+  // Nunca borra la copia más reciente de cada archivo y nunca interrumpe la operación que la pidió.
+  async function autoPruneCheckpoints() {
+    try {
+      const records = await checkpointInventory(); // más recientes primero
+      const perFile = new Map(), latest = new Set(), drop = new Set();
+      for (const m of records) {
+        const n = (perFile.get(m.path) || 0) + 1;
+        perFile.set(m.path, n);
+        if (n === 1) latest.add(m.id);
+        else if (n > CFG.CHECKPOINT_KEEP_PER_FILE) drop.add(m.id);
+      }
+      let total = records.reduce((sum, m) => sum + (drop.has(m.id) ? 0 : m.size), 0);
+      for (const m of [...records].reverse()) {
+        if (total <= CFG.CHECKPOINT_MAX_TOTAL_BYTES) break;
+        if (latest.has(m.id) || drop.has(m.id)) continue;
+        drop.add(m.id); total -= m.size;
+      }
+      const selected = records.filter((m) => drop.has(m.id));
+      if (!selected.length) return;
+      await removeCheckpointFiles(selected);
+      uiLog(t`Retención de copias: se eliminaron ${selected.length} checkpoint(s) antiguos (se conservan ${CFG.CHECKPOINT_KEEP_PER_FILE} por archivo y la más reciente siempre).`, 'info');
+    } catch (e) {
+      uiLog(t`⚠ No se pudo aplicar la retención de checkpoints: ${e.message}`, 'err');
+    }
   }
 
   // Copia previa automática (usa checkpoints) antes de operaciones que destruyen o reemplazan archivos.
@@ -4306,6 +4395,10 @@
       throw new Error(t('borrado de checkpoints cancelado; copias intactas'));
     }
     if (JSON.stringify(await checkpointInventory()) !== signature) throw new Error(t('checkpoints cambiaron durante confirmación; no se borró nada'));
+    return removeCheckpointFiles(selected);
+  }
+
+  async function removeCheckpointFiles(selected) {
     let deleted = 0;
     try {
       for (const m of selected) {
@@ -4410,7 +4503,7 @@
     if (text !== null && original !== null) {
       ctx.openEditor({
         snapshot: { path: current.path, text: original, hash: current.hash },
-        candidate: text, checkpointBeforeSave: true
+        candidate: text, checkpointBeforeSave: true, checkpointLabel: t('Antes de restore desde editor')
       });
       return t`Restauración preparada: ${metadata.path}. Revisa el diff y confirma Aplicar; se creará checkpoint previo al guardar.`;
     }
@@ -4430,6 +4523,599 @@
     return t`Restaurado y verificado: ${metadata.path}\nSHA256: ${metadata.hash}${backup ? t`\nCheckpoint previo: ${backup.id}` : ''}\nNo se hizo staging ni commit.`;
   });
 
+  def('undo', 'Sistema', 'undo', 'Deshace la última operación con copia previa (rm, cp/mv, importar, write, guardar, propuesta); repetirlo la rehace', async (ctx) => {
+    if (ctx.args.length) throw new Error(t('uso: undo'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de deshacer'));
+    const records = await checkpointInventory();
+    if (!records.length) throw new Error(t('no hay copias previas que restaurar'));
+    const newest = records[0], newestTime = Date.parse(newest.created);
+    const seen = new Set(), group = [];
+    for (const m of records) {
+      if (m.label !== newest.label || newestTime - Date.parse(m.created) > 10000 || seen.has(m.path)) continue;
+      seen.add(m.path); group.push(m);
+    }
+    const textItems = [], other = [];
+    for (const m of group) {
+      const { bytes } = await readCheckpoint(m.id);
+      const handle = await getHandle(m.path);
+      if (handle && handle.kind !== 'file') throw new Error(t`undo: ${m.path} ahora es una carpeta; no se toca`);
+      if (handle && (await fileSnapshot(m.path)).hash === m.hash) continue; // ya coincide
+      let item = null;
+      if (handle) {
+        try {
+          const current = await editorSnapshot(m.path);
+          const candidate = checkpointText(bytes);
+          if (candidate !== current.text) item = { snapshot: current, candidate };
+        } catch (e) { item = null; }
+      }
+      if (item) textItems.push({ m, item }); else other.push(m);
+    }
+    const actionable = textItems.length + other.length;
+    if (!actionable) return t('Nada que deshacer: los archivos ya coinciden con la última copia previa.');
+    const restore = REG.get('restore');
+    if (actionable === 1) {
+      const m = (textItems[0] || { m: other[0] }).m;
+      return t`Deshaciendo «${m.label}» en ${m.path}.\n` + await restore.run({ args: [m.id], openEditor: ctx.openEditor });
+    }
+    const messages = [];
+    for (const m of other) messages.push(await restore.run({ args: [m.id], openEditor: () => {} }));
+    if (textItems.length === 1) messages.push(await restore.run({ args: [textItems[0].m.id], openEditor: ctx.openEditor }));
+    else if (textItems.length > 1) {
+      const items = textItems.map((x) => x.item);
+      ctx.openEditor({ batch: items, snapshot: { path: items.map((x) => x.snapshot.path).join(', ') } });
+      messages.push(t`Deshacer «${newest.label}» preparado en ${items.length} archivos. Revisa los diffs y confirma Aplicar todo.`);
+    }
+    return messages.join('\n');
+  });
+
+  // <codetools>
+  // Herramientas de código puras (sin DOM ni t()): máscara de comentarios y cadenas, llaves/paréntesis, `;` en CSS,
+  // indentación básica de Python y localización de funciones. Los tests de tests/unit las cargan entre estas marcas.
+  const CODE_SCAN_LIMIT = 400000;
+  const VOID_TAGS = new Set('area base br col embed hr img input link meta param source track wbr'.split(' '));
+  const CODE_CLOSERS = { '(': ')', '[': ']', '{': '}' };
+  const JS_NON_FUNCTION = new Set(['if', 'for', 'while', 'switch', 'catch', 'with', 'function', 'return', 'else', 'do', 'typeof', 'new', 'super', 'await', 'yield', 'delete', 'void', 'in', 'of', 'import', 'export', 'async']);
+  const REGEX_PREV_WORDS = new Set(['return', 'typeof', 'case', 'delete', 'void', 'throw', 'in', 'of', 'instanceof', 'new', 'else', 'do', 'yield', 'await']);
+
+  function codeLineStarts(text) {
+    const starts = [0];
+    for (let i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) starts.push(i + 1);
+    return starts;
+  }
+  function codeLineAt(starts, index) {
+    let lo = 0, hi = starts.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (starts[mid] <= index) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+
+  // Devuelve un texto de la misma longitud donde comentarios y contenido de cadenas son espacios (los saltos de línea
+  // se conservan, y también las comillas de apertura y cierre), para poder contar llaves y leer líneas sin falsos avisos.
+  function codeMask(text, lang) {
+    const n = text.length, out = text.split(''), problems = [], strLines = new Set();
+    const starts = codeLineStarts(text);
+    const isJS = lang === 'js', isPY = lang === 'py';
+    const blank = (a, b) => { for (let k = a; k < b && k < n; k++) if (out[k] !== '\n') out[k] = ' '; };
+    const blankString = (a, b) => {
+      for (let k = a + 1; k < b - 1 && k < n; k++) {
+        if (out[k] === '\n') strLines.add(codeLineAt(starts, k) + 1); else out[k] = ' ';
+      }
+    };
+    let strClosed = false;
+    const skipString = (j, q) => {
+      j++;
+      strClosed = false;
+      while (j < n) { const ch = text[j]; if (ch === '\\') j += 2; else if (ch === q) { strClosed = true; return j + 1; } else if (ch === '\n') return j; else j++; }
+      return n;
+    };
+    const skipTemplate = (j) => {
+      while (j < n) {
+        const ch = text[j];
+        if (ch === '\\') { j += 2; continue; }
+        if (ch === '`') return j + 1;
+        if (ch === '$' && text[j + 1] === '{') {
+          j += 2;
+          let depth = 1;
+          while (j < n && depth) {
+            const x = text[j];
+            if (x === '`') { j = skipTemplate(j + 1); if (j < 0) return -1; }
+            else if (x === '"' || x === "'") j = skipString(j, x);
+            else { if (x === '{') depth++; else if (x === '}') depth--; j++; }
+          }
+          continue;
+        }
+        j++;
+      }
+      return -1;
+    };
+    let i = 0;
+    while (i < n) {
+      const c = text[i], d = text[i + 1];
+      if (isPY ? c === '#' : (isJS && c === '/' && d === '/')) {
+        let e = text.indexOf('\n', i); if (e < 0) e = n;
+        blank(i, e); i = e; continue;
+      }
+      if (!isPY && c === '/' && d === '*') {
+        const e = text.indexOf('*/', i + 2);
+        if (e < 0) { problems.push({ type: 'unterminated-comment', index: i }); blank(i, n); i = n; continue; }
+        blank(i, e + 2); i = e + 2; continue;
+      }
+      if (isPY && (c === '"' || c === "'") && text.startsWith(c.repeat(3), i)) {
+        let j = i + 3, end = -1;
+        while (j < n) {
+          if (text[j] === '\\') { j += 2; continue; }
+          if (text.startsWith(c.repeat(3), j)) { end = j + 3; break; }
+          j++;
+        }
+        if (end < 0) { problems.push({ type: 'unterminated-string', index: i }); blankString(i, n + 1); i = n; continue; }
+        blankString(i, end); i = end; continue;
+      }
+      if (c === '"' || c === "'") {
+        const end = skipString(i, c);
+        if (!strClosed) { problems.push({ type: 'unterminated-string', index: i }); blankString(i, end + 1); i = end; continue; }
+        blankString(i, end); i = end; continue;
+      }
+      if (isJS && c === '`') {
+        const end = skipTemplate(i + 1);
+        if (end < 0) { problems.push({ type: 'unterminated-template', index: i }); blankString(i, n + 1); i = n; continue; }
+        blankString(i, end); i = end; continue;
+      }
+      if (isJS && c === '/') {
+        let k = i - 1;
+        while (k >= 0 && /\s/.test(out[k])) k--;
+        let allowed = k < 0 || '(,=:[!&|?{;+-*%<>~^'.includes(out[k]);
+        if (!allowed && /[\w$]/.test(out[k])) {
+          let w = k; while (w >= 0 && /[\w$]/.test(out[w])) w--;
+          allowed = REGEX_PREV_WORDS.has(out.slice(w + 1, k + 1).join(''));
+        }
+        if (allowed) {
+          let j = i + 1, inClass = false, close = -1;
+          while (j < n) {
+            const ch = text[j];
+            if (ch === '\n') break;
+            if (ch === '\\') { j += 2; continue; }
+            if (ch === '[') inClass = true; else if (ch === ']') inClass = false;
+            else if (ch === '/' && !inClass) { close = j; break; }
+            j++;
+          }
+          if (close > i + 0) {
+            let e = close + 1;
+            while (e < n && /[a-z]/i.test(text[e])) e++;
+            blank(i, e); i = e; continue;
+          }
+        }
+      }
+      i++;
+    }
+    return { masked: out.join(''), problems, strLines };
+  }
+
+  // Revisa el equilibrio de ([{ en un texto ya enmascarado. Cada problema trae, si es seguro, un arreglo {from,to,text}.
+  function codeBrackets(masked) {
+    const stack = [], problems = [], pairs = new Map();
+    for (let i = 0; i < masked.length; i++) {
+      const c = masked[i];
+      if (c === '(' || c === '[' || c === '{') { stack.push({ c, i }); continue; }
+      if (c !== ')' && c !== ']' && c !== '}') continue;
+      const top = stack[stack.length - 1];
+      if (top && CODE_CLOSERS[top.c] === c) { pairs.set(top.i, i); stack.pop(); continue; }
+      let at = -1;
+      for (let k = stack.length - 1; k >= 0; k--) if (CODE_CLOSERS[stack[k].c] === c) { at = k; break; }
+      if (at >= 0) {
+        const skipped = stack.splice(at + 1).reverse();
+        const closers = skipped.map((s) => CODE_CLOSERS[s.c]).join('');
+        let at0 = i;
+        while (at0 > 0 && (masked[at0 - 1] === ' ' || masked[at0 - 1] === '\t')) at0--;
+        skipped.slice().reverse().forEach((s, n) => problems.push({
+          type: 'unclosed', ch: s.c, index: s.i, kind: 'error',
+          fix: n === 0 ? { from: at0, to: at0, text: closers } : null
+        }));
+        pairs.set(stack[at].i, i);
+        stack.pop();
+      } else if (top) {
+        problems.push({ type: 'mismatch', ch: c, expected: CODE_CLOSERS[top.c], index: i, kind: 'error', fix: { from: i, to: i + 1, text: CODE_CLOSERS[top.c] } });
+        pairs.set(top.i, i);
+        stack.pop();
+      } else {
+        problems.push({ type: 'extra', ch: c, index: i, kind: 'error', fix: { from: i, to: i + 1, text: '' } });
+      }
+    }
+    const rest = stack.slice();
+    const tail = rest.slice().reverse().map((s) => (CODE_CLOSERS[s.c] === '}' ? '\n}' : CODE_CLOSERS[s.c])).join('');
+    rest.forEach((s, n) => problems.push({
+      type: 'unclosed', ch: s.c, index: s.i, kind: 'error',
+      fix: n === 0 ? { from: masked.length, to: masked.length, text: tail } : null
+    }));
+    return { problems, pairs };
+  }
+
+  // `;` olvidado entre declaraciones CSS (error real: la declaración se pierde) o en la última (válido, pero conviene).
+  function codeCssSemicolons(masked) {
+    const problems = [], lines = masked.split('\n');
+    let pos = 0, depth = 0;
+    for (let li = 0; li < lines.length; li++) {
+      const raw = lines[li], lineStart = pos;
+      pos += raw.length + 1;
+      const before = depth;
+      for (const ch of raw) { if (ch === '{') depth++; else if (ch === '}') depth = Math.max(0, depth - 1); }
+      if (before <= 0) continue;
+      const m = /^\s*(-{0,2}[A-Za-z_][\w-]*)\s*:\s*([^;{}]*?)\s*$/.exec(raw);
+      if (!m || !m[2] || /[,(:]$/.test(m[2])) continue;
+      let nj = li + 1;
+      while (nj < lines.length && !lines[nj].trim()) nj++;
+      const nx = nj < lines.length ? lines[nj].trim() : '';
+      let type = null;
+      if (!nx || nx.startsWith('}')) type = 'semicolon-last';
+      else if (/^-{0,2}[A-Za-z_][\w-]*\s*:/.test(nx) && !nx.includes('{')) type = 'semicolon';
+      if (!type) continue;
+      const at = lineStart + raw.trimEnd().length;
+      problems.push({ type, index: at, kind: type === 'semicolon' ? 'error' : 'style', fix: { from: at, to: at, text: ';' } });
+    }
+    return problems;
+  }
+
+  // Indentación y dos puntos de Python. Solo detecta; el único arreglo automático es cambiar tabuladores por espacios
+  // en sangrías mezcladas y añadir los dos puntos que faltan, porque el resto cambiaría lo que hace el programa.
+  function codePythonChecks(text, masked, strLines) {
+    const problems = [], lines = text.split('\n'), ml = masked.split('\n');
+    const stack = [0];
+    let pos = 0, depth = 0, cont = false, prevOpened = false, logicalStart = -1, fileChar = null;
+    for (let li = 0; li < lines.length; li++) {
+      const lineStart = pos;
+      pos += lines[li].length + 1;
+      const m = ml[li] ?? '';
+      const startDepth = depth, startCont = cont, inString = strLines.has(li);
+      for (const ch of m) { if ('([{'.includes(ch)) depth++; else if (')]}'.includes(ch)) depth = Math.max(0, depth - 1); }
+      cont = m.trimEnd().endsWith('\\');
+      if (!(inString || startDepth > 0 || startCont)) {
+        if (!m.trim()) continue;
+        logicalStart = li;
+        const lead = /^[ \t]*/.exec(lines[li])[0], w = lead.length;
+        if (lead.includes(' ') && lead.includes('\t')) {
+          problems.push({ type: 'mixed-indent', index: lineStart, kind: 'error', fix: { from: lineStart, to: lineStart + w, text: lead.replace(/\t/g, '    ') } });
+        } else if (lead) {
+          if (fileChar === null) fileChar = lead[0];
+          else if (lead[0] !== fileChar) problems.push({ type: 'mixed-indent', index: lineStart, kind: 'error', fix: lead[0] === '\t' ? { from: lineStart, to: lineStart + w, text: lead.replace(/\t/g, '    ') } : null });
+        }
+        const top = stack[stack.length - 1];
+        if (w > top) {
+          if (!prevOpened) problems.push({ type: 'unexpected-indent', index: lineStart, kind: 'error', fix: null });
+          stack.push(w);
+        } else if (w < top) {
+          while (stack.length > 1 && stack[stack.length - 1] > w) stack.pop();
+          if (stack[stack.length - 1] !== w) { problems.push({ type: 'unindent-mismatch', index: lineStart, kind: 'error', fix: null }); stack.push(w); }
+          if (prevOpened) problems.push({ type: 'expected-indent', index: lineStart, kind: 'error', fix: null });
+        } else if (prevOpened) problems.push({ type: 'expected-indent', index: lineStart, kind: 'error', fix: null });
+        prevOpened = false;
+      }
+      if (depth === 0 && !cont && !inString && logicalStart >= 0) {
+        const joined = ml.slice(logicalStart, li + 1).join(' ').trimEnd();
+        prevOpened = joined.endsWith(':');
+        if (/^\s*(?:async\s+)?(?:def|class|if|elif|else|for|while|try|except|finally|with)\b/.test(joined) && !joined.includes(':')) {
+          const at = lineStart + m.trimEnd().length;
+          problems.push({ type: 'missing-colon', index: at, kind: 'error', fix: { from: at, to: at, text: ':' } });
+          prevOpened = true;
+        }
+        logicalStart = -1;
+      }
+    }
+    return problems;
+  }
+
+  // Deja solo el contenido de los bloques <script>/<style> (misma longitud) para reutilizar los analizadores en HTML.
+  function codeIsolateBlocks(text, tag) {
+    const out = text.replace(/[^\n]/g, ' ');
+    const chars = out.split('');
+    const lower = text.toLowerCase();
+    const openRe = new RegExp(`<${tag}\\b([^>]*)>`, 'gi');
+    let m;
+    while ((m = openRe.exec(text))) {
+      const attrs = m[1] || '';
+      const type = /\btype\s*=\s*["']?([^"'\s>]+)/i.exec(attrs)?.[1]?.toLowerCase();
+      const from = m.index + m[0].length;
+      let to = lower.indexOf(`</${tag}`, from);
+      if (to < 0) to = text.length;
+      openRe.lastIndex = to;
+      if (tag === 'script' && type && !/javascript|ecmascript|module/.test(type)) continue;
+      for (let k = from; k < to; k++) chars[k] = text[k];
+    }
+    return chars.join('');
+  }
+
+  function codeAnalyze(text, lang) {
+    if (text.length > CODE_SCAN_LIMIT) return { skipped: true, problems: [] };
+    const problems = [];
+    const run = (src, l, css) => {
+      const mk = codeMask(src, l);
+      for (const p of mk.problems) problems.push({ ...p, kind: 'error', fix: null });
+      problems.push(...codeBrackets(mk.masked).problems);
+      if (css) problems.push(...codeCssSemicolons(mk.masked));
+      if (l === 'py') problems.push(...codePythonChecks(src, mk.masked, mk.strLines));
+    };
+    if (lang === 'js') run(text, 'js', false);
+    else if (lang === 'css') run(text, 'css', true);
+    else if (lang === 'py') run(text, 'py', false);
+    else if (lang === 'html') {
+      run(codeIsolateBlocks(text, 'script'), 'js', false);
+      run(codeIsolateBlocks(text, 'style'), 'css', true);
+    }
+    const starts = codeLineStarts(text);
+    for (const p of problems) {
+      const line = codeLineAt(starts, Math.min(p.index, text.length));
+      p.line = line + 1; p.col = p.index - starts[line] + 1;
+    }
+    problems.sort((a, b) => a.index - b.index);
+    return { skipped: false, problems: problems.slice(0, 100) };
+  }
+
+  // Aplica los arreglos de una lista de problemas sin solaparse; los inserciones en el mismo punto salen en el orden listado.
+  function codeApplyFixes(text, problems) {
+    const fixes = problems.map((p) => p.fix).filter(Boolean).map((f, order) => ({ ...f, order }));
+    fixes.sort((a, b) => b.from - a.from || b.order - a.order);
+    let out = text, limit = Infinity;
+    for (const f of fixes) {
+      if (f.to > limit) continue;
+      out = out.slice(0, f.from) + f.text + out.slice(f.to);
+      limit = f.from;
+    }
+    return out;
+  }
+
+  function codeLeadOf(text, start) { return /^[ \t]*/.exec(text.slice(start, start + 200))[0]; }
+
+  function jsFunctions(text) {
+    const { masked } = codeMask(text, 'js');
+    const { pairs } = codeBrackets(masked);
+    const n = masked.length, found = new Map(), starts = codeLineStarts(text);
+    const lineStartOf = (i) => (i > 0 ? masked.lastIndexOf('\n', i - 1) + 1 : 0);
+    const skipWs = (i) => { while (i < n && /\s/.test(masked[i])) i++; return i; };
+    const bodyAfterParams = (open) => {
+      const close = pairs.get(open);
+      if (close === undefined) return -1;
+      let j = skipWs(close + 1);
+      if (masked[j] === ':') { const t = /^:[^{;=()]*/.exec(masked.slice(j, j + 200)); if (t) j = skipWs(j + t[0].length); }
+      return masked[j] === '{' && pairs.has(j) ? j : -1;
+    };
+    const add = (name, aliases, kind, start, end) => {
+      if (!(end > start)) return;
+      const key = start + ':' + end;
+      if (found.has(key)) return;
+      found.set(key, { name, aliases, kind, start, end, line: codeLineAt(starts, start) + 1, endLine: codeLineAt(starts, end - 1) + 1, indent: codeLeadOf(text, start) });
+    };
+    let m;
+    const reA = /(?:^|[^\w$.])((?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*\()/gm;
+    while ((m = reA.exec(masked))) {
+      const open = m.index + m[0].length - 1;
+      const body = bodyAfterParams(open);
+      if (body < 0) continue;
+      const lead = /[^\w$.]/.test(m[0][0]) ? 1 : 0;
+      add(m[2], [], 'function', lineStartOf(m.index + lead), pairs.get(body) + 1);
+    }
+    const reB = /(?:^|[^\w$.])((?:(?:export|default|const|let|var)\s+)*)([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*(?:=(?!=)|:(?!:))\s*(?:async\s+)?(function\b[^(]*\(|\(|[A-Za-z_$][\w$]*\s*=>)/gm;
+    while ((m = reB.exec(masked))) {
+      const tail = m[3], full = m[2], lead = /[^\w$.]/.test(m[0][0]) ? 1 : 0;
+      const name = full.split('.').pop(), aliases = full === name ? [] : [full];
+      const matchEnd = m.index + m[0].length;
+      let end = -1;
+      if (tail.startsWith('function') || tail === '(') {
+        const open = matchEnd - 1;
+        if (tail === '(') {
+          const close = pairs.get(open);
+          if (close === undefined) continue;
+          let j = skipWs(close + 1);
+          if (masked[j] === ':') { const t = /^:[^{;=()]*/.exec(masked.slice(j, j + 200)); if (t) j = skipWs(j + t[0].length); }
+          if (!masked.startsWith('=>', j)) continue;
+          end = arrowEnd(skipWs(j + 2));
+        } else {
+          const body = bodyAfterParams(open);
+          if (body < 0) continue;
+          end = pairs.get(body) + 1;
+        }
+      } else end = arrowEnd(skipWs(matchEnd));
+      if (end < 0) continue;
+      if (masked[end] === ';') end++;
+      add(name, aliases, 'function', lineStartOf(m.index + lead), end);
+    }
+    function arrowEnd(k) {
+      if (masked[k] === '{') return pairs.has(k) ? pairs.get(k) + 1 : -1;
+      let depth = 0, e = k;
+      while (e < n) {
+        const ch = masked[e];
+        if ('([{'.includes(ch)) depth++;
+        else if (')]}'.includes(ch)) { if (depth === 0) break; depth--; }
+        else if (ch === ';' && depth === 0) break;
+        else if (ch === '\n' && depth === 0 && masked.slice(k, e).trim()) break;
+        e++;
+      }
+      return k + masked.slice(k, e).trimEnd().length || -1;
+    }
+    const reC = /^[ \t]*(?:(?:static|async|get|set)[ \t]+)*\*?[ \t]*([A-Za-z_$][\w$]*)[ \t]*\(/gm;
+    while ((m = reC.exec(masked))) {
+      if (JS_NON_FUNCTION.has(m[1])) continue;
+      const body = bodyAfterParams(m.index + m[0].length - 1);
+      if (body < 0) continue;
+      add(m[1], [], 'method', m.index, pairs.get(body) + 1);
+    }
+    const reD = /(?:^|[^\w$.])class\s+([A-Za-z_$][\w$]*)[^{;]*\{/gm;
+    while ((m = reD.exec(masked))) {
+      const open = m.index + m[0].length - 1;
+      if (!pairs.has(open)) continue;
+      const lead = /[^\w$.]/.test(m[0][0]) ? 1 : 0;
+      add(m[1], [], 'class', lineStartOf(m.index + lead), pairs.get(open) + 1);
+    }
+    return [...found.values()];
+  }
+
+  function pyFunctions(text) {
+    const mk = codeMask(text, 'py');
+    const lines = text.split('\n'), ml = mk.masked.split('\n'), lineStart = [];
+    let p = 0;
+    for (const l of lines) { lineStart.push(p); p += l.length + 1; }
+    const depthAt = [];
+    let depth = 0;
+    for (const l of ml) { depthAt.push(depth); for (const ch of l) { if ('([{'.includes(ch)) depth++; else if (')]}'.includes(ch)) depth = Math.max(0, depth - 1); } }
+    const lead = (s) => /^[ \t]*/.exec(s)[0];
+    const out = [];
+    for (let i = 0; i < ml.length; i++) {
+      if (mk.strLines.has(i) || depthAt[i] > 0) continue;
+      const m = /^([ \t]*)(?:async[ \t]+)?(def|class)[ \t]+([A-Za-z_]\w*)/.exec(ml[i]);
+      if (!m) continue;
+      const indent = m[1];
+      let k = i, dd = 0;
+      for (; k < ml.length; k++) {
+        for (const ch of ml[k]) { if ('([{'.includes(ch)) dd++; else if (')]}'.includes(ch)) dd = Math.max(0, dd - 1); }
+        if ((dd === 0 && !ml[k].trimEnd().endsWith('\\')) || k === ml.length - 1) break;
+      }
+      let lastCode = k;
+      for (let j = k + 1; j < ml.length; j++) {
+        if (mk.strLines.has(j) || depthAt[j] > 0) { lastCode = j; continue; }
+        if (!ml[j].trim()) continue;
+        const ld = lead(lines[j]);
+        if (ld.length > indent.length && ld.startsWith(indent)) lastCode = j; else break;
+      }
+      let s = i;
+      while (s > 0 && !mk.strLines.has(s - 1) && /^[ \t]*@/.test(ml[s - 1]) && lead(lines[s - 1]) === indent) s--;
+      const start = lineStart[s], end = lineStart[lastCode] + lines[lastCode].trimEnd().length;
+      out.push({ name: m[3], aliases: [], kind: m[2] === 'class' ? 'class' : 'function', start, end, line: s + 1, endLine: lastCode + 1, indent });
+    }
+    return out;
+  }
+
+  // Lista las funciones, métodos y clases de un texto JS/Python (o de los <script> de un HTML) con su rango.
+  function codeFunctions(text, lang) {
+    if (text.length > CODE_SCAN_LIMIT) return [];
+    let list = [];
+    if (lang === 'py') list = pyFunctions(text);
+    else if (lang === 'js') list = jsFunctions(text);
+    else if (lang === 'html') {
+      const iso = codeIsolateBlocks(text, 'script');
+      list = jsFunctions(iso).map((f) => {
+        let first = f.start;
+        while (first < f.end && iso[first] === ' ') first++;
+        const shifted = /\S/.test(text.slice(f.start, first));
+        return shifted ? { ...f, start: first, indent: '' } : { ...f, indent: codeLeadOf(text, f.start) };
+      });
+    }
+    const classes = list.filter((f) => f.kind === 'class');
+    for (const f of list) {
+      let owner = null;
+      for (const c of classes) if (c !== f && c.start <= f.start && c.end >= f.end && (!owner || c.end - c.start < owner.end - owner.start)) owner = c;
+      f.owner = owner ? owner.name : '';
+      f.qname = owner ? `${owner.name}.${f.name}` : f.name;
+    }
+    return list.sort((a, b) => a.start - b.start || b.end - a.end);
+  }
+
+  // Función más pequeña que contiene la selección. Con allowEqual false devuelve una estrictamente mayor (para ampliar).
+  function codeFunctionAt(list, from, to, allowEqual = false) {
+    let best = null;
+    for (const f of list) {
+      if (f.start > from || f.end < to) continue;
+      if (!allowEqual && f.start === from && f.end === to) continue;
+      if (!best || f.end - f.start < best.end - best.start) best = f;
+    }
+    return best;
+  }
+
+  function codeFindFunction(list, name) {
+    const exact = list.filter((f) => f.qname === name);
+    if (exact.length === 1) return exact;
+    return list.filter((f) => f.name === name || f.qname === name || f.aliases.includes(name));
+  }
+
+  function codeReindent(block, indent, skipTemplates) {
+    if (skipTemplates && block.includes('`')) return block;
+    const lines = block.split('\n');
+    const first = lines.find((l) => l.trim());
+    if (first === undefined) return block;
+    const cur = /^[ \t]*/.exec(first)[0];
+    if (cur === indent) return block;
+    return lines.map((l) => (!l.trim() ? l : l.startsWith(cur) ? indent + l.slice(cur.length) : l)).join('\n');
+  }
+
+  // Sustituye una función entera por su versión nueva (con firma incluida). No decide nada si el nombre es ambiguo.
+  function codeReplaceFunction(text, lang, name, newText) {
+    const crlf = text.includes('\r\n');
+    const src = crlf ? text.replace(/\r\n/g, '\n') : text;
+    const list = codeFunctions(src, lang);
+    const found = codeFindFunction(list, name);
+    if (!found.length) return { error: 'notfound', names: [...new Set(list.filter((f) => f.kind !== 'class').map((f) => f.qname))].slice(0, 12) };
+    if (found.length > 1) return { error: 'ambiguous', lines: found.map((f) => f.line), names: found.map((f) => f.qname) };
+    const f = found[0];
+    let block = String(newText).replace(/\r\n?/g, '\n').replace(/^\n+/, '').replace(/\s+$/, '');
+    if (!block.trim()) return { error: 'empty' };
+    block = codeReindent(block, f.indent, lang !== 'py');
+    let candidate = src.slice(0, f.start) + block + src.slice(f.end);
+    if (crlf) candidate = candidate.replace(/\n/g, '\r\n');
+    return { candidate, fn: f, block };
+  }
+
+  // Bloques de varias líneas para las guías del margen: llaves/corchetes (JS, CSS, JSON, <script>/<style>), bloques por
+  // sangría de Python y elementos HTML. Cada bloque trae su línea de apertura y de cierre (1-based) y su nivel de anidación.
+  function codeBlocks(text, lang) {
+    if (text.length > CODE_SCAN_LIMIT) return [];
+    const starts = codeLineStarts(text), found = [];
+    const fromBrackets = (src, l) => {
+      const mk = codeMask(src, l);
+      for (const [open, close] of codeBrackets(mk.masked).pairs) {
+        if (mk.masked[open] === '(') continue;
+        const a = codeLineAt(starts, open) + 1, b = codeLineAt(starts, close) + 1;
+        if (b > a) found.push({ startLine: a, endLine: b, kind: mk.masked[open] === '{' ? 'brace' : 'bracket' });
+      }
+    };
+    if (lang === 'js' || lang === 'json') fromBrackets(text, 'js');
+    else if (lang === 'css') fromBrackets(text, 'css');
+    else if (lang === 'html') {
+      fromBrackets(codeIsolateBlocks(text, 'script'), 'js');
+      fromBrackets(codeIsolateBlocks(text, 'style'), 'css');
+      const plain = text.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '))
+        .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, (m) => m.replace(/[^\n]/g, ' '));
+      const stack = [];
+      for (const m of plain.matchAll(/<(\/?)([a-zA-Z][\w:-]*)[^>]*?(\/?)>/g)) {
+        const name = m[2].toLowerCase();
+        if (VOID_TAGS.has(name) || m[3]) continue;
+        const line = codeLineAt(starts, m.index) + 1;
+        if (!m[1]) { stack.push({ name, line }); continue; }
+        const at = stack.map((x) => x.name).lastIndexOf(name);
+        if (at < 0) continue;
+        const open = stack.splice(at)[0];
+        if (line > open.line) found.push({ startLine: open.line, endLine: line, kind: 'tag' });
+      }
+    } else if (lang === 'py') {
+      const mk = codeMask(text, 'py');
+      const lines = text.split('\n'), ml = mk.masked.split('\n');
+      const depthAt = [];
+      let depth = 0;
+      for (const l of ml) { depthAt.push(depth); for (const ch of l) { if ('([{'.includes(ch)) depth++; else if (')]}'.includes(ch)) depth = Math.max(0, depth - 1); } }
+      const lead = (x) => /^[ \t]*/.exec(x)[0];
+      for (let i = 0; i < ml.length; i++) {
+        if (mk.strLines.has(i) || !ml[i].trimEnd().endsWith(':')) continue;
+        let after = depthAt[i];
+        for (const ch of ml[i]) { if ('([{'.includes(ch)) after++; else if (')]}'.includes(ch)) after = Math.max(0, after - 1); }
+        if (after !== 0) continue;
+        let s0 = i;
+        while (s0 > 0 && depthAt[s0] > 0) s0--;
+        const indent = lead(lines[s0]);
+        let last = i;
+        for (let j = i + 1; j < ml.length; j++) {
+          if (mk.strLines.has(j) || depthAt[j] > 0) { last = j; continue; }
+          if (!ml[j].trim()) continue;
+          const ld = lead(lines[j]);
+          if (ld.length > indent.length && ld.startsWith(indent)) last = j; else break;
+        }
+        if (last > s0) found.push({ startLine: s0 + 1, endLine: last + 1, kind: 'indent' });
+      }
+    }
+    found.sort((a, b) => a.startLine - b.startLine || b.endLine - a.endLine);
+    const stack = [];
+    for (const b of found) {
+      while (stack.length && stack[stack.length - 1].endLine <= b.startLine) stack.pop();
+      b.depth = stack.length;
+      stack.push(b);
+    }
+    return found.slice(0, 1500);
+  }
+  // </codetools>
+
   // Avisos informativos (no bloquean el guardado): JSON, sintaxis JS (solo compila, no ejecuta) y HTML equilibrado.
   function validationNotes(path, text) {
     const ext = /\.([^./]+)$/.exec(String(path).toLowerCase())?.[1] || '';
@@ -4445,7 +5131,11 @@
           notes.push(e instanceof SyntaxError ? t`⚠ Sintaxis JS: ${e.message}` : t('Sintaxis JS: no verificable en esta página.'));
         }
       }
-    } else if (['html', 'htm'].includes(ext)) {
+    } else if (['css', 'py', 'html', 'htm'].includes(ext)) {
+      const basic = codeAnalyze(text, editorLanguage(path)).problems.filter((p) => p.kind === 'error');
+      if (basic.length) notes.push(t`⚠ Revisión básica: ${basic.length} problemas (llaves, comillas, «;» o sangría); usa Revisar en el editor.`);
+    }
+    if (['html', 'htm'].includes(ext)) {
       const stack = [];
       const clean = text.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, '<$1></$1>');
       const problems = [];
@@ -4479,8 +5169,8 @@
     validateEditorCandidate(snapshot, candidate);
     const current = await editorSnapshot(snapshot.path);
     if (current.hash !== snapshot.hash) throw new Error(t('el archivo cambió desde que abriste el editor; no se sobrescribió. Conserva tu borrador y vuelve a abrirlo'));
-    if (snapshot.checkpointBeforeSave) {
-      const backup = await createCheckpoint(snapshot.path, snapshot.checkpointLabel || t('Antes de restore desde editor'));
+    {
+      const backup = await createCheckpoint(snapshot.path, snapshot.checkpointLabel || t('Antes de guardar desde editor'));
       uiLog(t`Checkpoint previo: ${backup.id}`, 'info');
       if (backup.hash !== snapshot.hash || (await editorSnapshot(snapshot.path)).hash !== snapshot.hash) throw new Error(t('archivo cambió; checkpoint previo conservado, no se sobrescribió'));
     }
@@ -4506,7 +5196,7 @@
       }
       return value;
     }
-    const allowed = ['path', 'hash', 'operation', 'old', 'new', 'patch'];
+    const allowed = ['path', 'hash', 'operation', 'old', 'new', 'patch', 'name'];
     if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error(t('campos desconocidos en propuesta'));
     if (typeof value.path !== 'string' || typeof value.hash !== 'string' || !/^[a-f0-9]{64}$/.test(value.hash)) {
       throw new Error(t('propuesta requiere path y hash SHA256 completo en minúsculas'));
@@ -4519,6 +5209,14 @@
       return value;
     }
     if ('patch' in value) throw new Error(t('patch solo es válido con operation "patch"'));
+    if (value.operation === 'replace-function') {
+      if (!parts.length || isInternalPath(value.path)) throw new Error(t('ruta de propuesta no permitida'));
+      if ('old' in value) throw new Error(t('replace-function no admite old; usa name'));
+      if (typeof value.name !== 'string' || !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(value.name) || value.name.length > 200) throw new Error(t('name debe ser el nombre de una función (por ejemplo render o Clase.metodo)'));
+      if (typeof value.new !== 'string' || !value.new.trim() || value.new.includes('\0')) throw new Error(t('new debe ser la función completa, con su firma'));
+      return value;
+    }
+    if ('name' in value) throw new Error(t('name solo es válido con operation "replace-function"'));
     if (!['replace', 'insert-before', 'insert-after', 'append'].includes(value.operation) ||
       typeof value.new !== 'string' || value.new.includes('\0')) throw new Error(t('operation/new no válidos'));
     if (!parts.length || isInternalPath(value.path)) throw new Error(t('ruta de propuesta no permitida'));
@@ -4552,6 +5250,16 @@
       const result = engine.applyPatch(snapshot.text, parsed[0], { fuzzFactor: 0 });
       if (result === false || typeof result !== 'string') throw new Error(t('patch no aplica sobre la versión actual (contexto distinto); no se modifica el archivo'));
       candidate = result;
+    } else if (value.operation === 'replace-function') {
+      const lang = editorLanguage(value.path);
+      if (!['js', 'py', 'html'].includes(lang)) throw new Error(t('replace-function solo está disponible para JavaScript, Python y HTML con <script>'));
+      const own = codeAnalyze(value.new, lang === 'html' ? 'js' : lang).problems.filter((p) => ['unclosed', 'extra', 'mismatch', 'unterminated-string', 'unterminated-template', 'unterminated-comment'].includes(p.type));
+      if (own.length) throw new Error(t`la función nueva tiene llaves, paréntesis o comillas sin equilibrar (línea ${own[0].line}); revisa que no esté cortada`);
+      const result = codeReplaceFunction(snapshot.text, lang, value.name, value.new);
+      if (result.error === 'notfound') throw new Error(t`función ${value.name} no encontrada; disponibles: ${result.names.join(', ') || '—'}`);
+      if (result.error === 'ambiguous') throw new Error(t`nombre ${value.name} ambiguo (líneas ${result.lines.join(', ')}); usa Clase.metodo o un patch`);
+      if (result.error) throw new Error(t('new debe ser la función completa, con su firma'));
+      candidate = result.candidate;
     } else if (value.operation === 'append') {
       if ('old' in value) throw new Error(t('append no admite old'));
       candidate = snapshot.text + value.new;
@@ -4738,7 +5446,6 @@
     sh: 'sh', bash: 'sh', yml: 'sh', yaml: 'sh', toml: 'sh', ini: 'sh', md: 'md', markdown: 'md'
   };
   const EDITOR_LANG_NAMES = { js: 'JavaScript', json: 'JSON', css: 'CSS', html: 'HTML', py: 'Python', sh: 'Shell/YAML', md: 'Markdown' };
-  const VOID_TAGS = new Set('area base br col embed hr img input link meta param source track wbr'.split(' '));
   const EDITOR_PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
 
   function editorLanguage(path) {
@@ -5093,6 +5800,10 @@
       const dirtyMark = h('span', { class: 'dirty', title: t('Cambios sin guardar') }, '●');
       const title = h('span', {}, snapshot.isNew ? t`Nuevo archivo · ${path}` : t`Editor local · ${path}`);
       const gutter = h('pre', { class: 'gutter', 'aria-hidden': 'true' });
+      // Guías de bloque (como VS Code): una línea vertical por bloque desde la línea que abre hasta la que cierra.
+      const guideInner = h('div', { class: 'gin' });
+      const guides = h('div', { class: 'guides', 'aria-hidden': 'true' }, guideInner);
+      let renderGuides = () => {}, markActiveGuide = () => {};
       const hl = h('pre', { class: 'hl', 'aria-hidden': 'true' });
       const hit = h('div', { class: 'hit' });
       const code = h('textarea', { class: 'code', spellcheck: 'false', wrap: 'off', autocapitalize: 'off', autocomplete: 'off', 'aria-label': t`Código de ${path}` });
@@ -5195,10 +5906,12 @@
       minimap.addEventListener('pointerup', () => { miniDrag = false; });
 
       const syncScroll = () => {
+        guideInner.style.transform = `translateY(${-(code.scrollTop || 0)}px)`;
         gutter.scrollTop = code.scrollTop; hl.scrollTop = code.scrollTop; hl.scrollLeft = code.scrollLeft;
         updateMiniView();
       };
       const updatePosition = () => {
+        markActiveGuide();
         const value = code.value, s = code.selectionStart ?? 0, e = code.selectionEnd ?? s;
         const lineStart = s > 0 ? value.lastIndexOf('\n', s - 1) + 1 : 0;
         position.textContent = t`Ln ${countLines(value.slice(0, s))}, Col ${s - lineStart + 1}` + (e > s ? t` (${e - s} seleccionados)` : '');
@@ -5381,7 +6094,8 @@
         t('Ctrl+S: guardar (muestra el diff y confirma)'), t('Ctrl+F / Ctrl+H: buscar / reemplazar'), t('Ctrl+G: ir a la línea'),
         t('Ctrl+D: seleccionar la siguiente coincidencia'),
         t('Ctrl+/: comentar o descomentar'), t('Alt+↑/↓: mover línea · Shift+Alt+↑/↓: duplicar'),
-        t('Ctrl+Shift+K: borrar línea · Tab / Shift+Tab: sangrar'), t('Shift+Alt+F: formatear JSON · Esc: cerrar')
+        t('Ctrl+Shift+K: borrar línea · Tab / Shift+Tab: sangrar'), t('Shift+Alt+F: formatear JSON · Esc: cerrar'),
+        t('Alt+Shift+→: seleccionar la función del cursor (repite para la exterior)')
       ];
       const helpBox = h('div', { class: 'keys' }, h('strong', {}, t('Atajos de teclado')), ...shortcuts.map((line) => h('div', {}, line)));
       helpBox.style.display = 'none';
@@ -5434,6 +6148,153 @@
           report(t('JSON formateado. Revisa el diff.'));
         } catch (e) { report(t`JSON no válido: ${e.message}`, true); }
       };
+      // Revisión básica (llaves, comillas, `;` en CSS, sangría de Python) y trabajo con funciones completas.
+      const checkLang = ['js', 'css', 'py', 'html'].includes(lang) ? lang : null;
+      const funcLang = ['js', 'py', 'html'].includes(lang) ? lang : null;
+      const problemText = (p) => {
+        switch (p.type) {
+          case 'unclosed': return t`«${p.ch}» abierta en la línea ${p.line} no se cierra`;
+          case 'extra': return t`«${p.ch}» de más en la línea ${p.line}`;
+          case 'mismatch': return t`Línea ${p.line}: se esperaba «${p.expected}» y hay «${p.ch}»`;
+          case 'unterminated-string': return t`Cadena sin cerrar en la línea ${p.line}`;
+          case 'unterminated-comment': return t`Comentario /* sin cerrar desde la línea ${p.line}`;
+          case 'unterminated-template': return t`Plantilla con comillas invertidas sin cerrar desde la línea ${p.line}`;
+          case 'semicolon': return t`Falta «;» al final de la declaración (línea ${p.line})`;
+          case 'semicolon-last': return t`Falta «;» en la última declaración (línea ${p.line}); es válido, pero conviene añadirlo`;
+          case 'mixed-indent': return t`Sangría con tabuladores y espacios mezclados (línea ${p.line})`;
+          case 'unexpected-indent': return t`Sangría inesperada en la línea ${p.line}`;
+          case 'unindent-mismatch': return t`La sangría de la línea ${p.line} no coincide con ningún nivel anterior`;
+          case 'expected-indent': return t`Se esperaba un bloque con sangría en la línea ${p.line}`;
+          case 'missing-colon': return t`Falta «:» al final de la línea ${p.line}`;
+          default: return String(p.type);
+        }
+      };
+      let problemsOpen = false;
+      const problemsList = h('div', { class: 'plist' });
+      const fixAllButton = h('button', { class: 'ghost' }, t('Arreglar todo'));
+      const problemsBox = h('div', { class: 'probs', role: 'region', 'aria-label': t('Revisión básica') },
+        h('div', { class: 'phead' }, h('strong', {}, t('Revisión básica')), fixAllButton,
+          h('button', { class: 'ghost', 'aria-label': t('Cerrar la lista de problemas'), onclick: () => toggleProblems(false) }, '✕')),
+        problemsList);
+      problemsBox.style.display = 'none';
+      const checkButton = checkLang ? h('button', { class: 'ghost', 'aria-label': t('Revisar llaves, comillas, «;» y sangría') }, t('Revisar')) : null;
+      let currentProblems = [];
+      const applyProblemFixes = (list) => {
+        const old = code.value, next = codeApplyFixes(old, list);
+        if (next === old) { report(t('Nada que arreglar automáticamente.'), true); return; }
+        let a = 0;
+        while (a < old.length && a < next.length && old[a] === next[a]) a++;
+        let b = 0;
+        while (b < old.length - a && b < next.length - a && old[old.length - 1 - b] === next[next.length - 1 - b]) b++;
+        edit(a, old.length - b, next.slice(a, next.length - b));
+        runChecks();
+        report(t('Arreglo aplicado. Revisa el diff antes de guardar.'));
+      };
+      const renderProblems = () => {
+        const rows = currentProblems.length ? currentProblems.map((p) => h('div', { class: 'prow' },
+          h('button', { class: 'ghost', onclick: () => reveal(p.index, Math.min(p.index + 1, code.value.length)) }, `L${p.line}`),
+          h('span', { class: p.kind === 'style' ? 'pstyle' : '' }, problemText(p)),
+          ...(p.fix ? [h('button', { class: 'ghost', onclick: () => applyProblemFixes([p]) }, t('Arreglar'))] : [])))
+          : [h('div', {}, t('Sin problemas básicos.'))];
+        problemsList.replaceChildren(...rows);
+        fixAllButton.disabled = !currentProblems.some((p) => p.fix);
+      };
+      const runChecks = () => {
+        if (!checkLang) return [];
+        const res = codeAnalyze(code.value, checkLang);
+        currentProblems = res.problems;
+        checkButton.textContent = res.skipped ? t('Revisar') : res.problems.length ? `${t('Revisar')} ⚠ ${res.problems.length}` : `${t('Revisar')} ✓`;
+        if (problemsOpen) renderProblems();
+        return res.problems;
+      };
+      const toggleProblems = (open = !problemsOpen) => {
+        problemsOpen = open;
+        problemsBox.style.display = open ? 'block' : 'none';
+        if (open) { runChecks(); renderProblems(); } else code.focus?.();
+      };
+      checkButton?.addEventListener('click', () => toggleProblems());
+      fixAllButton.addEventListener('click', () => applyProblemFixes(currentProblems));
+      const scheduleCheck = debounce(runChecks, 700);
+
+      const functionList = () => codeFunctions(code.value, lang);
+      const selectFunction = () => {
+        if (!funcLang) { report(t('Seleccionar función solo está disponible para JavaScript, Python y HTML con <script>.'), true); return; }
+        const s = code.selectionStart ?? 0, e = code.selectionEnd ?? s;
+        const f = codeFunctionAt(functionList(), s, e);
+        if (!f) { report(t('El cursor no está dentro de ninguna función.'), true); return; }
+        reveal(f.start, f.end);
+        report(t`Seleccionada ${f.qname} (líneas ${f.line}–${f.endLine}). Pega encima, usa Reemplazar función o repite para ampliar.`);
+      };
+      const replaceFunction = async () => {
+        if (!funcLang) { report(t('Seleccionar función solo está disponible para JavaScript, Python y HTML con <script>.'), true); return; }
+        const s = code.selectionStart ?? 0, e = code.selectionEnd ?? s;
+        const f = codeFunctionAt(functionList(), s, e, true);
+        if (!f) { report(t('El cursor no está dentro de ninguna función.'), true); return; }
+        let text;
+        try { text = (await navigator.clipboard.readText()).replace(/\r\n?/g, '\n'); }
+        catch { report(t('El navegador bloqueó el portapapeles; selecciona con Función y pega con Ctrl+V.'), true); return; }
+        const block = codeReindent(text.replace(/^\n+/, '').replace(/\s+$/, ''), f.indent, lang !== 'py');
+        if (!block.trim()) { report(t('El portapapeles está vacío.'), true); return; }
+        const bad = codeAnalyze(block, lang === 'html' ? 'js' : lang).problems.filter((p) => ['unclosed', 'extra', 'mismatch', 'unterminated-string', 'unterminated-template', 'unterminated-comment'].includes(p.type));
+        if (bad.length && !confirm(t`El texto pegado tiene llaves, paréntesis o comillas sin equilibrar (línea ${bad[0].line}). ¿Reemplazar ${f.qname} igualmente?`)) return;
+        edit(f.start, f.end, block, f.start, f.start + block.length);
+        report(t`Función ${f.qname} reemplazada (${f.endLine - f.line + 1} → ${countLines(block)} líneas). Revisa el diff.`);
+      };
+
+      const GUIDES_PREF = 'dv.editor.guides.v1';
+      const guideLang = { js: 'js', json: 'js', css: 'css', py: 'py', html: 'html' }[lang] || null;
+      let guidesOn = !!guideLang;
+      try { if (localStorage.getItem(GUIDES_PREF) === '0') guidesOn = false; } catch { /* sin almacenamiento */ }
+      let guideBlocks = [], guideEls = [];
+      const GUIDE_COL = 9;
+      renderGuides = () => {
+        guideInner.replaceChildren();
+        guideEls = []; guideBlocks = [];
+        if (!guideLang || !guidesOn) { guides.style.display = 'none'; return; }
+        guideBlocks = codeBlocks(code.value, guideLang);
+        if (!guideBlocks.length) { guides.style.display = 'none'; return; }
+        guides.style.display = 'block';
+        const cols = Math.min(6, Math.max(...guideBlocks.map((b) => b.depth)) + 1), lh = lineHeight();
+        guides.style.width = (cols * GUIDE_COL + 8) + 'px';
+        const frag = document.createDocumentFragment();
+        for (const b of guideBlocks) {
+          const el = h('div', { class: 'g g-' + b.kind });
+          el.style.left = (4 + Math.min(b.depth, 5) * GUIDE_COL) + 'px';
+          el.style.top = (10 + (b.startLine - 1) * lh + Math.round(lh / 2)) + 'px';
+          el.style.height = ((b.endLine - b.startLine) * lh) + 'px';
+          el.title = t`Bloque de la línea ${b.startLine} a la ${b.endLine}; clic para seleccionarlo`;
+          el.addEventListener('click', () => {
+            const value = code.value, a = editorLineOffset(value, b.startLine);
+            const last = editorLineOffset(value, b.endLine);
+            const e2 = value.indexOf('\n', last);
+            reveal(a, e2 < 0 ? value.length : e2);
+          });
+          guideEls.push(el); frag.appendChild(el);
+        }
+        guideInner.appendChild(frag);
+        markActiveGuide();
+        syncScroll();
+      };
+      markActiveGuide = () => {
+        if (!guideEls.length) return;
+        const line = countLines(code.value.slice(0, code.selectionStart ?? 0));
+        let best = -1;
+        guideBlocks.forEach((b, i) => { if (b.startLine <= line && b.endLine >= line && (best < 0 || b.depth >= guideBlocks[best].depth)) best = i; });
+        guideEls.forEach((el, i) => el.classList.toggle('on', i === best));
+      };
+      const scheduleGuides = debounce(() => renderGuides(), 250);
+      const guidesButton = guideLang ? h('button', {
+        class: guidesOn ? 'ghost on' : 'ghost', 'aria-pressed': String(guidesOn),
+        'aria-label': t('Mostrar u ocultar las guías de bloque junto a los números de línea')
+      }, t('Guías')) : null;
+      guidesButton?.addEventListener('click', () => {
+        guidesOn = !guidesOn;
+        guidesButton.setAttribute('aria-pressed', String(guidesOn));
+        guidesButton.classList.toggle('on', guidesOn);
+        try { localStorage.setItem(GUIDES_PREF, guidesOn ? '1' : '0'); } catch { /* sin almacenamiento */ }
+        renderGuides();
+      });
+
       const copyAll = async () => {
         try { await navigator.clipboard.writeText(code.value); report(t('Código copiado al portapapeles.')); }
         catch { code.focus?.(); code.select?.(); report(t('El navegador bloqueó el portapapeles; el código quedó seleccionado, usa Ctrl+C.'), true); }
@@ -5463,7 +6324,7 @@
       const changeFont = (delta) => {
         fontSize = Math.min(24, Math.max(10, fontSize + delta));
         try { localStorage.setItem(EDITOR_FONT_KEY, String(fontSize)); } catch { /* sin almacenamiento */ }
-        applyFont(); placeHit(); syncScroll();
+        applyFont(); placeHit(); renderGuides(); syncScroll();
         report(t`Tamaño de letra: ${fontSize}px`);
       };
 
@@ -5478,6 +6339,8 @@
         paint(); markDirty(); updateInfo(); updateMini(); updatePosition();
         if (findOpen) scheduleFind();
         if (liveOpen) scheduleLive();
+        if (checkLang) scheduleCheck();
+        if (guideLang) scheduleGuides();
         report(snapshot.isNew ? t('Archivo nuevo · aún no existe en el disco') : t('Borrador local · aún no guardado'));
       };
       code.addEventListener('input', sync);
@@ -5524,6 +6387,7 @@
           report(t`Siguiente coincidencia en línea ${countLines(value.slice(0, next[0]))}`);
           return;
         }
+        if (e.altKey && e.shiftKey && !mod && key === 'ArrowRight') { e.preventDefault(); selectFunction(); return; }
         if (mod || e.altKey) return;
         if (key === 'Enter') {
           e.preventDefault();
@@ -5618,9 +6482,7 @@
             await nextPaint();
             if (saving || busy || candidate() !== approvedCandidate) return;
           }
-          if (!confirm(t`¿Aplicar el diff revisado a "${path}"? ${snapshot.checkpointBeforeSave ?
-            t('Se creará y verificará un checkpoint previo; si falla, no se guarda.') :
-            t('No crea backup automático.')} No crea commit.`)) return;
+          if (!confirm(t`¿Aplicar el diff revisado a "${path}"? ${t('Se creará y verificará un checkpoint previo; si falla, no se guarda.')} No crea commit.`)) return;
         }
         saving = true; setBusy(true); code.readOnly = true; apply.disabled = true;
         let saved = false;
@@ -5657,6 +6519,11 @@
         h('button', { class: 'ghost', onclick: pasteClipboard }, t('Pegar')),
         h('button', { class: 'ghost', 'aria-label': t('Descargar el borrador sin guardarlo en el disco virtual'), onclick: downloadDraft }, t('Descargar')),
         ...(lang === 'json' ? [h('button', { class: 'ghost', onclick: formatJSON }, t('Formatear'))] : []),
+        ...(checkButton ? [checkButton] : []),
+        ...(guidesButton ? [guidesButton] : []),
+        ...(funcLang ? [
+          h('button', { class: 'ghost', 'aria-label': t('Seleccionar la función que contiene el cursor (Alt+Shift+→)'), onclick: selectFunction }, t('Función')),
+          h('button', { class: 'ghost', 'aria-label': t('Reemplazar la función del cursor por el texto del portapapeles, ajustando la sangría'), onclick: replaceFunction }, t('Reemplazar función'))] : []),
         ...(isHTML ? [liveButton, tabButton] : []),
         h('button', { class: 'ghost', 'aria-label': t('Atajos de teclado'), onclick: () => toggleHelp() }, '⌨')
       ];
@@ -5704,6 +6571,15 @@
         .row input{flex:1;background:#3c3c3c;color:#eee;border:1px solid #555;border-radius:3px;padding:5px 7px;font:12px Consolas,monospace;outline:none;min-width:0}
         .row input:focus{border-color:#1f8ad2} .row input.bad{border-color:#f87171} .row button{padding:3px 8px}
         .count{font-size:11px;color:#aaa;min-width:72px;text-align:center}
+        .guides{position:relative;flex:none;overflow:hidden;border-right:1px solid #333;background:#1e1e1e;user-select:none}
+        .gin{position:absolute;left:0;top:0;right:0;height:0}
+        .g{position:absolute;box-sizing:border-box;width:9px;border-left:1px solid #ffffff4d;cursor:pointer}
+        .g::before,.g::after{content:'';position:absolute;left:-1px;width:6px;border-top:1px solid #ffffff4d}
+        .g::before{top:0}.g::after{bottom:0}
+        .g:hover,.g.on{border-left-color:#8ab4f8}.g:hover::before,.g:hover::after,.g.on::before,.g.on::after{border-top-color:#8ab4f8}
+        .probs{position:absolute;left:8px;right:100px;bottom:8px;z-index:3;max-height:40%;overflow:auto;background:#252526;border:1px solid #454545;border-radius:6px;box-shadow:0 4px 16px #0008;padding:6px;font-size:12px}
+        .phead{display:flex;gap:6px;align-items:center;margin-bottom:4px}.phead strong{flex:1}
+        .prow{display:flex;gap:6px;align-items:center;padding:2px 0}.prow span{flex:1}.pstyle{color:#aaa}
         .live{width:42%;min-width:240px;flex-direction:column;border-left:1px solid #444;background:#fff}
         .live-bar{background:#252526;color:#aaa;font-size:11px;padding:5px 8px}
         .live iframe{flex:1;border:0;width:100%;background:#fff}
@@ -5712,7 +6588,9 @@
         .status{flex:1;overflow-wrap:anywhere}.pos,.info{white-space:nowrap}
         @media (max-width:900px){.minimap{display:none}.live{width:50%}.find{right:8px}.info{display:none}}
       `));
-      source.append(gutter, h('div', { class: 'wrap' }, hl, code), minimap, findBox, gotoBox, helpBox);
+      source.append(gutter, guides, h('div', { class: 'wrap' }, hl, code), minimap, findBox, gotoBox, helpBox, problemsBox);
+      later(runChecks, 200);
+      later(renderGuides, 50);
       const dialog = h('section', { class: 'editor', role: 'dialog', 'aria-label': snapshot.isNew ? t`Nuevo archivo · ${path}` : t`Editor de ${path}` },
         windowBar, h('div', { class: 'bar' }, ...tools, preview, apply),
         h('div', { class: 'main' }, source, ...(live ? [live] : [])),
@@ -6444,6 +7322,7 @@
       t('  JSON: path, hash completo, operation, old (bloque único), new (texto exacto).'),
       t('  operation: replace, insert-before, insert-after, append (sin old).'),
       t('  operation patch: diff unificado en "patch" (sin old/new); exacto, sin tolerancia.'),
+      t('  operation replace-function: name (render o Clase.metodo) y new (función completa con firma); JS, Python y HTML.'),
       t('  Saltos dentro del JSON: \\n o \\r\\n; no se añaden saltos automáticamente.'),
       t('  Explorar / Importar: elige archivos del equipo; guarda bytes en la raíz OPFS.'),
       t('  Importación local, máximo 512 MB por archivo; confirma reemplazos, sin staging.'),
@@ -6770,6 +7649,7 @@
         ? t('Para varios archivos usa {"changes":[{path,hash,operation,old,new}, ...]} con rutas distintas (2 a 20 cambios); se aplican todos o ninguno. ')
         : t('Campos: path, hash, operation, old, new. ')) +
       t('operation: replace, insert-before, insert-after, append (sin old) o patch (diff unificado en el campo patch, sin old/new). ') +
+      t('En JavaScript y Python también replace-function con name (la función o Clase.metodo) y new (la función completa con su firma), sin old. ') +
       t('old debe ser texto exacto y coincidir una sola vez; new es texto exacto, no un diff ni código con puntos suspensivos. ') +
       t('Escapa saltos como \\n (o \\r\\n si el original los usa). Si falta contexto, pídelo; no supongas acceso al disco. El usuario revisará el diff y aprobará antes de guardar.'));
     return out.join('\n');
