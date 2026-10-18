@@ -4,7 +4,7 @@ Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.10.0)
+## Estado de un vistazo (1.10.1)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -294,6 +294,20 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## Revisión de código externa (1.10.1)
+
+Se comprobó cada punto de una revisión externa contra el código antes de tocar nada:
+- **`replace --regex` y macros de `$`: real, corregido.** `String.replace` interpretaba `$$`, `` $` `` y `$'` (también en el editor).
+  Ahora solo `$1`…`$99` y `$&` se expanden, `\$` da un `$` y el resto queda literal (`regexReplacer`).
+- **Binarios por tuberías: real, pero distinto del descrito.** `save` no lee la tubería (guarda el último resultado) y las redirecciones
+  `>` sí; el fallo era que `cat` decodificaba binarios sin avisar y que `save` tras un error guardaba el texto `❌…`. Ahora `cat`/`lines`
+  rechazan binarios y UTF-8 inválido (usa `cp`/`mv`/Descargar), `save` se niega si el último comando falló y una redirección abortada
+  no deja un archivo vacío nuevo.
+- **`withWriteLock`: no es un fallo.** `() => fn()` ya devuelve la promesa, así que el candado se mantiene hasta que termina la escritura.
+- **Vistas previas HTML: no es una fuga.** `closeHTMLPreview` limpia temporizadores, canal y URL del blob; `pagehide` las cierra todas, y los
+  temporizadores de la página no sobreviven a su cierre.
+- Pruebas: 2 e2e nuevas. Total 82.
 
 ## Editor: guías de bloque (1.10.0)
 

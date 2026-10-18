@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.10.0.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.10.1.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.10.0**.
+5. Comprueba que el panel muestra **v1.10.1**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -498,7 +498,7 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 | `edit archivo` | Abre el editor (en blanco si no existe) |
 | `view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `propose propuesta.json` | Prepara un cambio JSON para el editor |
-| `replace archivo old new [--all] [--regex] [--hash SHA256] [--dry-run]` | Reemplazo literal (o con regex: `$1`, sin coincidencias vacías, ambigua pide `--all`) con diff y aprobación |
+| `replace archivo old new [--all] [--regex] [--hash SHA256] [--dry-run]` | Reemplazo literal (o con regex: `$1`…`$99` y `$&` insertan grupo o coincidencia, `\$` da un `$` y cualquier otro `$` queda literal; sin coincidencias vacías, ambigua pide `--all`) con diff y aprobación |
 | `run archivo.html` / `run archivo.js` | HTML estático o JS de consola aislado |
 
 ### Sistema y auditoría

@@ -3,7 +3,7 @@
 // @name:en      loopwork (Dual-Channel OPFS + Git)
 // @name:zh-CN   loopwork（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.10.0
+// @version      1.10.1
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -60,7 +60,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.10.0',
+    VERSION: '1.10.1',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -2279,6 +2279,8 @@
     "name solo es válido con operation \"replace-function\"": ["name is only valid with operation \"replace-function\"", "name 仅适用于 operation \"replace-function\""],
     "replace-function solo está disponible para JavaScript, Python y HTML con <script>": ["replace-function is only available for JavaScript, Python and HTML with <script>", "replace-function 仅适用于 JavaScript、Python 和带 <script> 的 HTML"],
     "Alt+Shift+→: seleccionar la función del cursor (repite para la exterior)": ["Alt+Shift+→: select the function at the cursor (repeat for the outer one)", "Alt+Shift+→：选中光标所在函数（重复可选外层函数）"],
+    "el último comando falló; no hay resultado que guardar": ["the last command failed; there is no result to save", "上一个命令失败；没有可保存的结果"],
+    "{0} no es texto UTF-8 o es binario; usa cp, mv o Descargar para conservar sus bytes": ["{0} is not UTF-8 text or is binary; use cp, mv or Download to keep its bytes", "{0} 不是 UTF-8 文本或是二进制文件；请使用 cp、mv 或“下载”以保留其字节"],
     "Bloque de la línea {0} a la {1}; clic para seleccionarlo": ["Block from line {0} to {1}; click to select it", "从第 {0} 行到第 {1} 行的代码块；点击可选中"],
     "Mostrar u ocultar las guías de bloque junto a los números de línea": ["Show or hide the block guides next to the line numbers", "显示或隐藏行号旁的代码块引导线"],
     "Guías": ["Guides", "引导线"],
@@ -2973,8 +2975,12 @@
 
   async function openRawWriter(path, { append = false } = {}) {
     const { dir, name } = await parentOf(path, true);
+    let existed = true;
+    try { await dir.getFileHandle(name); } catch { existed = false; }
     const fh = await dir.getFileHandle(name, { create: true });
     const ws = await fh.createWritable({ keepExistingData: append });
+    // Si la escritura se aborta y el archivo no existía, no deja un archivo vacío huérfano.
+    ws.discardIfNew = async () => { if (!existed) { try { await dir.removeEntry(name); } catch { /* */ } } };
     if (append) { const f = await fh.getFile(); await ws.seek(f.size); }
     return ws;
   }
@@ -2982,7 +2988,7 @@
   async function writeBytes(path, data) {
     const ws = await openRawWriter(path);
     try { await ws.write(data); await ws.close(); }
-    catch (e) { try { await ws.abort(); } catch { /* */ } throw e; }
+    catch (e) { try { await ws.abort(); } catch { /* */ } await ws.discardIfNew(); throw e; }
     notifyHTMLPreviews(splitPath(path).join('/'));
   }
 
@@ -3111,6 +3117,7 @@
       },
       async abort() {
         try { if (gzWriter) await gzWriter.abort(); else await ws.abort(); } catch { /* */ }
+        await ws.discardIfNew();
       },
     };
   }
@@ -3824,7 +3831,8 @@
   // ============================================================
   async function* lines(path) {
     const file = await (await requireFile(path)).getFile();
-    const dec = new TextDecoder('utf-8');
+    const dec = new TextDecoder('utf-8', { fatal: true });
+    const notText = () => new Error(t`${path} no es texto UTF-8 o es binario; usa cp, mv o Descargar para conservar sus bytes`);
     let stream = file.stream();
     if (file.size >= 2) {
       const b = new Uint8Array(await file.slice(0, 2).arrayBuffer());
@@ -3836,7 +3844,10 @@
       for (; ;) {
         const { value, done } = await reader.read();
         if (done) break;
-        tail += dec.decode(value, { stream: true });
+        let piece;
+        try { piece = dec.decode(value, { stream: true }); } catch { throw notText(); }
+        if (piece.includes('\0')) throw notText();
+        tail += piece;
         let start = 0, i;
         while ((i = tail.indexOf('\n', start)) >= 0) {
           let l = tail.slice(start, i);
@@ -3846,7 +3857,7 @@
         }
         tail = tail.slice(start);
       }
-      tail += dec.decode();
+      try { tail += dec.decode(); } catch { throw notText(); }
       if (tail) yield tail.endsWith('\r') ? tail.slice(0, -1) : tail;
     } finally {
       try { await reader.cancel(); } catch { /* */ }
@@ -4219,7 +4230,7 @@
     });
   }
 
-  let lastResult = '';
+  let lastResult = '', lastResultOk = true;
   const panelHistory = [];
   const chatHistory = [];
 
@@ -5418,7 +5429,7 @@
       if (!matches.length) throw new Error(t('la expresión no coincide; no se modifica el archivo'));
       if (matches.some((m) => !m[0])) throw new Error(t('la expresión coincide con texto vacío; hazla más específica'));
       if (!flags.all && matches.length > 1) throw new Error(t`la expresión coincide ${matches.length} veces; usa --all o afínala`);
-      const text = snapshot.text.replace(re, pos[2]);
+      const text = snapshot.text.replace(re, regexReplacer(pos[2]));
       validateEditorCandidate(snapshot, text);
       proposal = { snapshot, candidate: text };
       count = matches.length;
@@ -5736,19 +5747,37 @@
     return out;
   }
 
+  // Sustitución con regex predecible: solo `$1`…`$99` (grupo) y `$&` (coincidencia) se expanden, `\$` da un `$` y cualquier
+  // otro `$` (`$$`, `$'`, `` $` ``, `$HOME`) queda tal cual, a diferencia de String.replace, que los interpreta.
+  function regexReplacer(replacement) {
+    return (...args) => {
+      const m = args[0];
+      const captures = typeof args[args.length - 1] === 'object' ? args.slice(1, -3) : args.slice(1, -2);
+      return replacement.replace(/\\\$|\$(&|\d{1,2})/g, (x, k) => {
+        if (x === '\\$') return '$';
+        if (k === '&') return m;
+        const two = Number(k);
+        if (two >= 1 && two <= captures.length) return captures[two - 1] ?? '';
+        const one = Number(k[0]);
+        if (k.length === 2 && one >= 1 && one <= captures.length) return (captures[one - 1] ?? '') + k[1];
+        return x;
+      });
+    };
+  }
+
   function replaceEditorMatches(text, query, replacement, options = {}, at = null) {
     const matches = findEditorMatches(text, query, options, Infinity);
     if (!matches.length) return { text, count: 0 };
     if (at === null) {
       const re = editorSearchRegex(query, options);
-      return { text: options.regex ? text.replace(re, replacement) : text.replace(re, () => replacement), count: matches.length };
+      return { text: options.regex ? text.replace(re, regexReplacer(replacement)) : text.replace(re, () => replacement), count: matches.length };
     }
     const [from, to] = matches.find(([a]) => a >= at) || matches[0];
     let insert = replacement;
     if (options.regex) {
       const re = editorSearchRegex(query, options, 'y');
       re.lastIndex = from;
-      const next = text.replace(re, replacement);
+      const next = text.replace(re, regexReplacer(replacement));
       insert = next.slice(from, next.length - (text.length - to));
     }
     return { text: text.slice(0, from) + insert + text.slice(to), count: 1, from, to, insert };
@@ -7103,6 +7132,7 @@
   def('save', 'Ficheros', 'save <file>', 'Guarda último resultado atómicamente', async (ctx) => {
     if (!ctx.args[0]) throw new Error(t('uso: save <file>'));
     if (!lastResult) throw new Error(t('no hay resultado previo'));
+    if (!lastResultOk) throw new Error(t('el último comando falló; no hay resultado que guardar'));
     const res = await atomicWrite(ctx.args[0], lastResult);
     return t`[Tx OK] Guardado ${ctx.args[0]} (${fmtBytes(res.bytes)})`;
   });
@@ -7414,11 +7444,11 @@
         }
         text = parts.join('\n');
       }
-      lastResult = text;
+      lastResult = text; lastResultOk = true;
       return { ok: true, text, ...(editorRequest ? { editor: editorRequest } : {}) };
     } catch (e) {
       const text = `❌ ${e.message || String(e)}`;
-      lastResult = text;
+      lastResult = text; lastResultOk = false;
       return { ok: false, text };
     }
   }
