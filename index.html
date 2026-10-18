@@ -427,21 +427,27 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
     var fig = document.getElementById('gifDemo'), img = fig && fig.querySelector('img'), cap = document.getElementById('gifCaption');
     if (!tabs.length || !img) return;
     var failed = {};
+    // Si el primer GIF ya falló antes de que este script se ejecutara, el evento de error se perdió: se vuelve a comprobar.
+    function recheck() { if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) img.dispatchEvent(new Event('error')); }
     function select(tab) {
       tabs.forEach(function (t) { var on = t === tab; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
       fig.setAttribute('aria-labelledby', tab.id);
       fig.classList.remove('missing');
-      cap.textContent = tab.getAttribute('data-cap');
+      current = tab;
+      cap.textContent = 'Cargando demostración…';
       img.alt = tab.getAttribute('data-alt');
       img.removeAttribute('src');          // reinicia la animación al volver a elegirla
       img.src = tab.getAttribute('data-gif');
     }
+    var current = tabs[0];
+    img.addEventListener('load', function () { cap.textContent = current.getAttribute('data-cap'); });
     img.addEventListener('error', function () {
       fig.classList.add('missing');
-      cap.textContent = 'Esta demostración aún no está disponible.';
+      cap.textContent = 'No se encontró «' + img.getAttribute('src') + '» junto a index.html (revisa el nombre exacto, también mayúsculas, y que esté subido).';
       failed[img.getAttribute('src')] = true;
       if (Object.keys(failed).length >= tabs.length) { var s = document.getElementById('demo'), a = document.querySelector('a[href="#demo"]'); if (s) s.hidden = true; if (a) a.hidden = true; }
     });
+    setTimeout(recheck, 0);
     tabs.forEach(function (tab, i) {
       tab.addEventListener('click', function () { select(tab); });
       tab.addEventListener('keydown', function (e) {
