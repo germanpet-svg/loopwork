@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.10.1.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.15.0.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.10.1**.
+5. Comprueba que el panel muestra **v1.15.0**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -93,7 +93,7 @@ con **Primeros pasos**.
 **Cuerpo**
 
 - Fila de almacenamiento (OPFS o carpeta real), con *Eliminar todos* y *Limpiar log*.
-- Botones: **Nuevo archivo…**, **Explorar / Importar archivos…**, **Ayuda**, **Primeros pasos**.
+- Botones: **Nuevo archivo…**, **Explorar / Importar archivos…**, **Deshacer**, **Rehacer**, **Ayuda**, **Primeros pasos**.
 - **Lista de archivos** con cuatro acciones por fila: **Editar · Ejecutar · Descargar · Eliminar**.
   Muestra hasta 50 filas; los nombres largos se acortan (el tooltip da la ruta completa).
 - **Registro (log)** con la salida de los comandos.
@@ -131,7 +131,7 @@ se pide confirmación antes de reemplazarlo (y no hay deshacer automático).
 usuario y **conserva** `.git`, `.dv` (checkpoints y registro) y `.dv_tmp`. Si usas carpeta real,
 la confirmación te avisa de que son archivos reales de tu PC.
 
-**Copia previa automática (desde 1.8.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
+**Copia previa automática (desde 1.7.0).** Antes de `rm`, `rm -r`, **Eliminar todos**, de
 reemplazar un destino con `cp`/`mv`, de importar un archivo o un ZIP sobre uno existente y de
 `write` sobre un archivo con contenido distinto, loopwork guarda un **checkpoint** del archivo
 afectado (etiquetas «Antes de rm», «Antes de cp», «Antes de importar»…). La confirmación te dice
@@ -139,10 +139,26 @@ cuántas copias se guardarán y cuántos archivos **no** tendrán copia por supe
 guardar la copia, **no toca nada**. Recupera con `!checkpoint --list --tag "Antes de rm"` y
 `!restore ID`. Los archivos internos (`.git`, `.dv`, `.dv_tmp`) no se copian.
 
-**`!undo`.** Deshace de un paso la última operación que dejó copia previa: `rm`, `cp`/`mv`, importar, `write`, guardar desde
-el editor o una propuesta multiarchivo (todas las copias de esa operación a la vez). Un archivo borrado se recrea; uno
-modificado abre el diff para que lo apruebes (varios archivos: una sola revisión con **Aplicar todo**). Como el propio
-deshacer deja una copia, ejecutarlo otra vez **rehace** el cambio.
+**Deshacer y rehacer (`!undo`, `!redo`).** Un *paso* es todo lo que hizo una operación: las copias previas de `rm`, `cp`/`mv`,
+importar, `write`, guardar desde el editor o una propuesta multiarchivo, o la **creación** de archivos y carpetas (`mkdir`,
+`touch`, `mktree`, `write`, `cp`/`mv`, importar y el editor sobre un archivo nuevo).
+
+```text
+!undo --list     # pasos que se pueden deshacer, el más reciente primero
+!undo            # deshace el último paso (pide confirmación)
+!undo 3          # deshace tres pasos (máx. 50)
+!redo            # rehace el último paso deshecho
+!redo 2
+```
+
+- Los botones **Deshacer** y **Rehacer** del panel y **Alt+Z** / **Alt+Mayús+Z** (con el foco en el panel) hacen lo mismo; no
+  tocan el Ctrl+Z del chat ni el del editor.
+- Todo pide confirmación mostrando qué se va a tocar. Un archivo borrado se recrea; uno modificado vuelve a su contenido
+  anterior; uno creado se borra tras guardar su contenido para poder rehacerlo. Una carpeta creada solo se quita si queda vacía.
+- **Un cambio nuevo descarta lo que se podía rehacer.** `redo` se niega si el archivo cambió después de deshacer.
+- El estado se guarda en `.dv/undo-state.json`: sobrevive a recargar la página.
+- Repetir `undo` **no** rehace: retrocede otro paso (para volver adelante usa `redo`). Los archivos de más de 1 MB no tienen
+  copia, así que su creación no se puede deshacer.
 
 **Retención automática.** Se conservan hasta **20 copias por archivo** y 64 MB en total; lo más antiguo se borra solo, y la
 copia más reciente de cada archivo nunca. El aviso aparece en el registro. Si necesitas conservar una versión, exporta el
@@ -166,6 +182,38 @@ no cierra el editor ni detiene nada.
 ```
 
 Redirección: `>` reemplaza, `>>` añade; un destino `.gz` se comprime (sin `>>`).
+
+### Armar un proyecto desde cero: carpetas, árbol y `cd`
+
+Las llaves funcionan como en bash:
+
+```text
+!mkdir -p app/{src,docs,tests/unit}
+!touch app/src/{index,util}.js app/docs/guia.md
+!tree app
+!mktree web "sitio/
+  css/
+    estilo.css
+  index.html"
+!cat plan.txt | mktree proyecto
+```
+
+- Se admiten listas (`{a,b}`), anidadas, rangos (`{1..3}`, `{01..10}`, `{a..e}`); máx. 200 rutas por orden.
+- `mktree` entiende un esquema con **sangría** (es carpeta si termina en `/` o tiene hijos) o el dibujo que produce `tree`;
+  máx. 300 elementos. Planifica todo antes de crear nada: si algo choca (un archivo donde va una carpeta, o al revés) no toca el
+  disco. Nunca sobrescribe.
+- Git no registra carpetas vacías: usa `touch carpeta/.gitkeep`. Las carpetas vacías aparecen en la lista del panel («carpeta
+  vacía»), en `ls` y `tree`, y viajan en el ZIP.
+
+**Carpeta actual.** `!cd /datos` (o `!cd datos`) cambia la carpeta de trabajo; `!cd ..` sube, `!cd -` vuelve a la anterior,
+`!cd /` o `!cd` a la raíz y `!pwd` la muestra. Después, `!ls`, `!cat a.txt`, `!write nuevo.txt "…"`, `!mkdir`, `!touch`,
+`!mktree`, `!cp`, `!grep`, `!git add`, `!checkpoint`, las redirecciones `>` y demás resuelven las rutas desde ahí. El panel
+muestra `· /datos` junto al estado, repite la carpeta delante de cada comando y su **lista de archivos** pasa a esa carpeta, con
+filas **📁 carpeta/** y botón **Entrar**, y **Subir** para volver. Se recuerda al recargar y vuelve a la raíz si la carpeta
+desaparece. No se puede entrar en `.git`, `.dv` ni `.dv_tmp`.
+
+> Las propuestas `dv` de la IA, `!undo`, `!restore` y los checkpoints usan siempre rutas **desde la raíz**. La IA no sabe en
+> qué carpeta estás: si un comando `!` suyo lleva una ruta relativa, se resolverá desde tu carpeta actual.
 
 ## 5. El editor integrado
 
@@ -365,11 +413,15 @@ hizo commit.
 !checkpoint prueba.txt "antes de editar"
 !checkpoint --list
 !checkpoint --list --file prueba.txt --tag "antes de"
+!checkpoint --list --verify
 !checkpoint show ID
 !checkpoint show ID --content
 !checkpoint diff ID1 ID2
 !restore ID
 ```
+
+El listado y la limpieza automática solo leen los metadatos y el tamaño (rápido); el hash completo se comprueba al
+restaurar, ver o comparar. `--list --verify` comprueba todas las copias y marca con ⚠ las corruptas.
 
 - `restore` vuelve a la ruta original. Si el archivo existe y es texto, pasa por editor y diff;
   si es binario o falta, pide confirmación directa. Siempre guarda antes otro checkpoint de la
@@ -410,7 +462,7 @@ Para probar aplicaciones web interactivas, ábrelas fuera del chat con un servid
 
 ### Exportar e importar el disco (ZIP)
 
-- **Exportar disco (.zip)…** descarga **todo**: archivos, `.git` y checkpoints. Se genera
+- **Exportar disco (.zip)…** descarga **todo**: archivos, carpetas vacías, `.git` y checkpoints. Se genera
   localmente, sin subir nada, y se abre con cualquier gestor ZIP.
 - **Importar ZIP…** restaura un ZIP: los archivos con el mismo nombre se **reemplazan sin
   deshacer** (pide confirmación). Se verifica el CRC de cada entrada.
@@ -488,12 +540,18 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 | Comando | Qué hace |
 |---|---|
 | `ls [-R] [ruta]` | Lista contenido |
+| `cd [ruta]` · `pwd` | Cambian y muestran la carpeta actual (`cd /datos`, `cd ..`, `cd -`, `cd /`); las rutas relativas parten de ahí |
+| `mkdir [-p] carpeta...` | Crea carpetas; con `-p` crea también las intermedias y no falla si ya existen |
+| `touch [-p] archivo...` | Crea archivos vacíos; nunca pisa los existentes |
+| `tree [-L N] [ruta]` | Dibuja el árbol (`├──`/`└──`), carpetas primero |
+| `mktree [base] "esquema"` · `cat plan.txt \| mktree [base]` | Crea un árbol entero desde un esquema con sangría o con el dibujo de `tree`; no sobrescribe y no hace nada si hay conflictos |
 | `cat [archivo...]` · `head [-n N] [archivo]` | Leen texto; aceptan pipes |
 | `grep [-i] [-n] [-F] patrón [archivo]` | Busca por líneas (regex o literal) |
 | `write archivo texto` | Escritura transaccional |
 | `save archivo` | Guarda el último resultado textual |
 | `cp origen destino` · `mv origen destino` | Copia verificada; `mv` siempre confirma |
-| `undo` | Deshace la última operación con copia previa; repetirlo la rehace |
+| `undo [N]` · `undo --list` | Deshace los últimos N pasos (por defecto 1), con confirmación; `--list` los muestra |
+| `redo [N]` | Rehace los pasos deshechos con `undo` |
 | `rm [-r] ruta` | Borra tras confirmación, con copia previa (checkpoint) de hasta 1 MB por archivo |
 | `edit archivo` | Abre el editor (en blanco si no existe) |
 | `view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
@@ -563,7 +621,6 @@ interpreta escapes de shell como `\n`.
 | En Claude, el mensaje se queda en la entrada o el envío se cancela | Desde 1.5.41 se busca el botón por su etiqueta (también en español) y se usa Enter si no aparece. Si persiste, pulsa **Diagnóstico** y adjunta el informe al reportarlo |
 | **Ctrl+V** no pega en el panel o el texto aparece en el chat (claude.ai) | Actualiza a 1.5.42. Si sigue pasando con el userscript, usa la extensión de Chrome: registra el aislamiento antes que los scripts del sitio. Mientras tanto, el botón **Pegar** del editor usa el portapapeles directamente |
 | En Claude, el texto compartido no llega o el envío se cancela | El compositor de claude.ai es experimental: vacía la entrada, reintenta y, si persiste, copia el mensaje a mano y repórtalo con tu versión |
-| Lo que escribo en el panel aparece en el chat (ChatGPT) | Actualiza a 1.8.0: el teclado del panel queda aislado de la página. El script ahora arranca en `document-start`; si Tampermonkey no lo aplica, abre el script, comprueba que la cabecera dice `@run-at document-start` y recarga el chat. Si persiste, pulsa **Diagnóstico** y adjunta el informe |
 | Error de Git "sin inicializar" | Pulsa **Inicializar Git local** o `!git init` |
 | `checkout bloqueado` | Haz commit o conserva tus archivos; no hay `--force` |
 | Aviso POSIBLE FUGA | Revisa el chat; es solo una alerta heurística |

@@ -3,7 +3,7 @@
 // @name:en      loopwork (Dual-Channel OPFS + Git)
 // @name:zh-CN   loopwork（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.10.1
+// @version      1.15.0
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -60,7 +60,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.10.1',
+    VERSION: '1.15.0',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -80,6 +80,7 @@
     HISTORY_MAX: 200,
     SETTINGS_KEY: 'dv.settings.v4',
     WELCOME_KEY: 'dv.welcome.v1',
+    CWD_KEY: 'dv.cwd.v1',
     LOCAL_FOLDER_CONSENT_KEY: 'dv.localFolder.consent.v1',
     HOST_ID: 'dv-host',
   };
@@ -2279,6 +2280,91 @@
     "name solo es válido con operation \"replace-function\"": ["name is only valid with operation \"replace-function\"", "name 仅适用于 operation \"replace-function\""],
     "replace-function solo está disponible para JavaScript, Python y HTML con <script>": ["replace-function is only available for JavaScript, Python and HTML with <script>", "replace-function 仅适用于 JavaScript、Python 和带 <script> 的 HTML"],
     "Alt+Shift+→: seleccionar la función del cursor (repite para la exterior)": ["Alt+Shift+→: select the function at the cursor (repeat for the outer one)", "Alt+Shift+→：选中光标所在函数（重复可选外层函数）"],
+    "Subir": ["Up", "上一级"],
+    "Volver a la carpeta anterior (cd ..)": ["Go back to the parent folder (cd ..)", "返回上一级文件夹（cd ..）"],
+    "Entrar": ["Enter", "进入"],
+    "Entrar en esta carpeta (cd)": ["Enter this folder (cd)", "进入此文件夹（cd）"],
+    "ruta fuera del disco: {0}": ["path outside the disk: {0}", "路径超出磁盘范围：{0}"],
+    "La carpeta actual ya no existe; vuelves a la raíz.": ["The current folder no longer exists; going back to the root.", "当前文件夹已不存在；返回根目录。"],
+    "uso: cd [ruta]": ["usage: cd [path]", "用法：cd [路径]"],
+    "cd: no se puede entrar en los metadatos internos": ["cd: cannot enter the internal metadata", "cd：无法进入内部元数据"],
+    "uso: pwd": ["usage: pwd", "用法：pwd"],
+    "cd [ruta]": ["cd [path]", "cd [路径]"],
+    "Cambia la carpeta actual (cd /datos, cd .. sube, cd / vuelve a la raíz, cd - vuelve a la anterior)": ["Changes the current folder (cd /data, cd .. goes up, cd / returns to the root, cd - goes back to the previous one)", "切换当前文件夹（cd /data；cd .. 上一级；cd / 回到根目录；cd - 回到上一个）"],
+    "pwd": ["pwd", "pwd"],
+    "Muestra la carpeta actual": ["Shows the current folder", "显示当前文件夹"],
+    "Exportado: {0} archivo(s) y {1} carpeta(s) vacía(s), {2} originales, {3} en el .zip. Incluye .git y checkpoints; nada enviado al chat.": ["Exported: {0} file(s) and {1} empty folder(s), {2} original, {3} in the .zip. Includes .git and checkpoints; nothing sent to the chat.", "已导出：{0} 个文件和 {1} 个空文件夹，原始 {2}，.zip 中 {3}。包含 .git 和检查点；未向聊天发送任何内容。"],
+    "ZIP restaurado: {0} archivo(s) escritos, {1} carpeta(s) vacía(s) creadas, {2} entrada(s) de carpeta omitidas. Nada enviado al chat.": ["ZIP restored: {0} file(s) written, {1} empty folder(s) created, {2} folder entr(ies) skipped. Nothing sent to the chat.", "ZIP 已恢复：写入 {0} 个文件，创建 {1} 个空文件夹，跳过 {2} 个文件夹条目。未向聊天发送任何内容。"],
+    "Importar ZIP": ["Import ZIP", "导入 ZIP"],
+    "Espera o cierra el editor antes de deshacer o rehacer.": ["Wait or close the editor before undoing or redoing.", "撤销或重做前请等待或关闭编辑器。"],
+    "Deshacer el último paso (Alt+Z); pide confirmación. Con !undo --list ves los pasos": ["Undo the last step (Alt+Z); asks for confirmation. Use !undo --list to see the steps", "撤销上一步（Alt+Z）；会请求确认。用 !undo --list 查看步骤"],
+    "Deshacer": ["Undo", "撤销"],
+    "Rehacer el último paso deshecho (Alt+Mayús+Z)": ["Redo the last undone step (Alt+Shift+Z)", "重做上一个已撤销的步骤（Alt+Shift+Z）"],
+    "Rehacer": ["Redo", "重做"],
+    "carpeta vacía": ["empty folder", "空文件夹"],
+    "⚠ No se pudo registrar la creación para poder deshacerla: {0}": ["⚠ Could not record the creation so it can be undone: {0}", "⚠ 无法记录创建操作，因此无法撤销：{0}"],
+    "undo: {0} ya no es una carpeta; no se toca": ["undo: {0} is no longer a folder; left untouched", "undo：{0} 不再是文件夹；保持不变"],
+    "undo: la carpeta {0} ya no está vacía ({1}); no se toca": ["undo: folder {0} is no longer empty ({1}); left untouched", "undo：文件夹 {0} 不再为空（{1}）；保持不变"],
+    "undo: {0} supera {1} y no tendría copia para rehacer; no se toca": ["undo: {0} exceeds {1} and would have no copy to redo; left untouched", "undo：{0} 超过 {1}，无法保留重做副本；保持不变"],
+    "undo: verificación fallida en {0}": ["undo: verification failed on {0}", "undo：{0} 验证失败"],
+    "redo: {0} ahora es una carpeta; no se toca": ["redo: {0} is now a folder; left untouched", "redo：{0} 现在是文件夹；保持不变"],
+    "redo: {0} cambió después de deshacer; no se toca": ["redo: {0} changed after the undo; left untouched", "redo：{0} 在撤销后已更改；保持不变"],
+    "redo: {0} ya existe; no se toca": ["redo: {0} already exists; left untouched", "redo：{0} 已存在；保持不变"],
+    "redo: verificación fallida en {0}": ["redo: verification failed on {0}", "redo：{0} 验证失败"],
+    "Se pueden rehacer {0} paso(s): {1}redo": ["{0} step(s) can be redone: {1}redo", "可重做 {0} 步：{1}redo"],
+    "N debe ser un entero entre 1 y {0}": ["N must be an integer between 1 and {0}", "N 必须是 1 到 {0} 之间的整数"],
+    "¿Deshacer {0} paso(s)?\n{1}\nSe guardarán copias para poder rehacerlo con redo.": ["Undo {0} step(s)?\n{1}\nCopies are kept so you can redo it with redo.", "撤销 {0} 步？\n{1}\n将保留副本，可用 redo 重做。"],
+    "{0}. Paso «{1}» aplicado solo en parte ({2} de {3}); usa {4}redo para recuperarlo.": ["{0}. Step «{1}» was only partly applied ({2} of {3}); use {4}redo to recover it.", "{0}。步骤「{1}」仅部分完成（{2}/{3}）；请使用 {4}redo 恢复。"],
+    "Deshecho: «{0}» ({1} elemento(s)).": ["Undone: «{0}» ({1} item(s)).", "已撤销：「{0}」（{1} 项）。"],
+    "«{0}»: ya estaba como antes; nada que cambiar.": ["«{0}»: already as before; nothing to change.", "「{0}」：已是之前的状态；无需更改。"],
+    "Para volver atrás: {0}redo": ["To go back: {0}redo", "要恢复：{0}redo"],
+    "¿Rehacer {0} paso(s)?\n{1}": ["Redo {0} step(s)?\n{1}", "重做 {0} 步？\n{1}"],
+    "Rehecho: «{0}» ({1} elemento(s)).": ["Redone: «{0}» ({1} item(s)).", "已重做：「{0}」（{1} 项）。"],
+    "rehacer": ["redo", "重做"],
+    "uso: undo [N] | undo --list": ["usage: undo [N] | undo --list", "用法：undo [N] | undo --list"],
+    "Pasos que se pueden deshacer (el más reciente primero):": ["Steps that can be undone (most recent first):", "可撤销的步骤（最近的在前）："],
+    "No hay pasos que deshacer.": ["There are no steps to undo.", "没有可撤销的步骤。"],
+    "deshacer cancelado; nada cambió": ["undo cancelled; nothing changed", "已取消撤销；未作更改"],
+    "uso: redo [N]": ["usage: redo [N]", "用法：redo [N]"],
+    "cierra el editor actual antes de rehacer": ["close the current editor before redoing", "重做前请先关闭当前编辑器"],
+    "no hay nada que rehacer": ["there is nothing to redo", "没有可重做的内容"],
+    "rehacer cancelado; nada cambió": ["redo cancelled; nothing changed", "已取消重做；未作更改"],
+    "Crear carpetas": ["Create folders", "创建文件夹"],
+    "Crear archivos": ["Create files", "创建文件"],
+    "Crear árbol": ["Create tree", "创建目录树"],
+    "undo [N] | undo --list": ["undo [N] | undo --list", "undo [N] | undo --list"],
+    "Deshace los últimos N pasos (por defecto 1): rm, cp/mv, importar, write, guardar, propuestas y creación de archivos/carpetas; undo --list los muestra; redo los rehace": ["Undoes the last N steps (default 1): rm, cp/mv, import, write, save, proposals and file/folder creation; undo --list shows them; redo redoes them", "撤销最近 N 步（默认 1）：rm、cp/mv、导入、write、保存、提案以及文件/文件夹创建；undo --list 列出步骤；redo 重做"],
+    "redo [N]": ["redo [N]", "redo [N]"],
+    "Rehace los últimos N pasos deshechos con undo (por defecto 1); se pierde al hacer un cambio nuevo": ["Redoes the last N steps undone with undo (default 1); lost when you make a new change", "重做最近 N 步已撤销的操作（默认 1）；进行新更改后失效"],
+    "uso: mkdir [-p] <carpeta>...": ["usage: mkdir [-p] <folder>...", "用法：mkdir [-p] <文件夹>..."],
+    "Las carpetas ya existían; no se creó nada.": ["The folders already existed; nothing was created.", "文件夹已存在；未创建任何内容。"],
+    "uso: touch [-p] <archivo>...": ["usage: touch [-p] <file>...", "用法：touch [-p] <文件>..."],
+    "uso: tree [-L N] [ruta]": ["usage: tree [-L N] [path]", "用法：tree [-L N] [路径]"],
+    "uso: mktree [base] [\"esquema\"] (o cat esquema.txt | mktree [base])": ["usage: mktree [base] [\"outline\"] (or cat outline.txt | mktree [base])", "用法：mktree [base] [\"大纲\"]（或 cat outline.txt | mktree [base]）"],
+    "el esquema tiene más de 300 elementos": ["the outline has more than 300 items", "大纲超过 300 项"],
+    "el esquema está vacío": ["the outline is empty", "大纲为空"],
+    "mkdir [-p] <carpeta>...": ["mkdir [-p] <folder>...", "mkdir [-p] <文件夹>..."],
+    "Crea carpetas (-p también las intermedias); admite llaves como bash: mkdir -p app/{src,docs}": ["Creates folders (-p also the intermediate ones); supports bash-style braces: mkdir -p app/{src,docs}", "创建文件夹（-p 同时创建中间层）；支持 bash 式大括号：mkdir -p app/{src,docs}"],
+    "touch [-p] <archivo>...": ["touch [-p] <file>...", "touch [-p] <文件>..."],
+    "Crea archivos vacíos que no existan (-p crea antes las carpetas); admite llaves: touch app/src/{a,b}.js": ["Creates empty files that do not exist (-p creates the folders first); supports braces: touch app/src/{a,b}.js", "创建不存在的空文件（-p 先创建文件夹）；支持大括号：touch app/src/{a,b}.js"],
+    "tree [-L N] [ruta]": ["tree [-L N] [path]", "tree [-L N] [路径]"],
+    "Muestra carpetas y archivos como árbol": ["Shows folders and files as a tree", "以树形显示文件夹和文件"],
+    "mktree [base] [\"esquema\"] (o cat esquema.txt | mktree [base])": ["mktree [base] [\"outline\"] (or cat outline.txt | mktree [base])", "mktree [base] [\"大纲\"]（或 cat outline.txt | mktree [base]）"],
+    "Crea carpetas y archivos vacíos desde un esquema con sangría o con el dibujo de tree; no sobrescribe nada": ["Creates folders and empty files from an indented outline or tree drawing; overwrites nothing", "根据缩进大纲或 tree 图创建文件夹和空文件；不会覆盖任何内容"],
+    "la expansión de llaves supera {0} rutas": ["brace expansion exceeds {0} paths", "大括号展开超过 {0} 个路径"],
+    "no se pueden crear metadatos internos: {0}": ["internal metadata cannot be created: {0}", "无法创建内部元数据：{0}"],
+    "{0} es un archivo, no una carpeta": ["{0} is a file, not a folder", "{0} 是文件，不是文件夹"],
+    "ya existe: {0}": ["already exists: {0}", "已存在：{0}"],
+    "no existe la carpeta {0}; usa mkdir -p": ["folder {0} does not exist; use mkdir -p", "文件夹 {0} 不存在；请使用 mkdir -p"],
+    "Carpetas creadas ({0}): {1}": ["Folders created ({0}): {1}", "已创建文件夹（{0}）：{1}"],
+    "no existe la carpeta {0}; usa touch -p o mkdir -p": ["folder {0} does not exist; use touch -p or mkdir -p", "文件夹 {0} 不存在；请使用 touch -p 或 mkdir -p"],
+    "Archivos creados: {0}{1}. Ya existían: {2}.": ["Files created: {0}{1}. Already existed: {2}.", "已创建文件：{0}{1}。已存在：{2}。"],
+    "no es una carpeta: {0}": ["not a folder: {0}", "不是文件夹：{0}"],
+    "{0} carpeta(s), {1} archivo(s)": ["{0} folder(s), {1} file(s)", "{0} 个文件夹，{1} 个文件"],
+    "{0} aparece como archivo y como carpeta en el esquema": ["{0} appears as both a file and a folder in the outline", "{0} 在大纲中既是文件又是文件夹"],
+    "{0} ya existe como archivo; no se crea nada": ["{0} already exists as a file; nothing is created", "{0} 已作为文件存在；不会创建任何内容"],
+    "{0} ya existe como carpeta; no se crea nada": ["{0} already exists as a folder; nothing is created", "{0} 已作为文件夹存在；不会创建任何内容"],
+    "Creado: {0} carpeta(s) y {1} archivo(s) vacío(s). Ya existían: {2} archivo(s) (no se tocan).": ["Created: {0} folder(s) and {1} empty file(s). Already existed: {2} file(s) (left untouched).", "已创建：{0} 个文件夹和 {1} 个空文件。已存在：{2} 个文件（保持不变）。"],
     "el último comando falló; no hay resultado que guardar": ["the last command failed; there is no result to save", "上一个命令失败；没有可保存的结果"],
     "{0} no es texto UTF-8 o es binario; usa cp, mv o Descargar para conservar sus bytes": ["{0} is not UTF-8 text or is binary; use cp, mv or Download to keep its bytes", "{0} 不是 UTF-8 文本或是二进制文件；请使用 cp、mv 或“下载”以保留其字节"],
     "Bloque de la línea {0} a la {1}; clic para seleccionarlo": ["Block from line {0} to {1}; click to select it", "从第 {0} 行到第 {1} 行的代码块；点击可选中"],
@@ -2955,6 +3041,20 @@
     }
   }
 
+  async function dirIsEmpty(handle) {
+    for await (const _ of handle.keys()) return false; // eslint-disable-line no-unused-vars
+    return true;
+  }
+
+  // Carpetas vacías de usuario (Git no las registra y no salen en la lista de archivos).
+  async function listEmptyDirs() {
+    const out = [];
+    for await (const e of walk(rootDir)) {
+      if (e.kind === 'dir' && !isInternalPath(e.path) && await dirIsEmpty(e.handle)) out.push(e.path);
+    }
+    return out;
+  }
+
   async function listFiles() {
     const out = [];
     for await (const e of walk(rootDir)) {
@@ -3028,6 +3128,7 @@
       catch (e) { throw new Error(t`copia verificada en "${targetPath}", pero no se pudo borrar "${sourcePath}": ${e.message}`); }
       if (await getHandle(sourcePath)) throw new Error(t`copia verificada, pero el origen sigue existiendo: ${sourcePath}`);
     }
+    if (!targetHandle) await recordCreation(t('Crear archivo'), [{ path: targetPath, kind: 'file' }]);
     return `${move ? 'Movido' : 'Copiado'}: ${sourcePath} -> ${targetPath} (${fmtBytes(sourceFile.size)}, SHA256: ${sourceHash.slice(0, 8)}...)`;
   }
 
@@ -3074,6 +3175,7 @@
         }
         if (target) await safetyCopyAll(targetPlan.copy, t('Antes de importar'));
         const hash = await copyVerifiedFile(file, file.name, target);
+        if (!target) await recordCreation(t('Crear archivo'), [{ path: file.name, kind: 'file' }]);
         imported++;
         uiLog(t`Importado localmente: ${file.name} (${fmtBytes(file.size)}, SHA256: ${hash.slice(0, 8)}...)`, 'info');
       }
@@ -4020,9 +4122,20 @@
     try {
       const encoder = new TextEncoder();
       const localChunks = [], centralChunks = [];
-      let offset = 0, fileCount = 0, rawTotal = 0;
+      let offset = 0, fileCount = 0, dirCount = 0, rawTotal = 0;
       for await (const e of walk(rootDir)) {
-        if (e.kind !== 'file') continue;
+        if (e.kind === 'dir') {
+          if (!await dirIsEmpty(e.handle)) continue;
+          const nameBytes = encoder.encode(e.path + '/');
+          const { time, dateVal } = zipDosDateTime(new Date());
+          const fields = { nameLen: nameBytes.length, method: 0, crc: 0, compSize: 0, rawSize: 0, time, dateVal };
+          const header = zipLocalHeader(fields);
+          localChunks.push(header, nameBytes);
+          centralChunks.push(zipCentralHeader({ ...fields, offset }), nameBytes);
+          offset += header.length + nameBytes.length;
+          fileCount++; dirCount++;
+          continue;
+        }
         const file = await e.handle.getFile();
         const rawBytes = new Uint8Array(await file.arrayBuffer());
         const crc = zipCrc32(rawBytes);
@@ -4056,7 +4169,7 @@
       const pendingUrl = url;
       setTimeout(() => URL.revokeObjectURL(pendingUrl), 60000);
       url = null;
-      uiLog(t`Exportado: ${fileCount} archivo(s), ${fmtBytes(rawTotal)} originales, ${fmtBytes(blob.size)} en el .zip. Incluye .git y checkpoints; nada enviado al chat.`, 'info');
+      uiLog(t`Exportado: ${fileCount - dirCount} archivo(s) y ${dirCount} carpeta(s) vacía(s), ${fmtBytes(rawTotal)} originales, ${fmtBytes(blob.size)} en el .zip. Incluye .git y checkpoints; nada enviado al chat.`, 'info');
     } catch (e) {
       uiLog(t`❌ Exportar ZIP: ${e.message}`, 'err');
     } finally {
@@ -4117,25 +4230,35 @@
       return;
     }
     setBusy(true);
-    let restored = 0, skipped = 0;
+    let restored = 0, skipped = 0, dirsMade = 0;
+    const createdByZip = [];
     try {
       if (file.size > CFG.MAX_ZIP_BYTES) throw new Error(t`ZIP demasiado grande: máximo ${fmtBytes(CFG.MAX_ZIP_BYTES)}`);
       const bytes = new Uint8Array(await file.arrayBuffer());
       const entries = parseZipEntries(bytes);
       for (const entry of entries) {
-        if (entry.name.endsWith('/')) { skipped++; continue; }
+        if (entry.name.endsWith('/')) {
+          const dirParts = splitPath(entry.name);
+          if (!dirParts.length || await getHandle(dirParts.join('/'))) { skipped++; continue; }
+          for (const path of await makeDirectory(dirParts, true)) createdByZip.push({ path, kind: 'dir' });
+          dirsMade++;
+          continue;
+        }
         const parts = splitPath(entry.name);
         const data = await readZipEntryData(bytes, entry);
         if (zipCrc32(data) !== entry.crc) throw new Error(t`CRC inválido en ${entry.name}; el ZIP podría estar corrupto`);
         const zipTarget = parts.join('/');
+        const existedBefore = !!await getHandle(zipTarget);
         await safetyCopyAll((await safetyPlan([zipTarget])).copy, t('Antes de importar ZIP'));
         await writeBytes(zipTarget, data);
+        if (!existedBefore && !isInternalPath(zipTarget)) createdByZip.push({ path: zipTarget, kind: 'file' });
         restored++;
       }
-      uiLog(t`ZIP restaurado: ${restored} archivo(s) escritos, ${skipped} carpeta(s) omitidas. Nada enviado al chat.`, 'info');
+      uiLog(t`ZIP restaurado: ${restored} archivo(s) escritos, ${dirsMade} carpeta(s) vacía(s) creadas, ${skipped} entrada(s) de carpeta omitidas. Nada enviado al chat.`, 'info');
     } catch (e) {
       uiLog(t`❌ Importar ZIP: ${e.message}. ${restored} archivo(s) ya escritos se conservan.`, 'err');
     } finally {
+      await recordCreation(t('Importar ZIP'), createdByZip.filter((i) => !isInternalPath(i.path)));
       setBusy(false);
       await ui?.refresh();
     }
@@ -4297,6 +4420,7 @@
     }
     await writeBytes(`${base}.json`, JSON.stringify(metadata));
     await readCheckpoint(id);
+    await clearRedoAfterNewWork();
     await autoPruneCheckpoints();
     return metadata;
   }
@@ -4305,7 +4429,7 @@
   // Nunca borra la copia más reciente de cada archivo y nunca interrumpe la operación que la pidió.
   async function autoPruneCheckpoints() {
     try {
-      const records = await checkpointInventory(); // más recientes primero
+      const records = (await checkpointInventory()).filter((m) => !m.label.startsWith(UNDO_INTERNAL)); // más recientes primero
       const perFile = new Map(), latest = new Set(), drop = new Set();
       for (const m of records) {
         const n = (perFile.get(m.path) || 0) + 1;
@@ -4360,7 +4484,7 @@
     return paths.length;
   }
 
-  async function readCheckpoint(id) {
+  async function readCheckpoint(id, { verify = true } = {}) {
     if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id)) throw new Error(t('ID de checkpoint no válido'));
     const base = `.dv/checkpoints/${id}`;
     const manifest = await (await requireFile(`${base}.json`)).getFile();
@@ -4375,19 +4499,21 @@
       typeof metadata.label !== 'string' || metadata.label.length > 200) throw new Error(t('checkpoint: metadatos no válidos'));
     const file = await (await requireFile(`${base}.bin`)).getFile();
     if (file.size !== metadata.size) throw new Error(t('checkpoint: tamaño de copia incorrecto'));
+    // El listado y la poda solo necesitan los metadatos y el tamaño; el hash completo se comprueba al leer el contenido.
+    if (!verify) return { metadata, bytes: null };
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (await computeSha256(bytes) !== metadata.hash) throw new Error(t('checkpoint: hash de copia incorrecto'));
     return { metadata, bytes };
   }
 
-  async function checkpointInventory() {
+  async function checkpointInventory({ verify = false } = {}) {
     const directory = await getHandle('.dv/checkpoints');
     if (!directory) return [];
     if (directory.kind !== 'directory') throw new Error(t('checkpoint: almacenamiento no es una carpeta'));
     const records = [];
     for await (const [name, handle] of directory.entries()) {
       if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
-      records.push((await readCheckpoint(name.slice(0, -5))).metadata);
+      records.push((await readCheckpoint(name.slice(0, -5), { verify })).metadata);
     }
     return records.sort((a, b) => Date.parse(b.created) - Date.parse(a.created) || a.id.localeCompare(b.id));
   }
@@ -4427,19 +4553,24 @@
   }
 
   def('checkpoint', 'Sistema', 'checkpoint <archivo> [etiqueta] | --list [--file ruta] [--tag texto] | show ID [--content] | diff ID1 ID2 | delete ID | prune <--keep N|--older-than Nd>', 'Copias locales verificadas; limpieza confirmada protege últimas versiones', async (ctx) => {
-    const { pos, flags } = parseArgs(ctx.args, { list: 'b', file: 'v', tag: 'v', content: 'b', keep: 'v', 'older-than': 'v' });
+    const { pos, flags } = parseArgs(ctx.args, { list: 'b', file: 'v', tag: 'v', content: 'b', keep: 'v', 'older-than': 'v', verify: 'b' });
     const checkFlags = (allowed) => {
       if (Object.keys(flags).some(key => !allowed.includes(key))) throw new Error(t('opciones incompatibles para checkpoint'));
     };
     if (flags.list) {
-      checkFlags(['list', 'file', 'tag']);
+      checkFlags(['list', 'file', 'tag', 'verify']);
       if (pos.length) throw new Error(t('uso: checkpoint --list [--file ruta] [--tag texto]'));
       const path = flags.file === undefined ? null : splitPath(flags.file).join('/');
       if (path !== null && (!path || isInternalPath(path))) throw new Error(t('filtro de archivo no permitido'));
-      return (await checkpointInventory()).filter(m =>
-        (path === null || m.path === path) && (flags.tag === undefined || m.label.includes(flags.tag)))
-        .map(m => `${m.id} | ${JSON.stringify(m.path)} | ${m.created} | ${m.size} B | ${JSON.stringify(m.label)}`)
-        .join('\n') || t('No hay checkpoints para esos filtros.');
+      const shown = (await checkpointInventory()).filter(m =>
+        (path === null || m.path === path) && (flags.tag === undefined || m.label.includes(flags.tag)));
+      const rows = [];
+      for (const m of shown) {
+        let mark = '';
+        if (flags.verify) { try { await readCheckpoint(m.id); } catch (e) { mark = ` | ⚠ ${e.message}`; } }
+        rows.push(`${m.id} | ${JSON.stringify(m.path)} | ${m.created} | ${m.size} B | ${JSON.stringify(m.label)}${mark}`);
+      }
+      return rows.join('\n') || t('No hay checkpoints para esos filtros.');
     }
     if (pos[0] === 'show') {
       checkFlags(['content']);
@@ -4534,49 +4665,238 @@
     return t`Restaurado y verificado: ${metadata.path}\nSHA256: ${metadata.hash}${backup ? t`\nCheckpoint previo: ${backup.id}` : ''}\nNo se hizo staging ni commit.`;
   });
 
-  def('undo', 'Sistema', 'undo', 'Deshace la última operación con copia previa (rm, cp/mv, importar, write, guardar, propuesta); repetirlo la rehace', async (ctx) => {
-    if (ctx.args.length) throw new Error(t('uso: undo'));
-    if (editorOpen) throw new Error(t('cierra el editor actual antes de deshacer'));
-    const records = await checkpointInventory();
-    if (!records.length) throw new Error(t('no hay copias previas que restaurar'));
-    const newest = records[0], newestTime = Date.parse(newest.created);
-    const seen = new Set(), group = [];
+  // --- Deshacer / rehacer de varios pasos ---
+  // Un «paso» es un grupo de checkpoints con la misma etiqueta (máx. 10 s entre ellos) o una creación registrada
+  // (mkdir, touch, mktree, write o editor sobre un archivo nuevo). El estado vive en .dv/undo-state.json, así que
+  // sobrevive a recargas: pasos ya deshechos (hidden), pila de rehacer (redo) y creaciones registradas (created).
+  const UNDO_STATE_PATH = '.dv/undo-state.json';
+  const UNDO_INTERNAL = '↶ ';
+  const UNDO_MAX_STEPS = 50;
+  let undoBusy = false, undoQueue = Promise.resolve();
+  const withUndoLock = (fn) => { const run = undoQueue.then(fn, fn); undoQueue = run.catch(() => {}); return run; };
+
+  async function loadUndoState() {
+    const empty = { version: 1, hidden: [], redo: [], created: [] };
+    try {
+      const handle = await getHandle(UNDO_STATE_PATH);
+      if (!handle || handle.kind !== 'file') return empty;
+      const file = await handle.getFile();
+      if (file.size > 2 * 1024 * 1024) return empty;
+      const s = JSON.parse(await file.text());
+      if (!s || s.version !== 1) return empty;
+      const items = (list) => Array.isArray(list) && list.every((i) => i && typeof i.path === 'string' && !isInternalPath(i.path));
+      return {
+        version: 1,
+        hidden: Array.isArray(s.hidden) ? s.hidden.filter((k) => typeof k === 'string') : [],
+        redo: Array.isArray(s.redo) ? s.redo.filter((e) => e && typeof e.key === 'string' && items(e.items)) : [],
+        created: Array.isArray(s.created) ? s.created.filter((e) => e && typeof e.key === 'string' && Number.isFinite(Date.parse(e.time)) && items(e.items)) : []
+      };
+    } catch { return empty; }
+  }
+
+  async function saveUndoState(s) {
+    s.hidden = s.hidden.slice(-500); s.created = s.created.slice(-200); s.redo = s.redo.slice(-UNDO_MAX_STEPS);
+    await writeBytes(UNDO_STATE_PATH, JSON.stringify(s));
+  }
+
+  // Borra las copias que solo servían para rehacer (se descartan al hacer un cambio nuevo o al rehacer).
+  async function dropRedoCopies(entries) {
+    for (const e of entries) for (const it of e.items) {
+      if (!it.cp) continue;
+      try { await removeCheckpointFiles([{ id: it.cp }]); } catch { /* ya no estaba */ }
+    }
+  }
+
+  // Cualquier cambio nuevo invalida lo que se podía rehacer.
+  async function clearRedoAfterNewWork() {
+    if (undoBusy) return;
+    try {
+      const s = await loadUndoState();
+      if (!s.redo.length) return;
+      const old = s.redo; s.redo = [];
+      await saveUndoState(s);
+      await dropRedoCopies(old);
+    } catch { /* el deshacer es un extra: nunca interrumpe la operación */ }
+  }
+
+  async function recordCreation(label, items) {
+    if (undoBusy || !items.length) return;
+    try {
+      const s = await loadUndoState();
+      const old = s.redo; s.redo = [];
+      s.created.push({ key: crypto.randomUUID(), time: new Date().toISOString(), label, items });
+      await saveUndoState(s);
+      await dropRedoCopies(old);
+    } catch (e) { uiLog(t`⚠ No se pudo registrar la creación para poder deshacerla: ${e.message}`, 'err'); }
+  }
+
+  async function undoSteps(state) {
+    const hidden = new Set(state.hidden);
+    const records = (await checkpointInventory()).filter((m) => !m.label.startsWith(UNDO_INTERNAL)); // más recientes primero
+    const steps = [], used = new Set();
     for (const m of records) {
-      if (m.label !== newest.label || newestTime - Date.parse(m.created) > 10000 || seen.has(m.path)) continue;
-      seen.add(m.path); group.push(m);
-    }
-    const textItems = [], other = [];
-    for (const m of group) {
-      const { bytes } = await readCheckpoint(m.id);
-      const handle = await getHandle(m.path);
-      if (handle && handle.kind !== 'file') throw new Error(t`undo: ${m.path} ahora es una carpeta; no se toca`);
-      if (handle && (await fileSnapshot(m.path)).hash === m.hash) continue; // ya coincide
-      let item = null;
-      if (handle) {
-        try {
-          const current = await editorSnapshot(m.path);
-          const candidate = checkpointText(bytes);
-          if (candidate !== current.text) item = { snapshot: current, candidate };
-        } catch (e) { item = null; }
+      if (used.has(m.id)) continue;
+      used.add(m.id);
+      const items = [m], paths = new Set([m.path]), t0 = Date.parse(m.created);
+      for (const o of records) {
+        if (used.has(o.id) || o.label !== m.label || t0 - Date.parse(o.created) > 10000 || paths.has(o.path)) continue;
+        used.add(o.id); paths.add(o.path); items.push(o);
       }
-      if (item) textItems.push({ m, item }); else other.push(m);
+      steps.push({ key: m.id, kind: 'mods', time: t0, label: m.label, items });
     }
-    const actionable = textItems.length + other.length;
-    if (!actionable) return t('Nada que deshacer: los archivos ya coinciden con la última copia previa.');
-    const restore = REG.get('restore');
-    if (actionable === 1) {
-      const m = (textItems[0] || { m: other[0] }).m;
-      return t`Deshaciendo «${m.label}» en ${m.path}.\n` + await restore.run({ args: [m.id], openEditor: ctx.openEditor });
+    for (const c of state.created) steps.push({ key: c.key, kind: 'created', time: Date.parse(c.time), label: c.label, items: c.items });
+    return steps.filter((s) => !hidden.has(s.key)).sort((a, b) => b.time - a.time);
+  }
+
+  const stepPaths = (s) => {
+    const list = s.items.map((i) => i.path);
+    return list.slice(0, 3).join(', ') + (list.length > 3 ? ` (+${list.length - 3})` : '');
+  };
+
+  async function planUndo(step) {
+    const plan = [];
+    if (step.kind === 'mods') {
+      for (const m of step.items) {
+        const { bytes } = await readCheckpoint(m.id);
+        const handle = await getHandle(m.path);
+        if (handle && handle.kind !== 'file') throw new Error(t`undo: ${m.path} ahora es una carpeta; no se toca`);
+        const current = handle ? await fileSnapshot(m.path) : null;
+        if (current && current.hash === m.hash) continue;
+        plan.push({ op: 'restore', path: m.path, kind: 'file', bytes, hash: m.hash, had: !!current });
+      }
+      return plan;
     }
-    const messages = [];
-    for (const m of other) messages.push(await restore.run({ args: [m.id], openEditor: () => {} }));
-    if (textItems.length === 1) messages.push(await restore.run({ args: [textItems[0].m.id], openEditor: ctx.openEditor }));
-    else if (textItems.length > 1) {
-      const items = textItems.map((x) => x.item);
-      ctx.openEditor({ batch: items, snapshot: { path: items.map((x) => x.snapshot.path).join(', ') } });
-      messages.push(t`Deshacer «${newest.label}» preparado en ${items.length} archivos. Revisa los diffs y confirma Aplicar todo.`);
+    const items = [...step.items].reverse(), gone = new Set(items.map((i) => i.path));
+    for (const it of items) {
+      const handle = await getHandle(it.path);
+      if (!handle) continue;
+      if (it.kind === 'dir') {
+        if (handle.kind !== 'directory') throw new Error(t`undo: ${it.path} ya no es una carpeta; no se toca`);
+        for await (const [name] of handle.entries()) {
+          if (!gone.has(`${it.path}/${name}`)) throw new Error(t`undo: la carpeta ${it.path} ya no está vacía (${name}); no se toca`);
+        }
+      } else {
+        if (handle.kind !== 'file') throw new Error(t`undo: ${it.path} ahora es una carpeta; no se toca`);
+        if ((await handle.getFile()).size > CFG.MAX_RUN_BYTES) throw new Error(t`undo: ${it.path} supera ${fmtBytes(CFG.MAX_RUN_BYTES)} y no tendría copia para rehacer; no se toca`);
+      }
+      plan.push({ op: 'remove', path: it.path, kind: it.kind });
     }
-    return messages.join('\n');
+    return plan;
+  }
+
+  async function applyUndoPlan(plan, done) {
+    for (const p of plan) {
+      if (p.op === 'restore') {
+        const cp = p.had ? (await createCheckpoint(p.path, UNDO_INTERNAL + t('rehacer'))).id : null;
+        await writeBytes(p.path, p.bytes);
+        if ((await fileSnapshot(p.path)).hash !== p.hash) throw new Error(t`undo: verificación fallida en ${p.path}`);
+        done.push({ op: 'restore', path: p.path, kind: 'file', cp, expect: p.hash });
+      } else if (p.kind === 'dir') {
+        await removePath(p.path, false);
+        done.push({ op: 'remove', path: p.path, kind: 'dir', cp: null, expect: null });
+      } else {
+        const m = await createCheckpoint(p.path, UNDO_INTERNAL + t('rehacer'));
+        await removePath(p.path, false);
+        done.push({ op: 'remove', path: p.path, kind: 'file', cp: m.id, expect: m.hash });
+      }
+    }
+  }
+
+  async function planRedo(entry) {
+    const plan = [];
+    for (const it of [...entry.items].reverse()) {
+      const handle = await getHandle(it.path);
+      if (it.op === 'restore') {
+        if (handle && handle.kind !== 'file') throw new Error(t`redo: ${it.path} ahora es una carpeta; no se toca`);
+        const current = handle ? (await fileSnapshot(it.path)).hash : null;
+        if (current !== it.expect) throw new Error(t`redo: ${it.path} cambió después de deshacer; no se toca`);
+        plan.push({ ...it, bytes: it.cp ? (await readCheckpoint(it.cp)).bytes : null });
+      } else {
+        if (handle) throw new Error(t`redo: ${it.path} ya existe; no se toca`);
+        plan.push({ ...it, bytes: it.kind === 'file' ? (await readCheckpoint(it.cp)).bytes : null });
+      }
+    }
+    return plan;
+  }
+
+  async function applyRedoPlan(plan) {
+    for (const p of plan) {
+      if (p.op === 'restore' && !p.bytes) { await removePath(p.path, false); continue; }
+      if (p.kind === 'dir') { await makeDirectory(splitPath(p.path), true); continue; }
+      await writeBytes(p.path, p.bytes);
+      if ((await fileSnapshot(p.path)).hash !== await computeSha256(p.bytes)) throw new Error(t`redo: verificación fallida en ${p.path}`);
+    }
+  }
+
+  def('undo', 'Sistema', 'undo [N] | undo --list', 'Deshace los últimos N pasos (por defecto 1): rm, cp/mv, importar, write, guardar, propuestas y creación de archivos/carpetas; undo --list los muestra; redo los rehace', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { list: 'b' });
+    if (pos.length > 1 || (flags.list && pos.length)) throw new Error(t('uso: undo [N] | undo --list'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de deshacer'));
+    return withUndoLock(async () => {
+      let state = await loadUndoState();
+      const steps = await undoSteps(state);
+      if (flags.list) {
+        const lines = steps.slice(0, 20).map((s, i) => `${i + 1}. ${new Date(s.time).toLocaleTimeString()} · ${s.label} · ${stepPaths(s)}`);
+        const tail = state.redo.length ? '\n' + t`Se pueden rehacer ${state.redo.length} paso(s): ${settings.prefix}redo` : '';
+        return (lines.length ? t('Pasos que se pueden deshacer (el más reciente primero):') + '\n' + lines.join('\n') : t('No hay pasos que deshacer.')) + tail;
+      }
+      const n = pos.length ? Number(pos[0]) : 1;
+      if (!Number.isInteger(n) || n < 1 || n > UNDO_MAX_STEPS) throw new Error(t`N debe ser un entero entre 1 y ${UNDO_MAX_STEPS}`);
+      if (!steps.length) throw new Error(t('no hay copias previas que restaurar'));
+      const chosen = steps.slice(0, n);
+      const summary = chosen.map((s) => `• ${s.label}: ${stepPaths(s)}`).join('\n');
+      if (!confirm(t`¿Deshacer ${chosen.length} paso(s)?\n${summary}\nSe guardarán copias para poder rehacerlo con redo.`)) throw new Error(t('deshacer cancelado; nada cambió'));
+      const messages = [];
+      undoBusy = true;
+      try {
+        for (const step of chosen) {
+          const plan = await planUndo(step), done = [];
+          let failure = null;
+          try { await applyUndoPlan(plan, done); } catch (e) { failure = e; }
+          state = await loadUndoState();
+          if (!failure || done.length) {
+            state.hidden.push(step.key);
+            if (done.length) state.redo.push({ key: step.key, label: step.label, time: new Date().toISOString(), items: done });
+            await saveUndoState(state);
+          }
+          if (failure) throw new Error(t`${failure.message}. Paso «${step.label}» aplicado solo en parte (${done.length} de ${plan.length}); usa ${settings.prefix}redo para recuperarlo.`);
+          messages.push(done.length ? t`Deshecho: «${step.label}» (${done.length} elemento(s)).` : t`«${step.label}»: ya estaba como antes; nada que cambiar.`);
+        }
+      } finally { undoBusy = false; }
+      return messages.join('\n') + '\n' + t`Para volver atrás: ${settings.prefix}redo`;
+    });
+  });
+
+  def('redo', 'Sistema', 'redo [N]', 'Rehace los últimos N pasos deshechos con undo (por defecto 1); se pierde al hacer un cambio nuevo', async (ctx) => {
+    const { pos } = parseArgs(ctx.args, {});
+    if (pos.length > 1) throw new Error(t('uso: redo [N]'));
+    if (editorOpen) throw new Error(t('cierra el editor actual antes de rehacer'));
+    return withUndoLock(async () => {
+      let state = await loadUndoState();
+      if (!state.redo.length) throw new Error(t('no hay nada que rehacer'));
+      const n = pos.length ? Number(pos[0]) : 1;
+      if (!Number.isInteger(n) || n < 1 || n > UNDO_MAX_STEPS) throw new Error(t`N debe ser un entero entre 1 y ${UNDO_MAX_STEPS}`);
+      const chosen = state.redo.slice(-n).reverse();
+      const summary = chosen.map((e) => `• ${e.label}: ${stepPaths(e)}`).join('\n');
+      if (!confirm(t`¿Rehacer ${chosen.length} paso(s)?\n${summary}`)) throw new Error(t('rehacer cancelado; nada cambió'));
+      const messages = [];
+      undoBusy = true;
+      try {
+        for (let i = 0; i < chosen.length; i++) {
+          state = await loadUndoState();
+          const entry = state.redo[state.redo.length - 1];
+          if (!entry) break;
+          const plan = await planRedo(entry);
+          await applyRedoPlan(plan);
+          state.redo.pop();
+          state.hidden = state.hidden.filter((k) => k !== entry.key);
+          await saveUndoState(state);
+          await dropRedoCopies([entry]);
+          messages.push(t`Rehecho: «${entry.label}» (${plan.length} elemento(s)).`);
+        }
+      } finally { undoBusy = false; }
+      return messages.join('\n');
+    });
   });
 
   // <codetools>
@@ -5125,6 +5445,83 @@
     }
     return found.slice(0, 1500);
   }
+
+  // Expansión de llaves como bash: a{b,c}d, {1..3}, {01..10}, {a..e}, anidadas. Devuelve la lista; supera el límite -> error 'brace-limit'.
+  function codeExpandBraces(word, limit = 200) {
+    const tooMany = () => Object.assign(new Error('brace-limit'), { code: 'brace-limit' });
+    const splitTop = (body) => {
+      const parts = [];
+      let depth = 0, cur = '';
+      for (const c of body) {
+        if (c === '{') depth++; else if (c === '}') depth--;
+        if (c === ',' && depth === 0) { parts.push(cur); cur = ''; } else cur += c;
+      }
+      parts.push(cur);
+      return parts;
+    };
+    const range = (body) => {
+      let m = /^(-?\d+)\.\.(-?\d+)$/.exec(body);
+      if (m) {
+        const a = Number(m[1]), b = Number(m[2]);
+        if (Math.abs(b - a) >= limit) throw tooMany();
+        const pad = /^-?0\d/.test(m[1]) || /^-?0\d/.test(m[2]) ? Math.max(m[1].replace('-', '').length, m[2].replace('-', '').length) : 0;
+        const out = [], step = a <= b ? 1 : -1;
+        for (let n = a; step > 0 ? n <= b : n >= b; n += step) out.push(pad ? (n < 0 ? '-' : '') + String(Math.abs(n)).padStart(pad, '0') : String(n));
+        return out;
+      }
+      m = /^([A-Za-z])\.\.([A-Za-z])$/.exec(body);
+      if (m) {
+        const a = m[1].charCodeAt(0), b = m[2].charCodeAt(0), out = [], step = a <= b ? 1 : -1;
+        for (let n = a; step > 0 ? n <= b : n >= b; n += step) out.push(String.fromCharCode(n));
+        return out;
+      }
+      return null;
+    };
+    const expand = (s) => {
+      let depth = 0, start = -1;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (c === '{') { if (depth === 0) start = i; depth++; }
+        else if (c === '}' && depth > 0) {
+          depth--;
+          if (depth) continue;
+          const body = s.slice(start + 1, i), parts = splitTop(body);
+          const alts = parts.length > 1 ? parts : range(body);
+          if (!alts) continue;
+          const pre = s.slice(0, start), post = expand(s.slice(i + 1)), out = [];
+          for (const a of alts) for (const x of expand(a)) for (const y of post) { out.push(pre + x + y); if (out.length > limit) throw tooMany(); }
+          return out;
+        }
+      }
+      return [s];
+    };
+    return expand(String(word));
+  }
+
+  // Lee un esquema de árbol (sangría o dibujo de `tree` con ├── └── │) y devuelve [{path:[...], dir}].
+  // Un nombre con `/` final, o con hijos, es carpeta; el resto, archivo vacío.
+  function codeParseTreeSpec(text, limit = 300) {
+    const entries = [], stack = [{ indent: -1, path: [], entry: null }];
+    for (const raw of String(text).replace(/\r\n?/g, '\n').split('\n')) {
+      const trimmed = raw.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      if (/^\d+ (?:director(?:y|ies)|carpetas?)\b.*\b(?:files?|archivos?)\b/i.test(trimmed)) continue;
+      const m = /^([\s│┃|┆├└┬┼─━\-+`\\]*)(.*)$/.exec(raw.replace(/\t/g, '    '));
+      let name = m[2].replace(/\s+#\s.*$/, '').trim();
+      if (!name) continue;
+      const indent = m[1].length, dirMark = name.endsWith('/');
+      name = name.replace(/\/+$/, '');
+      while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+      const parent = stack[stack.length - 1];
+      if (name === '.' || !name) { stack.push({ indent, path: parent.path, entry: null }); continue; }
+      const entry = { path: [...parent.path, ...name.split('/').filter(Boolean)], dir: dirMark };
+      if (parent.entry) parent.entry.dir = true;
+      entries.push(entry);
+      if (entries.length > limit) throw Object.assign(new Error('tree-limit'), { code: 'tree-limit' });
+      stack.push({ indent, path: entry.path, entry });
+    }
+    return entries;
+  }
   // </codetools>
 
   // Avisos informativos (no bloquean el guardado): JSON, sintaxis JS (solo compila, no ejecuta) y HTML equilibrado.
@@ -5175,6 +5572,7 @@
       if (!candidate) throw new Error(t('escribe o pega contenido antes de crear el archivo'));
       validateEditorCandidate(snapshot, candidate);
       await atomicWrite(snapshot.path, candidate, { mustNotExist: true });
+      await recordCreation(t('Crear archivo'), [{ path: splitPath(snapshot.path).join('/'), kind: 'file' }]);
       return editorSnapshot(snapshot.path);
     }
     validateEditorCandidate(snapshot, candidate);
@@ -7126,7 +7524,166 @@
       }
     }
     const res = await atomicWrite(ctx.args[0], writeText);
+    if (!existing) await recordCreation(t('Crear archivo'), [{ path: splitPath(ctx.args[0]).join('/'), kind: 'file' }]);
     return `[Tx OK] ${ctx.args[0]} (${fmtBytes(res.bytes)}, SHA256: ${res.hash.slice(0, 8)}...)`;
+  });
+
+  // --- Estructura de proyecto: mkdir, touch, tree, mktree (con llaves tipo bash) ---
+  const TREE_LIMIT = 200;
+  function expandPathArgs(args) {
+    const out = [];
+    for (const arg of args) {
+      let list;
+      try { list = codeExpandBraces(arg, TREE_LIMIT); }
+      catch (e) { if (e.code === 'brace-limit') throw new Error(t`la expansión de llaves supera ${TREE_LIMIT} rutas`); throw e; }
+      for (const item of list) if (!out.includes(item)) out.push(item);
+    }
+    if (out.length > TREE_LIMIT) throw new Error(t`la expansión de llaves supera ${TREE_LIMIT} rutas`);
+    return out;
+  }
+  function creatablePath(raw) {
+    const parts = splitPath(raw);
+    if (!parts.length) throw new Error(t('ruta no válida'));
+    if (['.git', '.dv', '.dv_tmp'].includes(parts[0])) throw new Error(t`no se pueden crear metadatos internos: ${raw}`);
+    return parts;
+  }
+  // Crea la carpeta `parts`; con parents crea las intermedias. Devuelve las rutas creadas. Nunca toca archivos.
+  async function makeDirectory(parts, parents) {
+    let dir = rootDir;
+    const made = [];
+    for (let i = 0; i < parts.length; i++) {
+      const path = parts.slice(0, i + 1).join('/'), last = i === parts.length - 1;
+      let next = null;
+      try { next = await dir.getDirectoryHandle(parts[i]); }
+      catch (e) {
+        if (e.name === 'TypeMismatchError') throw new Error(t`${path} es un archivo, no una carpeta`);
+        if (e.name !== 'NotFoundError') throw e;
+      }
+      if (next) {
+        if (last && !parents) throw new Error(t`ya existe: ${path}`);
+        dir = next; continue;
+      }
+      if (!last && !parents) throw new Error(t`no existe la carpeta ${parts.slice(0, i + 1).join('/')}; usa mkdir -p`);
+      dir = await dir.getDirectoryHandle(parts[i], { create: true });
+      made.push(path);
+    }
+    return made;
+  }
+
+  def('mkdir', 'Ficheros', 'mkdir [-p] <carpeta>...', 'Crea carpetas (-p también las intermedias); admite llaves como bash: mkdir -p app/{src,docs}', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { p: 'b' });
+    if (!pos.length) throw new Error(t('uso: mkdir [-p] <carpeta>...'));
+    const targets = expandPathArgs(pos).map((raw) => creatablePath(raw));
+    const made = [];
+    try { for (const parts of targets) made.push(...await makeDirectory(parts, !!flags.p)); }
+    finally { await recordCreation(t('Crear carpetas'), made.map((path) => ({ path, kind: 'dir' }))); }
+    const shown = made.slice(0, 30).join(', ') + (made.length > 30 ? '…' : '');
+    return made.length ? t`Carpetas creadas (${made.length}): ${shown}` : t('Las carpetas ya existían; no se creó nada.');
+  });
+
+  def('touch', 'Ficheros', 'touch [-p] <archivo>...', 'Crea archivos vacíos que no existan (-p crea antes las carpetas); admite llaves: touch app/src/{a,b}.js', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { p: 'b' });
+    if (!pos.length) throw new Error(t('uso: touch [-p] <archivo>...'));
+    const targets = expandPathArgs(pos).map((raw) => creatablePath(raw));
+    for (const parts of targets) {
+      const parent = parts.slice(0, -1);
+      if (parent.length && !flags.p && !(await getHandle(parent.join('/')))) throw new Error(t`no existe la carpeta ${parent.join('/')}; usa touch -p o mkdir -p`);
+      const handle = await getHandle(parts.join('/'));
+      if (handle?.kind === 'directory') throw new Error(t`es una carpeta: ${parts.join('/')}`);
+    }
+    const made = [], existed = [], madeDirs = [];
+    try {
+      for (const parts of targets) {
+        const path = parts.join('/');
+        if (await getHandle(path)) { existed.push(path); continue; }
+        if (parts.length > 1) madeDirs.push(...await makeDirectory(parts.slice(0, -1), true));
+        await atomicWrite(path, '', { mustNotExist: true });
+        made.push(path);
+      }
+    } finally {
+      await recordCreation(t('Crear archivos'), [...madeDirs.map((path) => ({ path, kind: 'dir' })), ...made.map((path) => ({ path, kind: 'file' }))]);
+    }
+    return t`Archivos creados: ${made.length}${made.length ? ` (${made.slice(0, 30).join(', ')}${made.length > 30 ? '…' : ''})` : ''}. Ya existían: ${existed.length}.`;
+  });
+
+  def('tree', 'Ficheros', 'tree [-L N] [ruta]', 'Muestra carpetas y archivos como árbol', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { L: 'v' });
+    if (pos.length > 1) throw new Error(t('uso: tree [-L N] [ruta]'));
+    const maxDepth = flags.L === undefined ? Infinity : toInt(flags.L, 1, '-L');
+    const base = pos[0] ? await getHandle(pos[0]) : rootDir;
+    if (!base) throw new Error(t`no existe: ${pos[0]}`);
+    if (base.kind !== 'directory') throw new Error(t`no es una carpeta: ${pos[0]}`);
+    const rows = [pos[0] ? splitPath(pos[0]).join('/') + '/' : '.'];
+    let dirs = 0, files = 0, truncated = false;
+    const hidden = pos[0] ? [] : ['.git', '.dv', '.dv_tmp'];
+    const walkTree = async (dir, prefix, depth) => {
+      const list = [];
+      for await (const [name, handle] of dir.entries()) if (!(depth === 1 && hidden.includes(name))) list.push([name, handle]);
+      list.sort((a, b) => (a[1].kind === b[1].kind ? a[0].localeCompare(b[0]) : a[1].kind === 'directory' ? -1 : 1));
+      for (let i = 0; i < list.length; i++) {
+        if (rows.length >= 1000) { truncated = true; return; }
+        const [name, handle] = list[i], last = i === list.length - 1;
+        const isDir = handle.kind === 'directory';
+        rows.push(`${prefix}${last ? '└── ' : '├── '}${name}${isDir ? '/' : ''}`);
+        if (isDir) { dirs++; if (depth < maxDepth) await walkTree(handle, prefix + (last ? '    ' : '│   '), depth + 1); }
+        else files++;
+      }
+    };
+    await walkTree(base, '', 1);
+    if (truncated) rows.push('…');
+    rows.push('', t`${dirs} carpeta(s), ${files} archivo(s)`);
+    return rows.join('\n');
+  });
+
+  def('mktree', 'Ficheros', 'mktree [base] ["esquema"] (o cat esquema.txt | mktree [base])', 'Crea carpetas y archivos vacíos desde un esquema con sangría o con el dibujo de tree; no sobrescribe nada', async (ctx) => {
+    const { pos } = parseArgs(ctx.args, {});
+    let base = null, specText;
+    if (ctx.stdin) {
+      if (pos.length > 1) throw new Error(t('uso: mktree [base] ["esquema"] (o cat esquema.txt | mktree [base])'));
+      base = pos.length ? pos[0] : null;
+      const rows = [];
+      for await (const l of ctx.stdin) rows.push(l);
+      specText = rows.join('\n');
+    } else {
+      if (!pos.length || pos.length > 2) throw new Error(t('uso: mktree [base] ["esquema"] (o cat esquema.txt | mktree [base])'));
+      if (pos.length === 2) base = pos[0];
+      specText = pos[pos.length - 1];
+    }
+    let entries;
+    try { entries = codeParseTreeSpec(specText, 300); }
+    catch (e) { if (e.code === 'tree-limit') throw new Error(t('el esquema tiene más de 300 elementos')); throw e; }
+    if (!entries.length) throw new Error(t('el esquema está vacío'));
+    const baseParts = base !== null ? (base ? splitPath(base) : []) : (ctx.cwd ? splitPath(ctx.cwd) : []);
+    // Plan completo antes de crear nada: si algo choca (archivo donde va una carpeta o al revés) no se toca el disco.
+    const dirsWanted = new Map(), filesWanted = new Map();
+    for (const e of entries) {
+      const parts = [...baseParts, ...e.path];
+      creatablePath(parts.join('/'));
+      for (let i = 1; i < parts.length; i++) dirsWanted.set(parts.slice(0, i).join('/'), parts.slice(0, i));
+      if (e.dir) dirsWanted.set(parts.join('/'), parts); else filesWanted.set(parts.join('/'), parts);
+    }
+    if (baseParts.length) for (let i = 1; i <= baseParts.length; i++) dirsWanted.set(baseParts.slice(0, i).join('/'), baseParts.slice(0, i));
+    for (const path of filesWanted.keys()) if (dirsWanted.has(path)) throw new Error(t`${path} aparece como archivo y como carpeta en el esquema`);
+    const newDirs = [], newFiles = [];
+    for (const [path] of dirsWanted) {
+      const handle = await getHandle(path);
+      if (handle?.kind === 'file') throw new Error(t`${path} ya existe como archivo; no se crea nada`);
+      if (!handle) newDirs.push(path);
+    }
+    for (const [path] of filesWanted) {
+      const handle = await getHandle(path);
+      if (handle?.kind === 'directory') throw new Error(t`${path} ya existe como carpeta; no se crea nada`);
+      if (!handle) newFiles.push(path);
+    }
+    const madeDirs = [], madeFiles = [];
+    try {
+      for (const path of newDirs.sort((a, b) => a.length - b.length)) madeDirs.push(...await makeDirectory(splitPath(path), true));
+      for (const path of newFiles) { await atomicWrite(path, '', { mustNotExist: true }); madeFiles.push(path); }
+    } finally {
+      await recordCreation(t('Crear árbol'), [...madeDirs.map((path) => ({ path, kind: 'dir' })), ...madeFiles.map((path) => ({ path, kind: 'file' }))]);
+    }
+    const skipped = filesWanted.size - newFiles.length;
+    return t`Creado: ${newDirs.length} carpeta(s) y ${newFiles.length} archivo(s) vacío(s). Ya existían: ${skipped} archivo(s) (no se tocan).`;
   });
 
   def('save', 'Ficheros', 'save <file>', 'Guarda último resultado atómicamente', async (ctx) => {
@@ -7395,8 +7952,122 @@
   // ============================================================
   // EJECUTOR DEL PIPELINE
   // ============================================================
+  // --- Carpeta actual: cd, pwd ---
+  // Las rutas que escribes en el panel (o en un bloque de comandos del chat) se resuelven contra esta carpeta.
+  // Las rutas guardadas por el propio sistema (checkpoints, journal, Git, propuestas dv) siguen siendo absolutas.
+  let cwd = '', prevCwd = '';
+  try {
+    const saved = localStorage.getItem(CFG.CWD_KEY);
+    if (saved && !isInternalPath(saved)) cwd = splitPath(saved).join('/');
+  } catch { cwd = ''; }
+  function setCwd(path) {
+    prevCwd = cwd; cwd = path;
+    try { if (cwd) localStorage.setItem(CFG.CWD_KEY, cwd); else localStorage.removeItem(CFG.CWD_KEY); } catch { /* sin almacenamiento */ }
+  }
+
+  function resolveUserPath(raw, clamp = false) {
+    const text = String(raw).replaceAll('\\', '/');
+    const absolute = text.startsWith('/');
+    if (!absolute && !cwd && !text.split('/').includes('..')) return raw;
+    const out = absolute || !cwd ? [] : cwd.split('/');
+    for (const seg of text.split('/')) {
+      if (!seg || seg === '.') continue;
+      if (seg === '..') {
+        if (!out.length) { if (clamp) continue; throw new Error(t`ruta fuera del disco: ${raw}`); }
+        out.pop();
+      } else out.push(seg);
+    }
+    return out.join('/');
+  }
+
+  const CWD_ARGS = {
+    ls: { pos: 'all', dflt: true }, tree: { pos: 'all', dflt: true, vflags: ['L'] }, cat: { pos: 'all' },
+    head: { pos: 'all', vflags: ['n'] }, rm: { pos: 'all' }, mkdir: { pos: 'all' }, touch: { pos: 'all' },
+    cp: { pos: 'all' }, mv: { pos: 'all' }, view: { pos: 'first', vflags: ['from', 'to'] }, edit: { pos: 'first' },
+    run: { pos: 'first' }, write: { pos: 'first' }, save: { pos: 'first' }, replace: { pos: 'first', vflags: ['hash'] },
+    grep: { pos: 'rest' }
+  };
+
+  // Devuelve los argumentos con las rutas resueltas contra la carpeta actual.
+  function resolveCommandArgs(name, args, piped) {
+    const out = [...args];
+    const resolveAt = (i) => { out[i] = resolveUserPath(out[i]); };
+    const positions = (vflags = []) => {
+      const idx = [];
+      let literal = false;
+      for (let i = 0; i < args.length; i++) {
+        const a = args[i];
+        if (!literal && a === '--') { literal = true; continue; }
+        if (!literal && a.length > 1 && a[0] === '-' && !/^-\d/.test(a)) {
+          if (vflags.includes(a.replace(/^-+/, ''))) i++;
+          continue;
+        }
+        idx.push(i);
+      }
+      return idx;
+    };
+    if (name === 'git') {
+      const sub = (args[0] || '').toLowerCase();
+      if (sub === 'add' || sub === 'restore') {
+        for (let i = 1; i < args.length; i++) if (!args[i].startsWith('-') && args[i] !== '.') resolveAt(i);
+      } else if (sub === 'log') {
+        const at = args.indexOf('--');
+        if (at >= 0) for (let i = at + 1; i < args.length; i++) resolveAt(i);
+      }
+      return out;
+    }
+    if (name === 'checkpoint') {
+      const first = args[0];
+      if (first && !first.startsWith('-') && !['show', 'diff', 'delete', 'prune'].includes(first)) resolveAt(0);
+      const f = args.indexOf('--file');
+      if (f >= 0 && args[f + 1] !== undefined) resolveAt(f + 1);
+      return out;
+    }
+    if (name === 'mktree') {
+      const idx = positions();
+      if (idx.length === 2 || (piped && idx.length === 1)) resolveAt(idx[0]);
+      return out;
+    }
+    const spec = CWD_ARGS[name];
+    if (!spec) return out;
+    const idx = positions(spec.vflags);
+    const chosen = spec.pos === 'first' ? idx.slice(0, 1) : spec.pos === 'rest' ? idx.slice(1) : idx;
+    for (const i of chosen) resolveAt(i);
+    if (spec.dflt && cwd && !idx.length) out.push(cwd);
+    return out;
+  }
+
+  async function ensureCwd() {
+    if (!cwd) return;
+    let handle = null;
+    try { handle = await getHandle(cwd); } catch { handle = null; }
+    if (!handle || handle.kind !== 'directory') {
+      setCwd(''); prevCwd = '';
+      uiLog(t('La carpeta actual ya no existe; vuelves a la raíz.'), 'err');
+    }
+  }
+
+  def('cd', 'Ficheros', 'cd [ruta]', 'Cambia la carpeta actual (cd /datos, cd .. sube, cd / vuelve a la raíz, cd - vuelve a la anterior)', async (ctx) => {
+    if (ctx.args.length > 1) throw new Error(t('uso: cd [ruta]'));
+    const arg = ctx.args[0];
+    const target = arg === undefined ? '' : arg === '-' ? prevCwd : resolveUserPath(arg, true);
+    if (target) {
+      if (isInternalPath(target)) throw new Error(t('cd: no se puede entrar en los metadatos internos'));
+      const handle = await getHandle(target);
+      if (!handle) throw new Error(t`no existe: ${target}`);
+      if (handle.kind !== 'directory') throw new Error(t`no es una carpeta: ${target}`);
+    }
+    setCwd(splitPath(target || '.').join('/'));
+    return '/' + cwd;
+  });
+  def('pwd', 'Ficheros', 'pwd', 'Muestra la carpeta actual', async (ctx) => {
+    if (ctx.args.length) throw new Error(t('uso: pwd'));
+    return '/' + cwd;
+  });
+
   async function execute(raw) {
     try {
+      await ensureCwd();
       const segs = parsePipeline(Array.isArray(raw) ? raw : tokenize(raw.trim()));
       if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && seg.argv[1]?.toLowerCase() === 'checkout') &&
         (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
@@ -7410,7 +8081,8 @@
       }
       const redirect = segs[segs.length - 1].redirect;
       if (redirect) {
-        if (!splitPath(redirect.file).length || isInternalPath(redirect.file)) throw new Error(t('destino de redirección no permitido'));
+        redirect.file = resolveUserPath(redirect.file);
+        if (!redirect.file || !splitPath(redirect.file).length || isInternalPath(redirect.file)) throw new Error(t('destino de redirección no permitido'));
         if (redirect.mode === '>>' && /\.gz$/i.test(redirect.file)) throw new Error(t('no se puede añadir (>>) a un .gz'));
       }
       let stream = null;
@@ -7418,7 +8090,7 @@
         const cmd = REG.get(seg.argv[0].toLowerCase());
         if (!cmd) throw new Error(t`comando no reconocido: ${seg.argv[0]}`);
         const ctx = {
-          args: seg.argv.slice(1), stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
+          args: resolveCommandArgs(seg.argv[0].toLowerCase(), seg.argv.slice(1), stream !== null), cwd, stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
           openEditor: (proposal) => { editorRequest = proposal; }
         };
         stream = normalize(await cmd.run(ctx));
@@ -7749,7 +8421,7 @@
       if (options.origin === 'chat') {
         uiLog(t`$ ${cleanCmd}  [ejecutado localmente, no enviado al chat]`, 'cmd');
       } else {
-        uiLog(`$ ${cleanCmd}`, 'cmd');
+        uiLog(`${cwd ? '/' + cwd + ' ' : ''}$ ${cleanCmd}`, 'cmd');
       }
 
       const res = await execute(parsed.tokens);
@@ -8706,6 +9378,22 @@
       }
     }, t('Importar ZIP…'));
 
+    const runUndoRedo = async (command) => {
+      if (busy || editorOpen) { uiLog(t('Espera o cierra el editor antes de deshacer o rehacer.'), 'err'); return; }
+      setBusy(true);
+      try {
+        const result = await execute(command);
+        uiLog(result.text, result.ok ? 'info' : 'err');
+      } catch (e) { uiLog(`❌ ${e.message}`, 'err'); }
+      finally { setBusy(false); await refresh(); }
+    };
+    const btnUndo = h('button', {
+      class: 'btn btn-secondary', title: t('Deshacer el último paso (Alt+Z); pide confirmación. Con !undo --list ves los pasos'), onclick: () => runUndoRedo('undo')
+    }, t('Deshacer'));
+    const btnRedo = h('button', {
+      class: 'btn btn-secondary', title: t('Rehacer el último paso deshecho (Alt+Mayús+Z)'), onclick: () => runUndoRedo('redo')
+    }, t('Rehacer'));
+
     const bodyEl = h('div', { id: 'body' },
       h('div', { style: 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;' },
         storageLabelEl,
@@ -8716,7 +9404,7 @@
           h('button', { class: 'btn btn-secondary', style: 'padding:2px 6px; font-size:10px;', onclick: () => logEl.replaceChildren() }, t('Limpiar log'))
         )
       ),
-      h('div', { class: 'row' }, btnNewFile, btnImport, btnHelp, btnDiag, btnWelcome, localFileInput),
+      h('div', { class: 'row' }, btnNewFile, btnImport, btnUndo, btnRedo, btnHelp, btnDiag, btnWelcome, localFileInput),
       newFileForm,
       welcome,
       helpDialog,
@@ -8730,6 +9418,9 @@
     );
 
     const panel = h('div', { id: 'panel' }, headerEl, bodyEl);
+    panel.addEventListener('keydown', (e) => {
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyZ') { e.preventDefault(); e.stopPropagation(); runUndoRedo(e.shiftKey ? 'redo' : 'undo'); }
+    });
     if (previous.panelStyle) panel.style.cssText = previous.panelStyle;
 
     let collapsed = !!previous.collapsed;
@@ -8809,12 +9500,34 @@
       const generation = ++refreshGeneration;
       filesEl.replaceChildren();
       try {
-        const files = (await listFiles()).filter((file) => !isInternalPath(file.path));
-        if (fileDialog.style.display === 'block') populateShareFiles(files);
-        if (!files.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, t('Tu disco está vacío. Usa Nuevo archivo… para escribir o pegar código, o Explorar / Importar archivos.')));
+        const allFiles = (await listFiles()).filter((file) => !isInternalPath(file.path));
+        if (fileDialog.style.display === 'block') populateShareFiles(allFiles);
+        const prefix = cwd ? cwd + '/' : '';
+        const files = allFiles.filter((file) => file.path.startsWith(prefix));
+        const emptyDirs = (await listEmptyDirs()).filter((dir) => dir.startsWith(prefix));
+        // Carpetas que se pueden abrir con un clic: las hijas directas de la carpeta actual.
+        const childDirs = new Set(emptyDirs.filter((dir) => !cwd || dir !== cwd).map((dir) => dir.slice(prefix.length).split('/')[0]));
+        for (const f of files) { const rest = f.path.slice(prefix.length), i = rest.indexOf('/'); if (i > 0) childDirs.add(rest.slice(0, i)); }
+        const enterBtn = (target, label, title) => h('button', {
+          class: 'btn btn-secondary', title, style: 'padding:2px 6px; font-size:10px; margin-left:6px;',
+          onclick: () => runUndoRedo(`cd ${JSON.stringify('/' + target)}`)
+        }, label);
+        if (cwd) {
+          const up = cwd.includes('/') ? cwd.slice(0, cwd.lastIndexOf('/')) : '';
+          filesEl.append(h('li', { class: 'cwd' },
+            h('span', { style: 'font-weight:600;' }, `📂 /${cwd}`),
+            enterBtn(up, t('Subir'), t('Volver a la carpeta anterior (cd ..)'))));
+        }
+        for (const name of [...childDirs].sort()) {
+          filesEl.append(h('li', { class: 'folder' },
+            h('span', { title: prefix + name, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, `📁 ${name}/`),
+            emptyDirs.includes(prefix + name) ? h('span', { style: 'color:#a1a1aa' }, t('carpeta vacía')) : '',
+            enterBtn(prefix + name, t('Entrar'), t('Entrar en esta carpeta (cd)'))));
+        }
+        if (!files.length && !emptyDirs.length) filesEl.append(h('li', { style: 'color:#a1a1aa' }, t('Tu disco está vacío. Usa Nuevo archivo… para escribir o pegar código, o Explorar / Importar archivos.')));
         for (const f of files.slice(0, 50)) {
           filesEl.append(h('li', {},
-            h('span', { title: f.path, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, f.path),
+            h('span', { title: f.path, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, cwd ? f.path.slice(prefix.length) : f.path),
             h('span', { style: 'color:#a1a1aa' }, fmtBytes(f.size)),
             h('button', {
               class: 'btn btn-secondary', 'aria-label': t`Editar ${f.path}`, title: t('Editar localmente y revisar el diff antes de guardar'),
@@ -8840,6 +9553,11 @@
           ));
         }
         if (files.length > 50) filesEl.append(h('li', {}, t`Mostrando 50 de ${files.length}; Eliminar todos incluye la lista completa.`));
+        for (const dir of emptyDirs.filter((d) => d.slice(prefix.length).includes('/')).slice(0, 20)) {
+          filesEl.append(h('li', { class: 'emptydir' },
+            h('span', { title: dir, style: 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' }, `📁 ${dir.slice(prefix.length)}/`),
+            h('span', { style: 'color:#a1a1aa' }, t('carpeta vacía'))));
+        }
       } catch (e) { panelLog(`❌ ${e.message}`, 'err'); }
       try {
         const state = await getGitStatus();
@@ -8861,10 +9579,11 @@
     }
 
     const updateState = () => {
-      stateEl.textContent = busy ? t('Operación en curso') : editorOpen ? t('Editor abierto') : t('Listo · local');
+      stateEl.textContent = (busy ? t('Operación en curso') : editorOpen ? t('Editor abierto') : t('Listo · local')) + (cwd ? ` · /${cwd}` : '');
       panel.setAttribute('aria-busy', String(busy));
       for (const button of [btnExec, btnShare, btnImport, btnOpenShareDialog, btnTaskShare, btnConnectFolder, btnReconnectFolder, btnDisconnectFolder, btnExportZip, btnImportZip]) button.disabled = busy;
       btnNewFile.disabled = busy || editorOpen;
+      btnUndo.disabled = btnRedo.disabled = busy || editorOpen;
       btnGitSave.disabled = busy || editorOpen || gitLoading || gitState?.initialized && !gitState.changes.length;
       btnGitDiff.disabled = busy || editorOpen || gitLoading || !gitState?.initialized;
       btnGitRevert.disabled = busy || editorOpen || gitLoading || !gitState?.changes?.some(c => c.head !== 0);

@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.10.1**. **135 pruebas Node** más una suite nueva en `tests/` (82 pruebas: traducciones, análisis de código y e2e en Chromium).
+Versión actual: **1.15.0**. **135 pruebas Node** más una suite nueva en `tests/` (121 pruebas: traducciones, análisis de código y e2e en Chromium).
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -103,7 +103,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.10.1**.
+5. Comprueba que el panel muestra **v1.15.0**.
 
 ### Alternativa: extensión de Chrome
 
@@ -114,7 +114,7 @@ nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la p�
 lo que corrige que **Ctrl+V** no pegara en claude.ai.
 
 1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
-   `loopwork-extension-1.10.1.zip`).
+   `loopwork-extension-1.15.0.zip`).
 2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
 3. Elige la carpeta `extension/` y recarga el chat.
 
@@ -499,12 +499,18 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | Comando | Alcance |
 |---|---|
 | `!ls [-R] [ruta]` | Lista contenido del disco |
+| `!cd [ruta]` · `!pwd` | Cambia y muestra la carpeta actual (`cd /datos`, `cd ..`, `cd -`, `cd /`). Las rutas relativas de los comandos se resuelven desde ahí; se recuerda al recargar. Las rutas de propuestas `dv`, checkpoints y Git son siempre desde la raíz |
+| `!mkdir [-p] carpeta...` · `!touch [-p] archivo...` | Crean carpetas / archivos vacíos (con llaves tipo bash: `app/{src,docs}`, `{1..3}`) |
+| `!tree [-L N] [ruta]` | Dibuja el árbol de carpetas y archivos |
+| `!mktree [base] "esquema"` · `cat plan.txt \| !mktree` | Crea un árbol completo desde un esquema con sangría o el dibujo de `tree`; no sobrescribe |
 | `!cat [archivo...]` / `!head [-n N] [archivo]` | Lee texto; también aceptan entrada de pipeline |
 | `!grep [-i] [-n] [-F] patrón [archivo]` | Regex por líneas, sin distinguir mayúsculas con `-i`, numeradas con `-n`, literales con `-F`; acepta pipes |
 | `!write archivo texto` | Guarda texto mediante candidato y verificación; si reemplaza contenido distinto, checkpoint previo |
 | `!save archivo` | Guarda el último resultado textual; no exporta bytes históricos |
 | `!cp origen destino` / `!mv origen destino` | Copia bytes verificados; mv confirma y borra origen tras comprobarlo |
-| `!undo` | Deshace la última operación con copia previa (rm, cp/mv, importar, write, guardar, propuesta multiarchivo); repetirlo la rehace. Se conservan 20 copias por archivo y 64 MB |
+| `!undo [N]` · `!undo --list` | Deshace los últimos N pasos (por defecto 1) con confirmación: rm, cp/mv, importar, write, guardar, propuestas y **creación de archivos y carpetas** (`mkdir`, `touch`, `mktree`, `write`, editor). `--list` muestra los pasos. Se conservan 20 copias por archivo y 64 MB |
+| Botones **Deshacer** / **Rehacer** y Alt+Z / Alt+Mayús+Z | Lo mismo que `!undo` y `!redo`, con el foco en el panel |
+| `!redo [N]` | Rehace los pasos deshechos; se pierde al hacer un cambio nuevo. El estado se guarda en `.dv/undo-state.json` y sobrevive a recargar la página |
 | `!rm [-r] ruta` | Borra una ruta tras confirmación; guarda antes un checkpoint de cada archivo de hasta 1 MB (recupera con `!restore`) |
 | `!view archivo [--from N] [--to N]` | Líneas numeradas y hash completo |
 | `!propose propuesta.json` | Prepara un cambio JSON (`replace`, `insert-before/after`, `append` o `patch` con diff unificado exacto) para el editor |

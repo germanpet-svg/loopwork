@@ -4,7 +4,7 @@ Proyecto: **loopwork** (userscript `loopwork.js`). Documentos
 hermanos: [README](./README.md) (vision general y limites) y
 [manual del usuario](./manual.md) (uso paso a paso).
 
-## Estado de un vistazo (1.10.1)
+## Estado de un vistazo (1.13.0)
 
 **Funciona y tiene pruebas** (135/135 pruebas Node en la ultima ejecucion
 registrada, mas validaciones en navegador con OPFS nativo):
@@ -294,6 +294,54 @@ adaptador de sitio.
   validar con una cuenta (incluida Pro).
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
+
+## Carpeta actual: cd y pwd (1.14.0)
+
+- **Hecho:** `cd [ruta]` (`/datos`, `..`, `-`, `/`, sin argumento = raíz) y `pwd`. Los comandos de ficheros y texto
+  (`ls tree cat head grep rm mkdir touch cp mv view edit run write save replace mktree`, `git add/restore/log --`,
+  `checkpoint`) y las redirecciones `>` / `>>` resuelven las rutas desde la carpeta actual; `ls` y `tree` sin argumento usan
+  la actual y `mktree` crea el árbol en ella. El estado del panel y el eco de cada comando muestran la carpeta.
+- Se guarda en el navegador (se conserva al recargar) y se restablece a la raíz si la carpeta desaparece. No se puede
+  entrar en `.git`, `.dv` ni `.dv_tmp`, y una ruta con `..` que sale del disco da error (salvo en `cd`, que se queda en la raíz).
+- **Aviso:** la IA no sabe en qué carpeta estás. Los bloques `dv` (propuestas) y todo lo guardado por el sistema usan rutas
+  desde la raíz; si un comando `!` que escribe la IA lleva rutas relativas, se resolverán desde tu carpeta actual.
+
+## Deshacer y rehacer de varios pasos (1.12.0 y 1.13.0)
+
+- **Hecho:** `undo [N]`, `undo --list` y `redo [N]`. Un paso es un grupo de checkpoints de la misma operación (misma etiqueta,
+  máx. 10 s) o una creación registrada (`mkdir`, `touch`, `mktree`, `write` o editor sobre un archivo nuevo).
+- Estado persistente en `.dv/undo-state.json` (pasos ya deshechos, pila de rehacer y creaciones, con tope de tamaño);
+  sobrevive a recargas. Las copias que solo sirven para rehacer llevan la etiqueta `↶ rehacer`, no cuentan como pasos
+  y la poda automática no las toca; se borran al rehacer o al hacer un cambio nuevo.
+- Deshacer una creación guarda antes el contenido (para rehacer) y borra; las carpetas solo se quitan si quedan vacías,
+  y `redo` se niega si el archivo cambió después de deshacer. Todo pide confirmación; el diff del editor ya no se usa aquí.
+- **Cambio de comportamiento:** ya no basta repetir `undo` para rehacer; ahora retrocede otro paso y `redo` rehace.
+- Botones **Deshacer/Rehacer** en el panel y atajo Alt+Z / Alt+Mayús+Z con el foco en el panel (no toca Ctrl+Z del chat).
+- `cp`, `mv`, importar archivos e importar ZIP también registran lo que crean. El ZIP exporta e importa las **carpetas vacías**,
+  y el panel las lista como «carpeta vacía».
+- Límites: un archivo de más de 1 MB no se puede deshacer como creación (no habría copia para rehacer); `>` y `save` sobre
+  un archivo nuevo no se registran todavía; `mv` genera dos pasos (copia y borrado del origen).
+
+## Árboles de carpetas desde el panel (1.11.0)
+
+- **Hecho:** `mkdir [-p]`, `touch [-p]`, `tree [-L N]` y `mktree` (esquema con sangría o dibujo de `tree`,
+  por argumento o por pipe). Expansión de llaves tipo bash (`{a,b}`, anidadas, `{1..3}`, `{01..10}`, `{a..e}`,
+  máx. 200 rutas por orden y 300 elementos por esquema).
+- `mktree` planifica todo antes de crear nada: ante cualquier conflicto (archivo en el camino, nombre usado como
+  archivo y carpeta) no crea nada. Nunca sobrescribe; las rutas internas (`.git`, `.dv`, `.dv_tmp`) se rechazan.
+- Límites conocidos: Git no registra carpetas vacías (usar `touch carpeta/.gitkeep`); las carpetas vacías no salen
+  en la lista de archivos del panel pero sí en `ls` y `tree`; la exportación ZIP de carpetas vacías no está verificada.
+
+## Checkpoints sin rehashear y mejoras descartadas (1.10.2)
+
+- **Hecho:** `checkpointInventory` ya no hashea cada copia. El listado, la poda automática, `undo` y `delete`/`prune` usan solo el
+  `.json` y el tamaño del `.bin`; el hash completo se comprueba al restaurar, ver o diff (`readCheckpoint` sigue verificando) y
+  antes de borrar. `checkpoint --list --verify` marca con ⚠ las copias corruptas. Con el tope de 64 MB, cada guardado ya no relee hasta 64 MB.
+- **Descartado por poca importancia** (se retoma solo si aparece un problema real): diferir la poda con temporizador (la poda ya es barata
+  y un temporizador puede dejar copias de más), limpiar las copias de `applyBatch` si falla antes de escribir (ruido inofensivo, y en un
+  lote ya escrito se necesitan para `!undo`), `SITE_NAME` como función (el host no cambia durante la vida de la página) y el
+  `installFocusTrap` del panel (fuga mínima al cambiar de idioma).
+- Pruebas: 1 e2e nueva. Total 83.
 
 ## Revisión de código externa (1.10.1)
 
