@@ -252,7 +252,7 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
           <a class="btn" href="#instalar">Instalar loopwork</a>
           <a class="btn ghost" href="manual.md">Leer el manual</a>
         </div>
-        <small>Prototipo funcional, versión 1.15.0. No es un IDE completo ni un respaldo externo.</small>
+        <small>Prototipo funcional, versión 1.16.0. No es un IDE completo ni un respaldo externo.</small>
       </div>
 
       <div class="patch" id="patch" data-state="pending">
@@ -303,6 +303,7 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
         <div><dt>Checkpoints por archivo</dt><dd>Copia exacta de bytes, incluso de archivos que nunca tuvieron commit. Lista, compara, restaura y limpia.</dd></div>
         <div><dt>Recuperación ante cierres a medias</dt><dd>Cada guardado deja un temporal verificado y un registro. Si el navegador se cierra a mitad, al volver se completa, se revierte o se guarda aparte. Nunca pisa en silencio.</dd></div>
         <div><dt>Arma proyectos como en bash</dt><dd><code>mkdir -p app/{src,docs}</code>, <code>touch</code>, <code>tree</code> y <code>mktree</code>, que crea un árbol entero desde un esquema con sangría o desde el dibujo de <code>tree</code>. No sobrescribe nada.</dd></div>
+        <div><dt>Bash dentro del panel</dt><dd><code>cd</code>, <code>grep -r</code>, <code>find</code>, <code>sort</code>, <code>wc</code>, <code>tee</code>, variables con <code>export</code>, comodines <code>*</code> y <code>?</code>, y encadenado con <code>;</code>, <code>&amp;&amp;</code> y <code>||</code>.</dd></div>
         <div><dt>Control Z de varios pasos</dt><dd><code>undo 3</code>, <code>undo --list</code> y <code>redo</code>, o los botones y Alt+Z. También deshace la creación de archivos y carpetas, y el estado sobrevive a recargar la página.</dd></div>
         <div><dt>Ejecutar sin salir del chat</dt><dd>HTML estático en una pestaña conectada que se actualiza al guardar, y JavaScript de consola en un Worker aislado.</dd></div>
         <div class="wide"><dt>En español, inglés y chino simplificado</dt><dd>El idioma cambia sin recargar y conserva tu borrador, el historial y la posición del panel. Los comandos no se traducen.</dd></div>
@@ -366,7 +367,7 @@ footer .loop { font: 700 1.15rem/1.35 var(--display); color: var(--ink); letter-
         <ol>
           <li>Usa un navegador <strong>Chromium</strong> (Chrome, Edge, Brave) e instala <a href="https://www.tampermonkey.net/">Tampermonkey</a>.</li>
           <li>Crea un script nuevo y pega completo <a href="loopwork.js"><code>loopwork.js</code></a>, incluida la cabecera.</li>
-          <li>Abre o recarga el chat. Verás el panel con <strong>v1.15.0</strong>.</li>
+          <li>Abre o recarga el chat. Verás el panel con <strong>v1.16.0</strong>.</li>
         </ol>
         <p><strong>¿Prefieres una extensión?</strong> Carga la carpeta <code>extension/</code> en <code>chrome://extensions</code> con el modo de desarrollador activo. No pide permisos, incluye sus bibliotecas y evita que el chat intercepte Ctrl+V. Usa solo una de las dos vías.</p>
         <a class="btn" href="manual.md">Seguir con el manual</a>

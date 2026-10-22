@@ -3,7 +3,7 @@
 **Taller local de archivos y código asistido por IA dentro de DeepSeek, ChatGPT, Gemini y Claude.**
 Userscript basado en OPFS y Git: la IA propone, el usuario revisa y aprueba.
 
-Versión actual: **1.15.0**. **135 pruebas Node** más una suite nueva en `tests/` (121 pruebas: traducciones, análisis de código y e2e en Chromium).
+Versión actual: **1.16.0**. **135 pruebas Node** más una suite nueva en `tests/` (132 pruebas: traducciones, análisis de código y e2e en Chromium).
 Es un prototipo funcional, no un IDE completo ni un sistema de respaldo externo.
 
 **Documentación:** [Manual del usuario](./manual.md) (paso a paso) ·
@@ -103,7 +103,7 @@ hashes y recupera escrituras interrumpidas (ver [Límites y recuperación](#lím
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/)
    (también disponible, de forma experimental, en [chatgpt.com](https://chatgpt.com/)
    y [gemini.google.com](https://gemini.google.com/app)).
-5. Comprueba que el panel muestra **v1.15.0**.
+5. Comprueba que el panel muestra **v1.16.0**.
 
 ### Alternativa: extensión de Chrome
 
@@ -114,7 +114,7 @@ nada de jsDelivr. Además aísla copiar, cortar y pegar del panel frente a la p�
 lo que corrige que **Ctrl+V** no pegara en claude.ai.
 
 1. Genera o descarga la carpeta `extension/` (`python3 tools/build-extension.py`, o descomprime
-   `loopwork-extension-1.15.0.zip`).
+   `loopwork-extension-1.16.0.zip`).
 2. Abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar descomprimida**.
 3. Elige la carpeta `extension/` y recarga el chat.
 
@@ -499,6 +499,8 @@ El botón **Ayuda** o `!help` muestra la ayuda del registro de comandos.
 | Comando | Alcance |
 |---|---|
 | `!ls [-R] [ruta]` | Lista contenido del disco |
+| Bash básico | `echo`, `tail`, `wc`, `sort`, `uniq`, `tee`, `find`, `stat`, `rmdir`, `basename`, `dirname`, `date`, `whoami`, `man`, `which`, `history`, `clear`, `env`/`printenv`, `export`, `unset`, `true`, `false`; `grep -r/-l/-c`, `cat -n`, `ls -la`, `rm -rf`, `mv`/`cp` hacia una carpeta |
+| Sintaxis de shell | Encadenado `a ; b`, `a && b`, `a \|\| b`; variables `export X=1` y `$X`/`${X}`; comodines `*` y `?` en rutas (`ls *.js`, `rm a?.txt`); llaves `{a,b}`; pipes y `>`/`>>` |
 | `!cd [ruta]` · `!pwd` | Cambia y muestra la carpeta actual (`cd /datos`, `cd ..`, `cd -`, `cd /`). Las rutas relativas de los comandos se resuelven desde ahí; se recuerda al recargar. Las rutas de propuestas `dv`, checkpoints y Git son siempre desde la raíz |
 | `!mkdir [-p] carpeta...` · `!touch [-p] archivo...` | Crean carpetas / archivos vacíos (con llaves tipo bash: `app/{src,docs}`, `{1..3}`) |
 | `!tree [-L N] [ruta]` | Dibuja el árbol de carpetas y archivos |

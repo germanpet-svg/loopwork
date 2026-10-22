@@ -3,7 +3,7 @@
 // @name:en      loopwork (Dual-Channel OPFS + Git)
 // @name:zh-CN   loopwork（双通道 OPFS + Git）
 // @namespace    local.disk
-// @version      1.15.0
+// @version      1.16.0
 // @description  Entorno local OPFS con doble canal: panel soberano (0 tokens) + atajo en chat mitigado
 // @description:en Local OPFS workspace with a private panel, Git versioning and reviewed AI patches
 // @description:zh-CN 本地 OPFS 工作区，支持独立面板、Git 版本管理及经审核的 AI 补丁
@@ -60,7 +60,7 @@
   // CONFIGURACIÓN
   // ============================================================
   const CFG = {
-    VERSION: '1.15.0',
+    VERSION: '1.16.0',
     ABOUT_URL: 'https://geeknome.com',
     MAX_RUN_BYTES: 1024 * 1024,
     RUN_TIMEOUT_MS: 3000,
@@ -2280,6 +2280,63 @@
     "name solo es válido con operation \"replace-function\"": ["name is only valid with operation \"replace-function\"", "name 仅适用于 operation \"replace-function\""],
     "replace-function solo está disponible para JavaScript, Python y HTML con <script>": ["replace-function is only available for JavaScript, Python and HTML with <script>", "replace-function 仅适用于 JavaScript、Python 和带 <script> 的 HTML"],
     "Alt+Shift+→: seleccionar la función del cursor (repite para la exterior)": ["Alt+Shift+→: select the function at the cursor (repeat for the outer one)", "Alt+Shift+→：选中光标所在函数（重复可选外层函数）"],
+    "{0} es una carpeta; usa grep -r": ["{0} is a folder; use grep -r", "{0} 是文件夹；请使用 grep -r"],
+    "la carpeta {0} no está vacía": ["folder {0} is not empty", "文件夹 {0} 不为空"],
+    "Carpetas eliminadas: {0}": ["Folders removed: {0}", "已删除文件夹：{0}"],
+    "{0} elemento(s)": ["{0} item(s)", "{0} 项"],
+    "{0}: no encontrado": ["{0}: not found", "{0}：未找到"],
+    "variable no válida: {0}; usa export NOMBRE=valor": ["invalid variable: {0}; use export NAME=value", "变量无效：{0}；请使用 export 名称=值"],
+    "{0}: no definida": ["{0}: not set", "{0}：未定义"],
+    "sin coincidencias: {0}": ["no matches: {0}", "没有匹配：{0}"],
+    "uso: rm [-r] [-f] <ruta>...": ["usage: rm [-r] [-f] <path>...", "用法：rm [-r] [-f] <路径>..."],
+    "uso: grep [-i] [-n] [-F] [-r] [-l] [-c] <patrón> [archivo...]": ["usage: grep [-i] [-n] [-F] [-r] [-l] [-c] <pattern> [file...]", "用法：grep [-i] [-n] [-F] [-r] [-l] [-c] <模式> [文件...]"],
+    "uso: tee [-a] <archivo>": ["usage: tee [-a] <file>", "用法：tee [-a] <文件>"],
+    "tee necesita una entrada por pipe": ["tee needs piped input", "tee 需要管道输入"],
+    "uso: find [ruta] [-name patrón] [-type f|d]": ["usage: find [path] [-name pattern] [-type f|d]", "用法：find [路径] [-name 模式] [-type f|d]"],
+    "find: -type admite f (archivo) o d (carpeta)": ["find: -type accepts f (file) or d (folder)", "find：-type 支持 f（文件）或 d（文件夹）"],
+    "(sin coincidencias)": ["(no matches)", "（无匹配）"],
+    "uso: rmdir <carpeta>...": ["usage: rmdir <folder>...", "用法：rmdir <文件夹>..."],
+    "uso: stat <ruta>...": ["usage: stat <path>...", "用法：stat <路径>..."],
+    "carpeta": ["folder", "文件夹"],
+    "archivo": ["file", "文件"],
+    "uso: basename <ruta> [sufijo]": ["usage: basename <path> [suffix]", "用法：basename <路径> [后缀]"],
+    "uso: dirname <ruta>": ["usage: dirname <path>", "用法：dirname <路径>"],
+    "false": ["false", "false"],
+    "Historial borrado.": ["History cleared.", "历史记录已清除。"],
+    "(sin historial)": ["(no history)", "（无历史记录）"],
+    "uso: which <comando>...": ["usage: which <command>...", "用法：which <命令>..."],
+    "comando interno de loopwork": ["built-in loopwork command", "loopwork 内置命令"],
+    "uso: man <comando>": ["usage: man <command>", "用法：man <命令>"],
+    "uso: export NOMBRE=valor": ["usage: export NAME=value", "用法：export 名称=值"],
+    "uso: unset NOMBRE...": ["usage: unset NAME...", "用法：unset 名称..."],
+    "uso: env | printenv [NOMBRE]": ["usage: env | printenv [NAME]", "用法：env | printenv [名称]"],
+    "(sin variables)": ["(no variables)", "（无变量）"],
+    "Busca regex o texto literal por líneas en archivos, carpetas (-r) o pipes": ["Searches by regex or literal text, line by line, in files, folders (-r) or pipes", "按行用正则或字面文本搜索文件、文件夹（-r）或管道"],
+    "Escribe el texto (útil con > y >>: echo hola > a.txt)": ["Prints the text (useful with > and >>: echo hello > a.txt)", "输出文本（配合 > 和 >>：echo hello > a.txt）"],
+    "Últimas N líneas (10 por defecto); acepta pipes": ["Last N lines (10 by default); accepts pipes", "最后 N 行（默认 10）；支持管道"],
+    "Cuenta líneas, palabras y bytes; acepta pipes": ["Counts lines, words and bytes; accepts pipes", "统计行数、单词数和字节数；支持管道"],
+    "Ordena líneas (-r inverso, -n numérico, -u sin repetidas); acepta pipes": ["Sorts lines (-r reverse, -n numeric, -u unique); accepts pipes", "排序行（-r 倒序，-n 数字，-u 去重）；支持管道"],
+    "Quita líneas repetidas consecutivas (-c las cuenta); acepta pipes": ["Removes consecutive repeated lines (-c counts them); accepts pipes", "删除相邻重复行（-c 计数）；支持管道"],
+    "Copia la entrada a un archivo y la deja pasar (tee -a añade)": ["Copies the input to a file and passes it on (tee -a appends)", "将输入复制到文件并继续传递（tee -a 追加）"],
+    "Busca archivos y carpetas por nombre (* y ?) o tipo": ["Finds files and folders by name (* and ?) or type", "按名称（* 和 ?）或类型查找文件和文件夹"],
+    "Borra carpetas vacías": ["Removes empty folders", "删除空文件夹"],
+    "Muestra tipo, tamaño y fecha de modificación": ["Shows type, size and modification date", "显示类型、大小和修改日期"],
+    "Nombre final de una ruta": ["Last component of a path", "路径的最后一部分"],
+    "Carpeta que contiene una ruta": ["Folder that contains a path", "包含该路径的文件夹"],
+    "Fecha y hora actuales": ["Current date and time", "当前日期和时间"],
+    "Usuario actual (siempre «loopwork»: disco local del navegador)": ["Current user (always «loopwork»: the browser's local disk)", "当前用户（始终为「loopwork」：浏览器本地磁盘）"],
+    "No hace nada y termina bien (útil con || y &&)": ["Does nothing and succeeds (useful with || and &&)", "什么也不做并成功结束（配合 || 和 &&）"],
+    "No hace nada y termina con error (útil con || y &&)": ["Does nothing and fails (useful with || and &&)", "什么也不做并以失败结束（配合 || 和 &&）"],
+    "Limpia el registro del panel": ["Clears the panel log", "清除面板日志"],
+    "Comandos escritos en el panel (-c los borra)": ["Commands typed in the panel (-c clears them)", "在面板中输入过的命令（-c 清除）"],
+    "Indica si un comando existe en loopwork": ["Tells whether a command exists in loopwork", "指出命令是否存在于 loopwork"],
+    "Uso y descripción de un comando": ["Usage and description of a command", "命令的用法和说明"],
+    "Define una variable; se usa como $NOMBRE o ${NOMBRE} en los comandos (solo en esta sesión)": ["Sets a variable; use it as $NAME or ${NAME} in commands (this session only)", "定义变量；在命令中用 $名称 或 ${名称} 引用（仅限本次会话）"],
+    "Borra variables definidas con export": ["Removes variables set with export", "删除用 export 定义的变量"],
+    "Muestra las variables definidas con export": ["Shows the variables set with export", "显示用 export 定义的变量"],
+    "Igual que env: muestra las variables definidas con export": ["Same as env: shows the variables set with export", "同 env：显示用 export 定义的变量"],
+    "Lista archivos (admite -l -a -h por compatibilidad y comodines: ls *.js)": ["Lists files (accepts -l -a -h for compatibility and wildcards: ls *.js)", "列出文件（为兼容接受 -l -a -h，并支持通配符：ls *.js）"],
+    "Elimina rutas tras confirmación (guarda copia previa de hasta 1 MB por archivo); -f no avisa si no existen": ["Removes paths after confirmation (keeps a prior copy of up to 1 MB per file); -f stays quiet if they do not exist", "确认后删除路径（每个文件最多保留 1 MB 的先前副本）；-f 在不存在时不报错"],
     "Subir": ["Up", "上一级"],
     "Volver a la carpeta anterior (cd ..)": ["Go back to the parent folder (cd ..)", "返回上一级文件夹（cd ..）"],
     "Entrar": ["Enter", "进入"],
@@ -3101,13 +3158,18 @@
       if (!parts.length || isInternalPath(path)) throw new Error(t('raíz y metadatos internos no permitidos'));
       return parts.join('/');
     });
-    const [sourcePath, targetPath] = paths;
+    const [sourcePath] = paths;
+    let targetPath = paths[1];
     if (sourcePath === targetPath) throw new Error(t('origen y destino son el mismo archivo'));
     const sourceHandle = await requireFile(sourcePath);
     const sourceFile = await sourceHandle.getFile();
     if (sourceFile.size > CFG.MAX_HASH_BYTES) throw new Error(t`archivo demasiado grande para verificar: máximo ${fmtBytes(CFG.MAX_HASH_BYTES)}`);
-    const targetHandle = await getHandle(targetPath);
-    if (targetHandle?.kind === 'directory') throw new Error(t('destino es una carpeta; indica la ruta completa del archivo'));
+    let targetHandle = await getHandle(targetPath);
+    if (targetHandle?.kind === 'directory') { // como en bash: «mv a.txt carpeta/» lo deja como carpeta/a.txt
+      targetPath = `${targetPath}/${sourcePath.split('/').pop()}`;
+      targetHandle = await getHandle(targetPath);
+      if (targetHandle?.kind === 'directory') throw new Error(t('destino es una carpeta; indica la ruta completa del archivo'));
+    }
     if (move || targetHandle) {
       const action = move ? t`Mover "${sourcePath}" a "${targetPath}" y borrar el origen` : t`Reemplazar "${targetPath}" con "${sourcePath}"`;
       const targetPlan = targetHandle ? await safetyPlan([targetPath]) : { copy: [], large: [] };
@@ -3994,7 +4056,14 @@
       if (q) { if (ch === q) q = null; else cur += ch; continue; }
       if (ch === '"' || ch === "'") { if (!has) start = i; q = ch; has = true; quoted = true; continue; }
       if (/\s/.test(ch)) { push(i); continue; }
-      if (ch === '|') { push(i); out.push({ t: 'op', v: '|', start: i, end: i + 1 }); continue; }
+      if (ch === '|') {
+        push(i);
+        if (str[i + 1] === '|') { out.push({ t: 'op', v: '||', start: i, end: i + 2 }); i++; }
+        else out.push({ t: 'op', v: '|', start: i, end: i + 1 });
+        continue;
+      }
+      if (ch === ';') { push(i); out.push({ t: 'op', v: ';', start: i, end: i + 1 }); continue; }
+      if (ch === '&' && str[i + 1] === '&') { push(i); out.push({ t: 'op', v: '&&', start: i, end: i + 2 }); i++; continue; }
       if (ch === '>') {
         push(i);
         if (str[i + 1] === '>') { out.push({ t: 'op', v: '>>', start: i, end: i + 2 }); i++; }
@@ -4271,7 +4340,7 @@
       const token = tokens[i];
       if (token.t === 'op') {
         clean.push(token);
-        if (token.v === '|') { literal = false; command = true; }
+        if (CHAIN_OPS.has(token.v) || token.v === '|') { literal = false; command = true; }
         else redirectTarget = true;
         continue;
       }
@@ -4292,8 +4361,21 @@
         file = next.v;
       } else clean.push(token);
     }
-    parsePipeline(clean);
+    for (const g of splitChain(clean)) parsePipeline(g.toks);
     return { tokens: clean, command: clean.map((t) => raw.slice(t.start, t.end)).join(' '), share, file };
+  }
+
+  const CHAIN_OPS = new Set([';', '&&', '||']);
+  // Divide «a ; b && c || d» en grupos con el conector que los precede.
+  function splitChain(toks) {
+    const groups = [];
+    let cur = [], op = null;
+    for (const k of toks) {
+      if (k.t === 'op' && CHAIN_OPS.has(k.v)) { groups.push({ toks: cur, op }); cur = []; op = k.v; }
+      else cur.push(k);
+    }
+    if (cur.length || op !== ';') groups.push({ toks: cur, op });
+    return groups;
   }
 
   function parsePipeline(toks) {
@@ -7470,44 +7552,57 @@
   def('run', 'Sistema', 'run <archivo.html|archivo.js>', 'HTML estático o consola JS aislada (sin Node/red/OPFS)', (ctx) => runFile(ctx.args));
 
   // Ficheros & Transacciones
-  def('ls', 'Ficheros', 'ls [-R] [ruta]', 'Lista archivos', async (ctx) => {
-    const { flags, pos } = parseArgs(ctx.args, { R: 'b' });
-    if (pos.length > 1) throw new Error(t('uso: ls [-R] [ruta]'));
-    const h = pos[0] ? await getHandle(pos[0]) : rootDir;
-    if (!h) throw new Error(t`no existe: ${pos[0]}`);
-    if (h.kind === 'file') return `${pos[0]} (${fmtBytes((await h.getFile()).size)})`;
-    const rows = [];
-    if (flags.R) {
-      for await (const e of walk(h)) {
-        rows.push(e.kind === 'dir' ? `${e.path}/` : `${e.path.padEnd(30)} ${fmtBytes((await e.handle.getFile()).size)}`);
+  def('ls', 'Ficheros', 'ls [-R] [ruta...]', 'Lista archivos (admite -l -a -h por compatibilidad y comodines: ls *.js)', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { R: 'b', l: 'b', a: 'b', h: 'b', F: 'b' });
+    const listOne = async (target) => {
+      const h = target ? await getHandle(target) : rootDir;
+      if (!h) throw new Error(t`no existe: ${target}`);
+      if (h.kind === 'file') return [`${target} (${fmtBytes((await h.getFile()).size)})`];
+      const rows = [];
+      if (flags.R) {
+        for await (const e of walk(h)) {
+          rows.push(e.kind === 'dir' ? `${e.path}/` : `${e.path.padEnd(30)} ${fmtBytes((await e.handle.getFile()).size)}`);
+        }
+      } else {
+        for await (const [name, handle] of h.entries()) {
+          rows.push(handle.kind === 'directory' ? `${name}/` : `${name.padEnd(30)} ${fmtBytes((await handle.getFile()).size)}`);
+        }
+        rows.sort((x, y) => x.localeCompare(y));
       }
-    } else {
-      for await (const [name, handle] of h.entries()) {
-        rows.push(handle.kind === 'directory' ? `${name}/` : `${name.padEnd(30)} ${fmtBytes((await handle.getFile()).size)}`);
-      }
-      rows.sort((a, b) => a.localeCompare(b));
+      return rows.length ? rows : [t('(carpeta vacía)')];
+    };
+    if (pos.length <= 1) return (await listOne(pos[0])).join('\n');
+    const fileRows = [], dirBlocks = [];
+    for (const target of pos) {
+      const rows = await listOne(target);
+      const h = target ? await getHandle(target) : rootDir;
+      if (h?.kind === 'directory') dirBlocks.push([`${target}:`, ...rows].join('\n')); else fileRows.push(...rows);
     }
-    return rows.join('\n') || t('(carpeta vacía)');
+    return [...(fileRows.length ? [fileRows.join('\n')] : []), ...dirBlocks].join('\n\n');
   });
-
-  def('rm', 'Ficheros', 'rm [-r] <ruta>', 'Elimina una ruta tras confirmación (guarda copia previa de hasta 1 MB por archivo)', async (ctx) => {
-    const { flags, pos } = parseArgs(ctx.args, { r: 'b' });
-    if (pos.length !== 1) throw new Error(t('uso: rm [-r] <ruta>'));
-    const parts = splitPath(pos[0]);
-    if (!parts.length) throw new Error(t('no se puede borrar la raíz'));
-    if (['.git', '.dv', '.dv_tmp'].includes(parts[0])) throw new Error(t('no se pueden borrar metadatos internos con rm'));
-    const path = parts.join('/');
-    const handle = await getHandle(path);
-    if (!handle) throw new Error(t`no existe: ${path}`);
-    if (handle.kind === 'directory' && !flags.r) throw new Error(t('para borrar una carpeta usa rm -r'));
-    const plan = await safetyPlan(handle.kind === 'directory' ? await filesUnder(path, handle) : [path]);
-    if (!confirm(t`¿Eliminar "${path}"${handle.kind === 'directory' ? ' y todo su contenido' : ''}? ${safetyNote(plan)}`)) {
-      throw new Error(t('borrado cancelado; no se ha eliminado nada'));
+  def('rm', 'Ficheros', 'rm [-r] [-f] <ruta>...', 'Elimina rutas tras confirmación (guarda copia previa de hasta 1 MB por archivo); -f no avisa si no existen', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { r: 'b', f: 'b', R: 'b' });
+    if (!pos.length) throw new Error(t('uso: rm [-r] [-f] <ruta>...'));
+    const recursive = !!(flags.r || flags.R);
+    const messages = [];
+    for (const raw of pos) {
+      const parts = splitPath(raw);
+      if (!parts.length) throw new Error(t('no se puede borrar la raíz'));
+      if (['.git', '.dv', '.dv_tmp'].includes(parts[0])) throw new Error(t('no se pueden borrar metadatos internos con rm'));
+      const path = parts.join('/');
+      const handle = await getHandle(path);
+      if (!handle) { if (flags.f) continue; throw new Error(t`no existe: ${path}`); }
+      if (handle.kind === 'directory' && !recursive) throw new Error(t('para borrar una carpeta usa rm -r'));
+      const plan = await safetyPlan(handle.kind === 'directory' ? await filesUnder(path, handle) : [path]);
+      if (!confirm(t`¿Eliminar "${path}"${handle.kind === 'directory' ? ' y todo su contenido' : ''}? ${safetyNote(plan)}`)) {
+        throw new Error(t('borrado cancelado; no se ha eliminado nada'));
+      }
+      await safetyCopyAll(plan.copy, t('Antes de rm'));
+      await removePath(path, recursive);
+      if (await getHandle(path)) throw new Error(t`no se pudo verificar el borrado: ${path}`);
+      messages.push(t`Eliminado: ${path}` + (plan.copy.length ? ' ' + t`Copias previas: ${plan.copy.length}. Ver: !checkpoint --list --tag "Antes de rm"` : ''));
     }
-    await safetyCopyAll(plan.copy, t('Antes de rm'));
-    await removePath(path, !!flags.r);
-    if (await getHandle(path)) throw new Error(t`no se pudo verificar el borrado: ${path}`);
-    return t`Eliminado: ${path}` + (plan.copy.length ? ' ' + t`Copias previas: ${plan.copy.length}. Ver: !checkpoint --list --tag "Antes de rm"` : '');
+    return messages.join('\n');
   });
 
   def('cp', 'Ficheros', 'cp <origen> <destino>', 'Copia archivo y verifica SHA256; confirma reemplazo', (ctx) => copyOrMove(ctx.args, false));
@@ -7694,9 +7789,12 @@
     return t`[Tx OK] Guardado ${ctx.args[0]} (${fmtBytes(res.bytes)})`;
   });
 
-  def('cat', 'Texto', 'cat [file...]', 'Muestra contenido', async function* (ctx) {
-    if (!ctx.args.length) { yield* source(ctx, null); return; }
-    for (const f of ctx.args) yield* lines(f);
+  def('cat', 'Texto', 'cat [-n] [file...]', 'Muestra contenido', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { n: 'b' });
+    let k = 0;
+    const number = (l) => (flags.n ? `${String(++k).padStart(6)}  ${l}` : l);
+    if (!pos.length) { for await (const l of source(ctx, null)) yield number(l); return; }
+    for (const f of pos) for await (const l of lines(f)) yield number(l);
   });
 
   def('head', 'Texto', 'head [-n N] [file]', 'Primeras N líneas', async function* (ctx) {
@@ -7707,16 +7805,235 @@
     for await (const l of source(ctx, pos[0])) { yield l; if (++c >= n) return; }
   });
 
-  def('grep', 'Texto', 'grep [-i] [-n] [-F] <patrón> [archivo]', 'Busca regex o texto literal por líneas; acepta pipes', async function* (ctx) {
-    const { flags, pos } = parseArgs(ctx.args, { i: 'b', n: 'b', F: 'b' });
-    if (pos.length < 1 || pos.length > 2) throw new Error(t('uso: grep [-i] [-n] [-F] <patrón> [archivo]'));
+  def('grep', 'Texto', 'grep [-i] [-n] [-F] [-r] [-l] [-c] <patrón> [archivo...]', 'Busca regex o texto literal por líneas en archivos, carpetas (-r) o pipes', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { i: 'b', n: 'b', F: 'b', r: 'b', R: 'b', l: 'b', c: 'b' });
+    if (pos.length < 1) throw new Error(t('uso: grep [-i] [-n] [-F] [-r] [-l] [-c] <patrón> [archivo...]'));
     const re = makeRegex(pos[0], { ignoreCase: !!flags.i, fixed: !!flags.F });
-    let line = 0;
-    for await (const text of source(ctx, pos[1])) {
-      line++;
-      if (re.test(text)) yield flags.n ? `${line}: ${text}` : text;
+    const recursive = !!(flags.r || flags.R);
+    let targets = pos.slice(1);
+    if (!targets.length && recursive) targets = [ctx.cwd || ''];
+    const files = [];
+    for (const target of targets) {
+      const handle = target ? await getHandle(target) : rootDir;
+      if (!handle) throw new Error(t`no existe: ${target}`);
+      if (handle.kind === 'directory') {
+        if (!recursive) throw new Error(t`${target} es una carpeta; usa grep -r`);
+        for await (const e of walk(handle, target ? target + '/' : '')) if (e.kind === 'file' && !isInternalPath(e.path)) files.push(e.path);
+      } else files.push(target);
+    }
+    const show = files.length > 1 || recursive;
+    const scan = async function* (name, iterable) {
+      let line = 0, count = 0;
+      for await (const text of iterable) {
+        line++;
+        if (!re.test(text)) continue;
+        count++;
+        if (flags.l) { yield name; return; }
+        if (!flags.c) yield (show ? `${name}:` : '') + (flags.n ? `${line}: ` : '') + text;
+      }
+      if (flags.c) yield (show ? `${name}:` : '') + count;
+    };
+    if (!files.length) { yield* scan('(stdin)', source(ctx, null)); return; }
+    for (const name of files) {
+      try { yield* scan(name, lines(name)); }
+      catch (e) { if (!recursive) throw e; }
     }
   });
+
+  def('echo', 'Texto', 'echo [-n] [-e] [texto...]', 'Escribe el texto (útil con > y >>: echo hola > a.txt)', async (ctx) => {
+    let args = [...ctx.args], newline = true, escapes = false;
+    while (args[0] === '-n' || args[0] === '-e' || args[0] === '-ne' || args[0] === '-en') {
+      const flag = args.shift();
+      if (flag.includes('n')) newline = false;
+      if (flag.includes('e')) escapes = true;
+    }
+    let text = args.join(' ');
+    if (escapes) text = text.replace(/\\(n|t|\\)/g, (m, c) => (c === 'n' ? '\n' : c === 't' ? '\t' : '\\'));
+    return text; // cada resultado ya termina en línea; -n se admite por compatibilidad
+  });
+
+  def('tail', 'Texto', 'tail [-n N] [archivo]', 'Últimas N líneas (10 por defecto); acepta pipes', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { n: 'v' });
+    const n = toInt(flags.n, 10, '-n');
+    if (n === 0) return;
+    const keep = [];
+    for await (const l of source(ctx, pos[0])) { keep.push(l); if (keep.length > n) keep.shift(); }
+    yield* keep;
+  });
+
+  def('wc', 'Texto', 'wc [-l] [-w] [-c] [archivo...]', 'Cuenta líneas, palabras y bytes; acepta pipes', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { l: 'b', w: 'b', c: 'b' });
+    const all = !flags.l && !flags.w && !flags.c;
+    const enc = new TextEncoder();
+    const count = async (iterable) => {
+      let l = 0, w = 0, c = 0;
+      for await (const text of iterable) { l++; w += text.split(/\s+/).filter(Boolean).length; c += enc.encode(text).length + 1; }
+      return { l, w, c };
+    };
+    const row = (r, name) => [all || flags.l ? String(r.l).padStart(7) : '', all || flags.w ? String(r.w).padStart(7) : '', all || flags.c ? String(r.c).padStart(7) : '', name ? ' ' + name : ''].join('');
+    if (!pos.length) { yield row(await count(source(ctx, null)), ''); return; }
+    const total = { l: 0, w: 0, c: 0 };
+    for (const f of pos) {
+      const r = await count(lines(f));
+      total.l += r.l; total.w += r.w; total.c += r.c;
+      yield row(r, f);
+    }
+    if (pos.length > 1) yield row(total, 'total');
+  });
+
+  def('sort', 'Texto', 'sort [-r] [-n] [-u] [archivo]', 'Ordena líneas (-r inverso, -n numérico, -u sin repetidas); acepta pipes', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { r: 'b', n: 'b', u: 'b' });
+    let rows = [];
+    for await (const l of source(ctx, pos[0])) rows.push(l);
+    rows.sort(flags.n ? (a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b) : (a, b) => a.localeCompare(b));
+    if (flags.u) rows = rows.filter((l, i) => i === 0 || l !== rows[i - 1]);
+    if (flags.r) rows.reverse();
+    yield* rows;
+  });
+
+  def('uniq', 'Texto', 'uniq [-c] [archivo]', 'Quita líneas repetidas consecutivas (-c las cuenta); acepta pipes', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { c: 'b' });
+    let prev = null, n = 0;
+    const out = (l, k) => (flags.c ? `${String(k).padStart(7)} ${l}` : l);
+    for await (const l of source(ctx, pos[0])) {
+      if (prev !== null && l === prev) { n++; continue; }
+      if (prev !== null) yield out(prev, n);
+      prev = l; n = 1;
+    }
+    if (prev !== null) yield out(prev, n);
+  });
+
+  def('tee', 'Texto', 'tee [-a] <archivo>', 'Copia la entrada a un archivo y la deja pasar (tee -a añade)', async function* (ctx) {
+    const { flags, pos } = parseArgs(ctx.args, { a: 'b' });
+    if (pos.length !== 1) throw new Error(t('uso: tee [-a] <archivo>'));
+    if (!ctx.stdin) throw new Error(t('tee necesita una entrada por pipe'));
+    if (!splitPath(pos[0]).length || isInternalPath(pos[0])) throw new Error(t('destino de redirección no permitido'));
+    const writer = await openWriter(pos[0], { append: !!flags.a });
+    try {
+      for await (const l of ctx.stdin) { await writer.write(l + '\n'); yield l; }
+      await writer.close();
+    } catch (e) { await writer.abort(); throw e; }
+  });
+
+  def('find', 'Ficheros', 'find [ruta] [-name patrón] [-type f|d]', 'Busca archivos y carpetas por nombre (* y ?) o tipo', async (ctx) => {
+    const { flags, pos } = parseArgs(ctx.args, { name: 'v', type: 'v' });
+    if (pos.length > 1) throw new Error(t('uso: find [ruta] [-name patrón] [-type f|d]'));
+    if (flags.type !== undefined && !['f', 'd'].includes(flags.type)) throw new Error(t('find: -type admite f (archivo) o d (carpeta)'));
+    const start = pos[0] !== undefined ? pos[0] : (ctx.cwd || '');
+    const base = start ? await getHandle(start) : rootDir;
+    if (!base) throw new Error(t`no existe: ${start}`);
+    const re = flags.name === undefined ? null : new RegExp('^' + flags.name.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+    const rows = [], prefix = ctx.cwd ? ctx.cwd + '/' : '';
+    const show = (p) => (p.startsWith(prefix) ? p.slice(prefix.length) : p);
+    const consider = (path, kind) => {
+      if (flags.type === 'f' && kind !== 'file') return;
+      if (flags.type === 'd' && kind !== 'dir') return;
+      if (re && !re.test(path.split('/').pop())) return;
+      rows.push(show(path));
+    };
+    if (base.kind === 'file') consider(start, 'file');
+    else {
+      consider(start || '', 'dir') ;
+      for await (const e of walk(base, start ? start + '/' : '')) {
+        if (isInternalPath(e.path)) continue;
+        consider(e.path, e.kind);
+        if (rows.length > 5000) { rows.push('…'); break; }
+      }
+    }
+    return rows.filter((r) => r !== '').join('\n') || t('(sin coincidencias)');
+  });
+
+  def('rmdir', 'Ficheros', 'rmdir <carpeta>...', 'Borra carpetas vacías', async (ctx) => {
+    if (!ctx.args.length) throw new Error(t('uso: rmdir <carpeta>...'));
+    const done = [];
+    for (const raw of ctx.args) {
+      const parts = splitPath(raw);
+      if (!parts.length || isInternalPath(raw)) throw new Error(t('no se pueden borrar metadatos internos con rm'));
+      const path = parts.join('/'), handle = await getHandle(path);
+      if (!handle) throw new Error(t`no existe: ${path}`);
+      if (handle.kind !== 'directory') throw new Error(t`no es una carpeta: ${path}`);
+      if (!await dirIsEmpty(handle)) throw new Error(t`la carpeta ${path} no está vacía`);
+      await removePath(path, false);
+      done.push(path);
+    }
+    return t`Carpetas eliminadas: ${done.join(', ')}`;
+  });
+
+  def('stat', 'Ficheros', 'stat <ruta>...', 'Muestra tipo, tamaño y fecha de modificación', async function* (ctx) {
+    if (!ctx.args.length) throw new Error(t('uso: stat <ruta>...'));
+    for (const raw of ctx.args) {
+      const handle = raw ? await getHandle(raw) : rootDir;
+      if (!handle) throw new Error(t`no existe: ${raw}`);
+      if (handle.kind === 'directory') {
+        let n = 0; for await (const _ of handle.keys()) n++; // eslint-disable-line no-unused-vars
+        yield `${raw || '/'}: ${t('carpeta')}, ${t`${n} elemento(s)`}`;
+      } else {
+        const f = await handle.getFile();
+        yield `${raw}: ${t('archivo')}, ${fmtBytes(f.size)}, ${new Date(f.lastModified).toISOString()}`;
+      }
+    }
+  });
+
+  def('basename', 'Texto', 'basename <ruta> [sufijo]', 'Nombre final de una ruta', async (ctx) => {
+    if (!ctx.args.length || ctx.args.length > 2) throw new Error(t('uso: basename <ruta> [sufijo]'));
+    let name = ctx.args[0].replace(/\/+$/, '').split('/').pop() || '/';
+    if (ctx.args[1] && name.endsWith(ctx.args[1]) && name !== ctx.args[1]) name = name.slice(0, -ctx.args[1].length);
+    return name;
+  });
+  def('dirname', 'Texto', 'dirname <ruta>', 'Carpeta que contiene una ruta', async (ctx) => {
+    if (ctx.args.length !== 1) throw new Error(t('uso: dirname <ruta>'));
+    const p = ctx.args[0].replace(/\/+$/, '');
+    const i = p.lastIndexOf('/');
+    return i < 0 ? '.' : i === 0 ? '/' : p.slice(0, i);
+  });
+
+  def('date', 'Sistema', 'date', 'Fecha y hora actuales', async () => new Date().toString());
+  def('whoami', 'Sistema', 'whoami', 'Usuario actual (siempre «loopwork»: disco local del navegador)', async () => 'loopwork');
+  def('true', 'Sistema', 'true', 'No hace nada y termina bien (útil con || y &&)', async () => '');
+  def('false', 'Sistema', 'false', 'No hace nada y termina con error (útil con || y &&)', async () => { throw new Error(t('false')); });
+  def('clear', 'Sistema', 'clear', 'Limpia el registro del panel', async () => { ui?.clearLog?.(); return ''; });
+  def('history', 'Sistema', 'history [-c]', 'Comandos escritos en el panel (-c los borra)', async (ctx) => {
+    const { flags } = parseArgs(ctx.args, { c: 'b' });
+    if (flags.c) { panelHistory.length = 0; return t('Historial borrado.'); }
+    return panelHistory.map((c, i) => `${String(i + 1).padStart(4)}  ${c}`).join('\n') || t('(sin historial)');
+  });
+  def('which', 'Sistema', 'which <comando>...', 'Indica si un comando existe en loopwork', async (ctx) => {
+    if (!ctx.args.length) throw new Error(t('uso: which <comando>...'));
+    const out = [];
+    for (const name of ctx.args) {
+      if (!REG.has(name.toLowerCase())) throw new Error(t`${name}: no encontrado`);
+      out.push(`${name}: ${t('comando interno de loopwork')}`);
+    }
+    return out.join('\n');
+  });
+  def('man', 'Sistema', 'man <comando>', 'Uso y descripción de un comando', async (ctx) => {
+    if (ctx.args.length !== 1) throw new Error(t('uso: man <comando>'));
+    const c = REG.get(ctx.args[0].toLowerCase());
+    if (!c) throw new Error(t`comando no reconocido: ${ctx.args[0]}`);
+    return `${settings.prefix}${c.usage}\n${c.desc}`;
+  });
+  def('export', 'Sistema', 'export NOMBRE=valor', 'Define una variable; se usa como $NOMBRE o ${NOMBRE} en los comandos (solo en esta sesión)', async (ctx) => {
+    if (!ctx.args.length) throw new Error(t('uso: export NOMBRE=valor'));
+    const done = [];
+    for (const arg of ctx.args) {
+      const m = /^([A-Za-z_]\w*)=([\s\S]*)$/.exec(arg);
+      if (!m) throw new Error(t`variable no válida: ${arg}; usa export NOMBRE=valor`);
+      shellEnv.set(m[1], m[2]); done.push(`${m[1]}=${m[2]}`);
+    }
+    return done.join('\n');
+  });
+  def('unset', 'Sistema', 'unset NOMBRE...', 'Borra variables definidas con export', async (ctx) => {
+    if (!ctx.args.length) throw new Error(t('uso: unset NOMBRE...'));
+    for (const name of ctx.args) shellEnv.delete(name);
+    return '';
+  });
+  const showEnv = async (ctx) => {
+    if (ctx.args.length > 1) throw new Error(t('uso: env | printenv [NOMBRE]'));
+    if (ctx.args.length) { if (!shellEnv.has(ctx.args[0])) throw new Error(t`${ctx.args[0]}: no definida`); return shellEnv.get(ctx.args[0]); }
+    return [...shellEnv].map(([k, v]) => `${k}=${v}`).join('\n') || t('(sin variables)');
+  };
+  def('env', 'Sistema', 'env [NOMBRE]', 'Muestra las variables definidas con export', showEnv);
+  def('printenv', 'Sistema', 'printenv [NOMBRE]', 'Igual que env: muestra las variables definidas con export', showEnv);
 
   def('journal', 'Auditoría', 'journal [-n N]', 'Ver registro de transacciones (.dv/journal)', async (ctx) => {
     const { flags } = parseArgs(ctx.args, { n: 'v' });
@@ -7981,15 +8298,51 @@
   }
 
   const CWD_ARGS = {
-    ls: { pos: 'all', dflt: true }, tree: { pos: 'all', dflt: true, vflags: ['L'] }, cat: { pos: 'all' },
-    head: { pos: 'all', vflags: ['n'] }, rm: { pos: 'all' }, mkdir: { pos: 'all' }, touch: { pos: 'all' },
-    cp: { pos: 'all' }, mv: { pos: 'all' }, view: { pos: 'first', vflags: ['from', 'to'] }, edit: { pos: 'first' },
+    ls: { pos: 'all', dflt: true, glob: true }, tree: { pos: 'all', dflt: true, vflags: ['L'] }, cat: { pos: 'all', glob: true },
+    head: { pos: 'all', vflags: ['n'], glob: true }, tail: { pos: 'all', vflags: ['n'], glob: true }, wc: { pos: 'all', glob: true },
+    sort: { pos: 'all', glob: true }, uniq: { pos: 'all', glob: true }, rm: { pos: 'all', glob: true },
+    mkdir: { pos: 'all' }, touch: { pos: 'all' }, rmdir: { pos: 'all' }, stat: { pos: 'all', glob: true },
+    cp: { pos: 'all' }, mv: { pos: 'all' }, tee: { pos: 'all' }, find: { pos: 'first', vflags: ['name', 'type'] },
+    view: { pos: 'first', vflags: ['from', 'to'], glob: true }, edit: { pos: 'first' },
     run: { pos: 'first' }, write: { pos: 'first' }, save: { pos: 'first' }, replace: { pos: 'first', vflags: ['hash'] },
-    grep: { pos: 'rest' }
+    grep: { pos: 'rest', glob: true }
   };
 
+  // Variables de shell: export NOMBRE=valor y luego $NOMBRE o ${NOMBRE}. Las no definidas se dejan tal cual ($1, $&…).
+  const shellEnv = new Map();
+  function expandShellVars(args) {
+    return args.map((a) => (a.includes('$') ? a.replace(/\$\{([A-Za-z_]\w*)\}|\$([A-Za-z_]\w*)/g, (m, braced, plain) => {
+      const key = braced || plain;
+      return shellEnv.has(key) ? shellEnv.get(key) : m;
+    }) : a));
+  }
+
+  // Comodines * y ? en rutas (por segmento, sin recursión); los archivos que empiezan por punto solo con un punto explícito.
+  const hasGlob = (s) => /[*?]/.test(s);
+  async function globPaths(pattern) {
+    let level = [''];
+    for (const seg of pattern.split('/').filter(Boolean)) {
+      const next = [];
+      if (!hasGlob(seg)) { for (const base of level) next.push(base ? base + '/' + seg : seg); level = next; continue; }
+      const re = new RegExp('^' + seg.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+      for (const base of level) {
+        const dir = base ? await getHandle(base) : rootDir;
+        if (!dir || dir.kind !== 'directory') continue;
+        for await (const [name] of dir.entries()) {
+          if (name.startsWith('.') && !seg.startsWith('.')) continue;
+          if (!base && isInternalPath(name)) continue;
+          if (re.test(name)) next.push(base ? base + '/' + name : name);
+        }
+      }
+      level = next;
+    }
+    const found = [];
+    for (const path of level) if (await getHandle(path)) found.push(path);
+    return found.sort();
+  }
+
   // Devuelve los argumentos con las rutas resueltas contra la carpeta actual.
-  function resolveCommandArgs(name, args, piped) {
+  async function resolveCommandArgs(name, args, piped) {
     const out = [...args];
     const resolveAt = (i) => { out[i] = resolveUserPath(out[i]); };
     const positions = (vflags = []) => {
@@ -8033,6 +8386,20 @@
     const idx = positions(spec.vflags);
     const chosen = spec.pos === 'first' ? idx.slice(0, 1) : spec.pos === 'rest' ? idx.slice(1) : idx;
     for (const i of chosen) resolveAt(i);
+    if (spec.glob) {
+      const expanded = new Map();
+      for (const i of chosen) {
+        if (!hasGlob(out[i])) continue;
+        const found = await globPaths(out[i]);
+        if (!found.length) throw new Error(t`sin coincidencias: ${out[i]}`);
+        expanded.set(i, found);
+      }
+      if (expanded.size) {
+        const result = [];
+        out.forEach((value, i) => { if (expanded.has(i)) result.push(...expanded.get(i)); else result.push(value); });
+        return result;
+      }
+    }
     if (spec.dflt && cwd && !idx.length) out.push(cwd);
     return out;
   }
@@ -8065,14 +8432,36 @@
     return '/' + cwd;
   });
 
+  // Ejecuta «a ; b», «a && b» y «a || b» (y sus pipes); el resultado es el del último comando ejecutado.
   async function execute(raw) {
+    let tokens;
+    try { tokens = Array.isArray(raw) ? raw : tokenize(raw.trim()); }
+    catch (e) { const text = `❌ ${e.message || String(e)}`; lastResult = text; lastResultOk = false; return { ok: false, text }; }
+    if (!tokens.some((k) => k.t === 'op' && CHAIN_OPS.has(k.v))) return executeOne(tokens, false);
+    let groups;
+    try { groups = splitChain(tokens); for (const g of groups) parsePipeline(g.toks); }
+    catch (e) { const text = `❌ ${e.message || String(e)}`; lastResult = text; lastResultOk = false; return { ok: false, text }; }
+    const texts = [];
+    let status = true;
+    for (const g of groups) {
+      if ((g.op === '&&' && !status) || (g.op === '||' && status)) continue;
+      const res = await executeOne(g.toks, true);
+      status = res.ok;
+      if (res.text) texts.push(res.text);
+    }
+    const text = texts.join('\n');
+    lastResult = text; lastResultOk = status;
+    return { ok: status, text };
+  }
+
+  async function executeOne(raw, inChain) {
     try {
       await ensureCwd();
       const segs = parsePipeline(Array.isArray(raw) ? raw : tokenize(raw.trim()));
       if (segs.some(seg => seg.argv[0].toLowerCase() === 'git' && seg.argv[1]?.toLowerCase() === 'checkout') &&
         (segs.length !== 1 || segs[0].redirect)) throw new Error(t('git checkout no admite pipes ni redirecciones'));
       const editorCommand = segs.find((seg) => ['propose', 'replace', 'checkpoint', 'restore', 'edit', 'recover'].includes(seg.argv[0].toLowerCase()));
-      if (editorCommand && (segs.length !== 1 || segs[0].redirect)) {
+      if (editorCommand && (segs.length !== 1 || segs[0].redirect || inChain)) {
         throw new Error(t`${editorCommand.argv[0]} no admite pipes ni redirecciones`);
       }
       let editorRequest = null;
@@ -8081,7 +8470,7 @@
       }
       const redirect = segs[segs.length - 1].redirect;
       if (redirect) {
-        redirect.file = resolveUserPath(redirect.file);
+        redirect.file = resolveUserPath(expandShellVars([redirect.file])[0]);
         if (!redirect.file || !splitPath(redirect.file).length || isInternalPath(redirect.file)) throw new Error(t('destino de redirección no permitido'));
         if (redirect.mode === '>>' && /\.gz$/i.test(redirect.file)) throw new Error(t('no se puede añadir (>>) a un .gz'));
       }
@@ -8090,7 +8479,7 @@
         const cmd = REG.get(seg.argv[0].toLowerCase());
         if (!cmd) throw new Error(t`comando no reconocido: ${seg.argv[0]}`);
         const ctx = {
-          args: resolveCommandArgs(seg.argv[0].toLowerCase(), seg.argv.slice(1), stream !== null), cwd, stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
+          args: await resolveCommandArgs(seg.argv[0].toLowerCase(), expandShellVars(seg.argv.slice(1)), stream !== null), cwd, stdin: stream, warn: (m) => uiLog(`⚠ ${m}`, 'err'),
           openEditor: (proposal) => { editorRequest = proposal; }
         };
         stream = normalize(await cmd.run(ctx));
@@ -8132,7 +8521,7 @@
 
   function isRegisteredCommand(text) {
     if (!text.startsWith(settings.prefix)) return false;
-    const first = text.slice(settings.prefix.length).trim().split(/[\s|>]/)[0].toLowerCase();
+    const first = text.slice(settings.prefix.length).trim().split(/[\s|>;&]/)[0].toLowerCase();
     return REG.has(first);
   }
 
@@ -9604,7 +9993,7 @@
     }
     refresh();
     panelLog(t`Panel Soberano v${CFG.VERSION} activo. 100% local por defecto.`, 'info');
-    return { log: panelLog, refresh, updateState, toggleVisible: () => setPanelHidden(!panelHidden) };
+    return { log: panelLog, refresh, updateState, clearLog: () => logEl.replaceChildren(), toggleVisible: () => setPanelHidden(!panelHidden) };
   }
 
   // ============================================================

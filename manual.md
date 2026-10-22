@@ -1,6 +1,6 @@
 # Manual del usuario de loopwork
 
-**Versión del manual: 1.15.0.** Taller local de archivos y código asistido por IA dentro de
+**Versión del manual: 1.16.0.** Taller local de archivos y código asistido por IA dentro de
 DeepSeek, ChatGPT, Gemini y Claude. La IA propone, tú revisas y apruebas.
 
 Este manual explica cómo usar loopwork paso a paso. Para una visión general y
@@ -59,7 +59,7 @@ en ChatGPT, Gemini ni Claude. Para moverlo, exporta un ZIP en un sitio e impórt
 4. Guarda y abre o recarga [chat.deepseek.com](https://chat.deepseek.com/),
    [chatgpt.com](https://chatgpt.com/) o [gemini.google.com](https://gemini.google.com/app) o
    [claude.ai](https://claude.ai/).
-5. Comprueba que el panel muestra **v1.15.0**.
+5. Comprueba que el panel muestra **v1.16.0**.
 
 **Alternativa: extensión de Chrome.** En vez de Tampermonkey puedes cargar la carpeta `extension/`:
 abre `chrome://extensions`, activa **Modo de desarrollador**, pulsa **Cargar descomprimida** y elige la carpeta.
@@ -539,7 +539,12 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 
 | Comando | Qué hace |
 |---|---|
-| `ls [-R] [ruta]` | Lista contenido |
+| `ls [-R] [ruta...]` | Lista contenido (acepta `-l -a -h` y comodines) |
+| `find [ruta] [-name patrón] [-type f\|d]` | Busca por nombre (`*`, `?`) o tipo |
+| `stat ruta...` · `rmdir carpeta...` | Tipo/tamaño/fecha · borra carpetas vacías |
+| `echo [-e] texto` | Escribe texto; sirve con `>` y `>>` |
+| `tail [-n N]` · `wc [-l -w -c]` · `sort [-r -n -u]` · `uniq [-c]` · `tee [-a] archivo` | Filtros de texto; aceptan pipes |
+| `basename ruta [sufijo]` · `dirname ruta` | Partes de una ruta |
 | `cd [ruta]` · `pwd` | Cambian y muestran la carpeta actual (`cd /datos`, `cd ..`, `cd -`, `cd /`); las rutas relativas parten de ahí |
 | `mkdir [-p] carpeta...` | Crea carpetas; con `-p` crea también las intermedias y no falla si ya existen |
 | `touch [-p] archivo...` | Crea archivos vacíos; nunca pisa los existentes |
@@ -558,6 +563,27 @@ opcional dentro del panel. Los comandos y flags **no se traducen** al cambiar de
 | `propose propuesta.json` | Prepara un cambio JSON para el editor |
 | `replace archivo old new [--all] [--regex] [--hash SHA256] [--dry-run]` | Reemplazo literal (o con regex: `$1`…`$99` y `$&` insertan grupo o coincidencia, `\$` da un `$` y cualquier otro `$` queda literal; sin coincidencias vacías, ambigua pide `--all`) con diff y aprobación |
 | `run archivo.html` / `run archivo.js` | HTML estático o JS de consola aislado |
+
+### Sintaxis de shell (1.16.0)
+
+```text
+!mkdir -p proyecto && cd proyecto && echo "# Proyecto" > README.md ; ls
+!export CARPETA=src
+!mkdir -p $CARPETA/lib
+!ls *.js                          # comodines * y ? (no recursivos; para buscar a fondo usa find)
+!grep -rn "TODO" .                # -r recursivo, -l solo nombres, -c cuenta
+!cat datos.txt | sort -u | tee unicos.txt | wc -l
+!cat falta.txt || echo "no existe"
+```
+
+- `a ; b` ejecuta siempre; `a && b` solo si `a` salió bien; `a || b` solo si `a` falló.
+- `export NOMBRE=valor` define una variable de sesión (se pierde al recargar); `$NOMBRE` y `${NOMBRE}` se expanden en los
+  argumentos. Las variables no definidas (`$1`, `$&` en `replace --regex`) se dejan tal cual. `env`, `printenv`, `unset`.
+- Un `;`, `&&` o `||` **sin comillas** separa comandos; entre comillas es texto (`!write nota.txt "a;b"`).
+- Los comodines no tocan `.git`, `.dv` ni los archivos que empiezan por punto, y si no hay coincidencias dan error.
+- `replace`, `propose`, `edit`, `checkpoint`, `restore` y `recover` no se pueden encadenar ni usar en pipes.
+- `man grep` da el uso de cualquier comando; `which`, `history [-c]`, `clear`, `whoami`, `date`, `true` y `false` completan el
+  conjunto básico. No hay `&`, `$(…)`, heredocs, `if`/`for`, `sed`, `awk` ni `diff`.
 
 ### Sistema y auditoría
 

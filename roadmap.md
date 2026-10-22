@@ -295,6 +295,20 @@ adaptador de sitio.
 - El OPFS es por origen: Gemini no ve los archivos de DeepSeek ni de ChatGPT;
   se trasladan con Exportar/Importar ZIP.
 
+## Comandos y sintaxis de bash (1.16.0)
+
+- **Hecho:** `echo tail wc sort uniq tee find stat rmdir basename dirname date whoami man which history clear env printenv
+  export unset true false`; `grep` con varios archivos y `-r -l -c`; `cat -n`; `ls -l/-a/-h` (aceptados) y varias rutas; `rm`
+  con varias rutas, `-f` y `-rf`; `cp`/`mv` hacia una carpeta existente.
+- **Sintaxis:** `;`, `&&` y `||` (el estado es el del último comando ejecutado), variables `export X=v` con `$X` y `${X}`
+  (las no definidas, como `$1` o `$&`, se dejan tal cual), comodines `*` y `?` por segmento en `ls cat head tail wc sort uniq rm
+  stat view grep`; los archivos con punto inicial solo se casan con un punto explícito.
+- Límites conocidos: sin `&`, subshells, `$(…)`, heredocs, `if/for`, `sed`, `awk` ni `diff`; las variables solo viven en la sesión;
+  los comodines no son recursivos (usa `find`); los comandos con editor (`replace`, `propose`, `edit`, `checkpoint`, `restore`,
+  `recover`) no se pueden encadenar. Un `;` o `&&` sin comillas dentro de un texto ahora separa comandos: escríbelo entre comillas.
+- Inspirado en el catálogo de comandos de Termly (`help`, `whoami`, `pwd`, `printenv`, `export`, `cd`, `ls`, `cat`, `man`,
+  `history`), cuyo código es GPLv3 y **no** se ha copiado: todo es implementación propia sobre el disco de loopwork.
+
 ## Carpeta actual: cd y pwd (1.14.0)
 
 - **Hecho:** `cd [ruta]` (`/datos`, `..`, `-`, `/`, sin argumento = raíz) y `pwd`. Los comandos de ficheros y texto
